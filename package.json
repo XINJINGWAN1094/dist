@@ -104,7 +104,11 @@
     "vue-word-highlighter": "^1.2.6",
     "vue3-pixi": "1.0.0-beta.3",
     "yaml": "^2.8.4",
+<<<<<<< HEAD
     "zod": "^4.4.3"
+=======
+    "zod": "^4.4.2"
+>>>>>>> 83d9038af3d5ad60dd9744400c8b94779c47044e
   },
   "pnpm": {
     "onlyBuiltDependencies": [
