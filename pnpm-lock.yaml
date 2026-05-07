@@ -3678,8 +3678,13 @@ packages:
       uglify-js:
         optional: true
 
+<<<<<<< HEAD
   terser@5.47.0:
     resolution: {integrity: sha512-TV+JFkQFtljk12ffyYAA4+zVF4Hs+qaROsT+Qo9o2/z39x+IUn+pvsmomiCPlp5YigfR1OdbGHOvc0L+Ca1X7g==}
+=======
+  terser@5.46.2:
+    resolution: {integrity: sha512-uxfo9fPcSgLDYob/w1FuL0c99MWiJDnv+5qXSQc5+Ki5NjVNsYi66INnMFBjf6uFz6OnX12piJQPF4IpjJTNTw==}
+>>>>>>> c3c8df31b7e860053e3689eef0f82a0a89f3a481
     engines: {node: '>=10'}
     hasBin: true
 
@@ -6209,7 +6214,11 @@ snapshots:
       he: 1.2.0
       param-case: 3.0.4
       relateurl: 0.2.7
+<<<<<<< HEAD
       terser: 5.47.0
+=======
+      terser: 5.46.2
+>>>>>>> c3c8df31b7e860053e3689eef0f82a0a89f3a481
 
   html-minifier-terser@7.2.0:
     dependencies:
@@ -6219,7 +6228,11 @@ snapshots:
       entities: 4.5.0
       param-case: 3.0.4
       relateurl: 0.2.7
+<<<<<<< HEAD
       terser: 5.47.0
+=======
+      terser: 5.46.2
+>>>>>>> c3c8df31b7e860053e3689eef0f82a0a89f3a481
 
   html-void-elements@3.0.0: {}
 
@@ -7762,10 +7775,17 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
+<<<<<<< HEAD
       terser: 5.47.0
       webpack: 5.106.2(webpack-cli@6.0.1)
 
   terser@5.47.0:
+=======
+      terser: 5.46.2
+      webpack: 5.106.2(webpack-cli@6.0.1)
+
+  terser@5.46.2:
+>>>>>>> c3c8df31b7e860053e3689eef0f82a0a89f3a481
     dependencies:
       '@jridgewell/source-map': 0.3.11
       acorn: 8.16.0
