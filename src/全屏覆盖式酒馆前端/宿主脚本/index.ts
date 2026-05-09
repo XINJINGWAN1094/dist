@@ -85,14 +85,25 @@ function mountFullscreenOverlayHost() {
       return;
     }
 
+    frameDocument.documentElement.style.width = '100%';
+    frameDocument.documentElement.style.height = '100%';
+    frameDocument.body.style.width = '100%';
+    frameDocument.body.style.height = '100%';
+    frameDocument.body.style.margin = '0';
+    frameDocument.body.style.overflow = 'hidden';
     frameDocument.body.innerHTML = `<div id="${OVERLAY_ROOT_ID}"></div>`;
+    const rootElement = frameDocument.getElementById(OVERLAY_ROOT_ID);
+    if (rootElement) {
+      rootElement.style.width = '100%';
+      rootElement.style.height = '100%';
+    }
 
     destroyStyleTeleport?.();
     destroyStyleTeleport = teleportStyle(frameDocument.head).destroy;
 
     app?.unmount();
     app = createApp(OverlayApp).use(createPinia());
-    app.mount(frameDocument.getElementById(OVERLAY_ROOT_ID)!);
+    app.mount(rootElement!);
   };
 
   const updateLauncherText = () => {

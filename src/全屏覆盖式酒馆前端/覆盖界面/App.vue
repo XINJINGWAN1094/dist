@@ -25,6 +25,19 @@
         </button>
       </div>
 
+      <section ref="chatScrollRef" class="chat-box">
+        <article
+          v-for="message in chatMessages"
+          :key="message.message_id"
+          class="message-row"
+          :class="`role-${message.role}`"
+        >
+          <p class="meta">{{ message.name }} · #{{ message.message_id }}</p>
+          <div class="bubble">{{ message.message }}</div>
+        </article>
+        <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
+      </section>
+
       <div class="input-shell">
         <textarea
           v-model="draft"
@@ -37,49 +50,79 @@
       <div class="action-row">
         <button type="button" class="send-btn" @click="requestNativeSend">发送</button>
       </div>
-
-      <div class="status-block">
-        <p class="line">阶段：{{ state.stage }}</p>
-        <p class="line">最后消息ID：{{ state.lastMessageId ?? '无' }}</p>
-        <p class="line">最近世界书：{{ state.worldbookName ?? '无' }}</p>
-        <p class="line">最近原始输入：{{ state.lastUserInputRaw || '无' }}</p>
-        <p v-if="sendStatus" class="line status">{{ sendStatus }}</p>
-      </div>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   OVERLAY_EVENTS,
   type NativeSendResultPayload,
-  type OverlaySyncState,
   type OverlayVisibilityPayload,
 } from '../共享/协议';
 
 type OverlayTheme = 'cyber_blue' | 'cyber_pink';
+type RenderableMessage = {
+  message_id: number;
+  name: string;
+  role: 'system' | 'assistant' | 'user';
+  message: string;
+};
 
-const state = ref<OverlaySyncState>({
-  stage: 'idle',
-  lastMessageId: null,
-  worldbookName: null,
-  lastUserInputRaw: '',
-  updatedAt: Date.now(),
-});
-const sendStatus = ref('');
 const draft = ref('');
 const theme = ref<OverlayTheme>('cyber_blue');
+const chatMessages = ref<RenderableMessage[]>([]);
+const chatScrollRef = ref<HTMLElement | null>(null);
 const stops: EventOnReturn[] = [];
 
 function setTheme(next: OverlayTheme) {
   theme.value = next;
 }
 
+function closeOverlay() {
+  void eventEmit(OVERLAY_EVENTS.REQUEST_OVERLAY_VISIBILITY, {
+    visible: false,
+    source: 'overlay_ui',
+  } satisfies OverlayVisibilityPayload);
+}
+
+function loadChatMessages() {
+  const lastMessageId = getLastMessageId();
+  if (lastMessageId < 0) {
+    chatMessages.value = [];
+    return;
+  }
+
+  const rawMessages = getChatMessages(`0-${lastMessageId}`, {
+    hide_state: 'unhidden',
+    role: 'all',
+  });
+
+  chatMessages.value = rawMessages.map(message => ({
+    message_id: message.message_id,
+    name: message.name || (message.role === 'user' ? '用户' : message.role === 'assistant' ? 'AI' : '系统'),
+    role: message.role,
+    message: message.message || '',
+  }));
+}
+
+function scrollChatToBottom(behavior: ScrollBehavior = 'auto') {
+  const element = chatScrollRef.value;
+  if (!element) {
+    return;
+  }
+
+  element.scrollTo({
+    top: element.scrollHeight,
+    behavior,
+  });
+}
+
 function requestNativeSend() {
   const inputRaw = draft.value.trim();
   if (!inputRaw) {
-    sendStatus.value = '请输入要发送的文本。';
+    toastr.warning('请输入要发送的文本。', '覆盖层发送');
     return;
   }
 
@@ -90,38 +133,50 @@ function requestNativeSend() {
   });
 }
 
-function closeOverlay() {
-  void eventEmit(OVERLAY_EVENTS.REQUEST_OVERLAY_VISIBILITY, {
-    visible: false,
-    source: 'overlay_ui',
-  } satisfies OverlayVisibilityPayload);
-}
-
 onMounted(() => {
-  stops.push(
-    eventOn(OVERLAY_EVENTS.STATE_SYNC, payload => {
-      if (!payload || typeof payload !== 'object') {
-        return;
-      }
-      state.value = {
-        ...state.value,
-        ...(payload as Partial<OverlaySyncState>),
-      };
-    }),
-  );
+  const refreshChatMessages = _.debounce(loadChatMessages, 30);
+  const refreshAndStickBottom = _.debounce(() => {
+    loadChatMessages();
+    void nextTick(() => scrollChatToBottom('smooth'));
+  }, 30);
 
+  stops.push(eventOn(tavern_events.MESSAGE_SENT, refreshAndStickBottom).stop);
+  stops.push(eventOn(tavern_events.MESSAGE_RECEIVED, refreshAndStickBottom).stop);
+  stops.push(eventOn(tavern_events.MESSAGE_UPDATED, refreshChatMessages).stop);
+  stops.push(eventOn(tavern_events.MESSAGE_EDITED, refreshChatMessages).stop);
+  stops.push(eventOn(tavern_events.MESSAGE_DELETED, refreshChatMessages).stop);
+  stops.push(eventOn(tavern_events.MORE_MESSAGES_LOADED, refreshChatMessages).stop);
+  stops.push(
+    eventOn(tavern_events.CHAT_CHANGED, () => {
+      draft.value = '';
+      refreshAndStickBottom();
+    }).stop,
+  );
   stops.push(
     eventOn(OVERLAY_EVENTS.NATIVE_SEND_RESULT, payload => {
       const result = payload as NativeSendResultPayload;
-      sendStatus.value = result.clicked
-        ? `已触发原生发送（来源：${result.requestedBy}）`
-        : `发送失败：${result.reason ?? '未知原因'}`;
       if (result.clicked) {
         draft.value = '';
+        return;
       }
-    }),
+      toastr.error(result.reason ?? '未知原因', '覆盖层发送失败');
+    }).stop,
   );
+
+  loadChatMessages();
+  void nextTick(() => scrollChatToBottom());
 });
+
+watch(
+  () => chatMessages.value.length,
+  async (next, previous) => {
+    if (next <= previous) {
+      return;
+    }
+    await nextTick();
+    scrollChatToBottom('smooth');
+  },
+);
 
 onBeforeUnmount(() => {
   stops.forEach(handle => handle.stop());
@@ -130,12 +185,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .overlay-root {
-  min-height: 100%;
+  width: 100vw;
+  height: 100dvh;
   margin: 0;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 12px;
   color: var(--text-color);
   background: var(--page-bg);
   font-family: 'Segoe UI', 'PingFang SC', sans-serif;
@@ -143,41 +196,50 @@ onBeforeUnmount(() => {
 
 .overlay-root[data-theme='cyber_blue'] {
   --page-bg: radial-gradient(circle at 18% 10%, #14263f 0%, #070b13 52%, #03050a 100%);
-  --panel-bg: linear-gradient(155deg, rgba(10, 13, 21, 0.92), rgba(18, 29, 48, 0.9));
+  --panel-bg: linear-gradient(155deg, rgba(10, 13, 21, 0.94), rgba(18, 29, 48, 0.92));
   --line-color: rgba(78, 230, 255, 0.55);
   --text-color: #dff5ff;
   --sub-color: #9ec9db;
   --accent: #45f3ff;
   --accent-soft: rgba(69, 243, 255, 0.24);
-  --input-bg: rgba(4, 8, 16, 0.9);
+  --input-bg: rgba(4, 8, 16, 0.92);
   --btn-bg: linear-gradient(140deg, #04070d, #0e1728);
   --btn-fg: #dff5ff;
+  --assistant-bubble: linear-gradient(150deg, rgba(10, 18, 31, 0.96), rgba(20, 35, 58, 0.88));
+  --user-bubble: linear-gradient(145deg, rgba(7, 41, 68, 0.92), rgba(6, 26, 48, 0.92));
+  --system-bubble: linear-gradient(145deg, rgba(22, 24, 30, 0.92), rgba(17, 19, 24, 0.92));
 }
 
 .overlay-root[data-theme='cyber_pink'] {
   --page-bg: radial-gradient(circle at 20% 8%, #f3f4f8 0%, #d0d3dd 55%, #b6b9c3 100%);
-  --panel-bg: linear-gradient(150deg, rgba(236, 239, 246, 0.95), rgba(202, 206, 216, 0.93));
+  --panel-bg: linear-gradient(150deg, rgba(236, 239, 246, 0.97), rgba(202, 206, 216, 0.95));
   --line-color: rgba(255, 64, 176, 0.55);
   --text-color: #161922;
   --sub-color: #3f475b;
   --accent: #ff44c2;
   --accent-soft: rgba(255, 68, 194, 0.22);
-  --input-bg: rgba(245, 247, 251, 0.9);
+  --input-bg: rgba(245, 247, 251, 0.94);
   --btn-bg: linear-gradient(150deg, #eceff6, #cfd4df);
   --btn-fg: #1b1f2b;
+  --assistant-bubble: linear-gradient(145deg, rgba(232, 236, 244, 0.97), rgba(220, 225, 235, 0.95));
+  --user-bubble: linear-gradient(145deg, rgba(255, 225, 245, 0.96), rgba(255, 212, 238, 0.96));
+  --system-bubble: linear-gradient(145deg, rgba(222, 224, 229, 0.95), rgba(208, 211, 219, 0.94));
 }
 
 .panel {
-  width: min(920px, calc(100% - 8px));
+  width: 100%;
+  height: calc(100dvh - 24px);
   border-radius: 18px;
   border: 1px solid var(--line-color);
-  padding: 24px;
+  padding: 20px;
   background: var(--panel-bg);
   box-shadow: 0 0 0 1px var(--accent-soft), 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 12px;
 }
 
 .panel-head {
-  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -201,7 +263,6 @@ h1 {
 }
 
 .theme-switch {
-  margin-bottom: 14px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -234,9 +295,69 @@ h1 {
   background: linear-gradient(150deg, #edeff5, #d8dce8);
 }
 
+.chat-box {
+  min-height: 0;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line-color);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.message-row {
+  max-width: min(860px, 96%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-row.role-user {
+  align-self: flex-end;
+}
+
+.message-row.role-assistant,
+.message-row.role-system {
+  align-self: flex-start;
+}
+
+.meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sub-color);
+}
+
+.bubble {
+  border-radius: 10px;
+  border: 1px solid var(--line-color);
+  padding: 10px 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.role-assistant .bubble {
+  background: var(--assistant-bubble);
+}
+
+.role-user .bubble {
+  background: var(--user-bubble);
+}
+
+.role-system .bubble {
+  background: var(--system-bubble);
+}
+
+.placeholder {
+  margin: auto 0;
+  color: var(--sub-color);
+  text-align: center;
+}
+
 .input-shell {
   position: relative;
-  margin-bottom: 14px;
   border-radius: 14px;
   padding: 1px;
   background: linear-gradient(120deg, transparent 0%, var(--accent) 45%, transparent 100%);
@@ -258,8 +379,8 @@ h1 {
   position: relative;
   z-index: 1;
   width: 100%;
-  resize: vertical;
-  min-height: 110px;
+  resize: none;
+  min-height: 96px;
   border: none;
   border-radius: 13px;
   padding: 14px;
@@ -275,7 +396,6 @@ h1 {
 }
 
 .action-row {
-  margin-bottom: 14px;
   display: flex;
   justify-content: flex-end;
 }
@@ -288,27 +408,6 @@ h1 {
   background: var(--btn-bg);
   box-shadow: 0 0 14px var(--accent-soft);
   cursor: pointer;
-}
-
-.status-block {
-  border-radius: 12px;
-  border: 1px solid var(--line-color);
-  padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.line {
-  margin: 0 0 6px;
-  color: var(--sub-color);
-  font-size: 13px;
-}
-
-.line:last-child {
-  margin-bottom: 0;
-}
-
-.status {
-  color: var(--text-color);
 }
 
 @keyframes borderPulse {
@@ -327,6 +426,21 @@ h1 {
   }
   100% {
     background-position: 200% 50%;
+  }
+}
+
+@media (max-width: 768px) {
+  .overlay-root {
+    padding: 8px;
+  }
+
+  .panel {
+    height: calc(100dvh - 16px);
+    padding: 14px;
+  }
+
+  h1 {
+    font-size: 20px;
   }
 }
 </style>
