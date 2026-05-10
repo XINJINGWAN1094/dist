@@ -33,7 +33,7 @@
           :class="`role-${message.role}`"
         >
           <p class="meta">{{ message.name }} · #{{ message.message_id }}</p>
-          <div class="bubble">{{ message.message }}</div>
+          <div class="bubble" v-html="message.renderedHtml"></div>
         </article>
         <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
       </section>
@@ -67,7 +67,7 @@ type RenderableMessage = {
   message_id: number;
   name: string;
   role: 'system' | 'assistant' | 'user';
-  message: string;
+  renderedHtml: string;
 };
 
 const draft = ref('');
@@ -87,6 +87,64 @@ function closeOverlay() {
   } satisfies OverlayVisibilityPayload);
 }
 
+function normalizeMessageName(message: Pick<ChatMessage, 'name' | 'role'>): string {
+  if (message.name?.trim()) {
+    return message.name;
+  }
+
+  if (message.role === 'user') {
+    return '用户';
+  }
+  if (message.role === 'assistant') {
+    return 'AI';
+  }
+  return '系统';
+}
+
+function escapeAsDisplayedParagraph(text: string): string {
+  if (!text.trim()) {
+    return '<p></p>';
+  }
+  return `<p>${_.escape(text).replace(/\r?\n/g, '<br>')}</p>`;
+}
+
+function tryReadNativeDisplayedHtml(messageId: number): string | null {
+  const $displayed = retrieveDisplayedMessage(messageId);
+  if ($displayed.length === 0) {
+    return null;
+  }
+
+  const html = $displayed.html();
+  if (typeof html !== 'string') {
+    return null;
+  }
+
+  const trimmed = html.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function formatMessageForOverlay(message: ChatMessage): string {
+  const nativeDisplayedHtml = tryReadNativeDisplayedHtml(message.message_id);
+  if (nativeDisplayedHtml) {
+    return nativeDisplayedHtml;
+  }
+
+  const plainText = message.message ?? '';
+  try {
+    const rendered = formatAsDisplayedMessage(plainText, { message_id: message.message_id });
+    if (rendered.trim()) {
+      return rendered;
+    }
+  } catch (error) {
+    console.warn('[全屏覆盖式酒馆前端] 读取原生渲染失败，回退为纯文本渲染。', {
+      message_id: message.message_id,
+      error,
+    });
+  }
+
+  return escapeAsDisplayedParagraph(plainText);
+}
+
 function loadChatMessages() {
   const lastMessageId = getLastMessageId();
   if (lastMessageId < 0) {
@@ -94,17 +152,27 @@ function loadChatMessages() {
     return;
   }
 
-  const rawMessages = getChatMessages(`0-${lastMessageId}`, {
-    hide_state: 'unhidden',
-    role: 'all',
-  });
+  let rawMessages: ChatMessage[] = [];
+  try {
+    rawMessages = getChatMessages('0-', {
+      hide_state: 'unhidden',
+      role: 'all',
+    });
+  } catch {
+    rawMessages = getChatMessages(`0-${lastMessageId}`, {
+      hide_state: 'unhidden',
+      role: 'all',
+    });
+  }
 
-  chatMessages.value = rawMessages.map(message => ({
-    message_id: message.message_id,
-    name: message.name || (message.role === 'user' ? '用户' : message.role === 'assistant' ? 'AI' : '系统'),
-    role: message.role,
-    message: message.message || '',
-  }));
+  chatMessages.value = rawMessages
+    .filter(message => message.role === 'assistant' || message.role === 'user' || message.role === 'system')
+    .map(message => ({
+      message_id: message.message_id,
+      name: normalizeMessageName(message),
+      role: message.role,
+      renderedHtml: formatMessageForOverlay(message),
+    }));
 }
 
 function scrollChatToBottom(behavior: ScrollBehavior = 'auto') {
@@ -142,6 +210,7 @@ onMounted(() => {
 
   stops.push(eventOn(tavern_events.MESSAGE_SENT, refreshAndStickBottom).stop);
   stops.push(eventOn(tavern_events.MESSAGE_RECEIVED, refreshAndStickBottom).stop);
+  stops.push(eventOn(tavern_events.GENERATION_ENDED, refreshAndStickBottom).stop);
   stops.push(eventOn(tavern_events.MESSAGE_UPDATED, refreshChatMessages).stop);
   stops.push(eventOn(tavern_events.MESSAGE_EDITED, refreshChatMessages).stop);
   stops.push(eventOn(tavern_events.MESSAGE_DELETED, refreshChatMessages).stop);
