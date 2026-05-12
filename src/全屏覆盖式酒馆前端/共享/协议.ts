@@ -6,6 +6,8 @@ export const OVERLAY_EVENTS = {
   NATIVE_SEND_RESULT: `${OVERLAY_NAMESPACE}:native_send_result`,
   REQUEST_OVERLAY_VISIBILITY: `${OVERLAY_NAMESPACE}:request_overlay_visibility`,
   OVERLAY_VISIBILITY_CHANGED: `${OVERLAY_NAMESPACE}:overlay_visibility_changed`,
+  REQUEST_NATIVE_MESSAGE_VISIBILITY: `${OVERLAY_NAMESPACE}:request_native_message_visibility`,
+  NATIVE_MESSAGE_VISIBILITY_CHANGED: `${OVERLAY_NAMESPACE}:native_message_visibility_changed`,
 } as const;
 
 export type OverlayLifecycleStage =
@@ -37,5 +39,10 @@ export type NativeSendResultPayload = {
 
 export type OverlayVisibilityPayload = {
   visible: boolean;
+  source: 'overlay_ui' | 'launcher' | 'script' | 'unknown';
+};
+
+export type NativeMessageVisibilityPayload = {
+  hidden: boolean;
   source: 'overlay_ui' | 'launcher' | 'script' | 'unknown';
 };

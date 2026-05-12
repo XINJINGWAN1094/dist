@@ -1,7 +1,11 @@
 import { createScriptIdIframe, teleportStyle } from '@util/script';
 import { createApp, type App as VueApp } from 'vue';
 import OverlayApp from '../覆盖界面/App.vue';
-import { OVERLAY_EVENTS, type OverlayVisibilityPayload } from '../共享/协议';
+import {
+  OVERLAY_EVENTS,
+  type NativeMessageVisibilityPayload,
+  type OverlayVisibilityPayload,
+} from '../共享/协议';
 import { registerCoreEventSync } from './事件同步';
 import { registerNativeSendBridge } from './原生发送';
 
@@ -10,8 +14,6 @@ const OVERLAY_FRAME_ID = 'th-fullscreen-overlay-frame';
 const OVERLAY_ROOT_ID = 'th-fullscreen-overlay-root';
 const OVERLAY_LAUNCHER_ID = 'th-fullscreen-overlay-launcher';
 const DEFAULT_HIDE_NATIVE_UI = true;
-
-const NATIVE_INPUT_UI_SELECTORS = ['#send_form', '#chat-input', '#chat_textarea_holder', '#chat_controls'] as const;
 
 function normalizeVisibilityPayload(payload: unknown): OverlayVisibilityPayload {
   if (!payload || typeof payload !== 'object') {
@@ -26,6 +28,21 @@ function normalizeVisibilityPayload(payload: unknown): OverlayVisibilityPayload 
       : 'unknown';
 
   return { visible, source };
+}
+
+function normalizeNativeMessageVisibilityPayload(payload: unknown): NativeMessageVisibilityPayload {
+  if (!payload || typeof payload !== 'object') {
+    return { hidden: DEFAULT_HIDE_NATIVE_UI, source: 'unknown' };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const hidden = record.hidden !== false;
+  const source =
+    record.source === 'overlay_ui' || record.source === 'launcher' || record.source === 'script' || record.source === 'unknown'
+      ? record.source
+      : 'unknown';
+
+  return { hidden, source };
 }
 
 function mountFullscreenOverlayHost() {
@@ -118,26 +135,25 @@ function mountFullscreenOverlayHost() {
   };
 
   const applyNativeMessageVisibility = () => {
-    const lastMessageId = getLastMessageId();
-    if (lastMessageId < 0) {
-      return;
-    }
-
-    for (let messageId = 0; messageId <= lastMessageId; messageId++) {
-      const $messageFloor = retrieveDisplayedMessage(messageId).closest('.mes');
-      if ($messageFloor.length === 0) {
-        continue;
-      }
+    $('#chat > .mes').each((_, element) => {
+      const $messageFloor = $(element);
+      const messageId = Number($messageFloor.attr('mesid'));
       const shouldShow = !nativeUiHidden || messageId === 0;
       $messageFloor.toggle(shouldShow);
-    }
+    });
   };
 
   const applyNativeUiVisibility = () => {
-    NATIVE_INPUT_UI_SELECTORS.forEach(selector => {
-      $(selector).toggle(!nativeUiHidden);
-    });
     applyNativeMessageVisibility();
+  };
+
+  const setNativeMessageHidden = (hidden: boolean, source: NativeMessageVisibilityPayload['source']) => {
+    nativeUiHidden = hidden;
+    applyNativeUiVisibility();
+    void eventEmit(OVERLAY_EVENTS.NATIVE_MESSAGE_VISIBILITY_CHANGED, {
+      hidden,
+      source,
+    } satisfies NativeMessageVisibilityPayload);
   };
 
   const syncNativeUiVisibilityAfterRender = () => {
@@ -154,6 +170,12 @@ function mountFullscreenOverlayHost() {
       setOverlayVisible(payload.visible, payload.source);
     }).stop,
   );
+  stopHandles.push(
+    eventOn(OVERLAY_EVENTS.REQUEST_NATIVE_MESSAGE_VISIBILITY, rawPayload => {
+      const payload = normalizeNativeMessageVisibilityPayload(rawPayload);
+      setNativeMessageHidden(payload.hidden, payload.source);
+    }).stop,
+  );
   stopHandles.push(eventOn(tavern_events.MESSAGE_RECEIVED, syncNativeUiVisibilityAfterRender).stop);
   stopHandles.push(eventOn(tavern_events.MESSAGE_SENT, syncNativeUiVisibilityAfterRender).stop);
   stopHandles.push(eventOn(tavern_events.MESSAGE_UPDATED, syncNativeUiVisibilityAfterRender).stop);
@@ -162,7 +184,6 @@ function mountFullscreenOverlayHost() {
   stopHandles.push(
     eventOn(tavern_events.CHAT_CHANGED, () => {
       _.delay(() => {
-        nativeUiHidden = DEFAULT_HIDE_NATIVE_UI;
         applyNativeUiVisibility();
       }, 50);
     }).stop,
@@ -175,6 +196,14 @@ function mountFullscreenOverlayHost() {
   $frame.on(`load${PAGE_SCOPE}`, mountVueOnFrame);
   _.delay(mountVueOnFrame, 16);
   _.delay(applyNativeUiVisibility, 80);
+  void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, {
+    visible: overlayVisible,
+    source: 'script',
+  } satisfies OverlayVisibilityPayload);
+  void eventEmit(OVERLAY_EVENTS.NATIVE_MESSAGE_VISIBILITY_CHANGED, {
+    hidden: nativeUiHidden,
+    source: 'script',
+  } satisfies NativeMessageVisibilityPayload);
   updateLauncherText();
 
   console.info('[全屏覆盖式酒馆前端] 已挂载到顶层 body 的全屏 iframe。');

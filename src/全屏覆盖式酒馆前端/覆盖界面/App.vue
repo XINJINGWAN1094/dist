@@ -3,7 +3,12 @@
     <section class="panel">
       <header class="panel-head">
         <h1>全屏覆盖式酒馆前端</h1>
-        <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
+        <div class="head-actions">
+          <button type="button" class="native-ui-btn" @click="toggleNativeMessageVisibility">
+            {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
+          </button>
+          <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
+        </div>
       </header>
 
       <div class="theme-switch">
@@ -25,14 +30,80 @@
         </button>
       </div>
 
+      <details class="regex-panel">
+        <summary>正则查找替换（仅覆盖层显示）</summary>
+        <div class="regex-body">
+          <div class="regex-creator">
+            <input v-model="draftRegex.name" type="text" class="rule-input" placeholder="规则名（可选）" />
+            <input v-model="draftRegex.find" type="text" class="rule-input" placeholder="查找正则，如：```([\\s\\S]*?)```" />
+            <input v-model="draftRegex.flags" type="text" class="rule-input flags" placeholder="标志，如：gim" />
+            <textarea
+              v-model="draftRegex.replace"
+              class="rule-input replace-input"
+              rows="2"
+              placeholder="替换文本，支持 $1 等捕获组"
+            ></textarea>
+          </div>
+
+          <div class="regex-actions">
+            <button type="button" class="action-btn" @click="appendRegexRule">添加规则</button>
+            <button type="button" class="action-btn" @click="refreshChatMessages">应用到当前对话</button>
+            <label class="file-picker">
+              选择正则文件
+              <input type="file" accept=".json,.txt" @change="onRegexFileSelected" />
+            </label>
+            <button
+              type="button"
+              class="action-btn"
+              :disabled="!selectedRegexFileName"
+              @click="importFileAsOverlayRules"
+            >
+              导入为覆盖规则
+            </button>
+            <button
+              type="button"
+              class="action-btn"
+              :disabled="!selectedRegexFileName"
+              @click="importFileIntoTavernRegex"
+            >
+              导入到酒馆正则库
+            </button>
+          </div>
+
+          <p class="file-hint">{{ selectedRegexFileName ? `已选文件：${selectedRegexFileName}` : '未选择文件' }}</p>
+          <p v-if="regexCompileError" class="regex-error">{{ regexCompileError }}</p>
+
+          <section class="regex-rule-list">
+            <article v-for="rule in regexRules" :key="rule.id" class="regex-rule">
+              <div class="regex-rule-top">
+                <label class="rule-enable">
+                  <input v-model="rule.enabled" type="checkbox" />
+                  启用
+                </label>
+                <input v-model="rule.name" type="text" class="rule-input" placeholder="规则名（可选）" />
+                <button type="button" class="action-btn danger" @click="removeRegexRule(rule.id)">删除</button>
+              </div>
+              <div class="regex-rule-fields">
+                <input v-model="rule.find" type="text" class="rule-input" placeholder="查找正则" />
+                <input v-model="rule.flags" type="text" class="rule-input flags" placeholder="标志" />
+                <textarea v-model="rule.replace" class="rule-input replace-input" rows="2" placeholder="替换文本"></textarea>
+              </div>
+            </article>
+          </section>
+        </div>
+      </details>
+
       <section ref="chatScrollRef" class="chat-box">
         <article
           v-for="message in chatMessages"
           :key="message.message_id"
           class="message-row"
-          :class="`role-${message.role}`"
+          :class="[`role-${message.role}`, { 'is-hidden-message': message.is_hidden }]"
         >
-          <p class="meta">{{ message.name }} · #{{ message.message_id }}</p>
+          <p class="meta">
+            {{ message.name }} · #{{ message.message_id }}
+            <span v-if="message.is_hidden" class="hidden-tag">· 原生隐藏</span>
+          </p>
           <div class="bubble" v-html="message.renderedHtml"></div>
         </article>
         <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
@@ -43,7 +114,7 @@
           v-model="draft"
           class="input-box"
           rows="4"
-          placeholder="输入发送前原始文本，发送将走酒馆原生按钮链路。"
+          placeholder="输入发送前原始文本。发送会走酒馆原生按钮链路。"
         ></textarea>
       </div>
 
@@ -55,9 +126,10 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   OVERLAY_EVENTS,
+  type NativeMessageVisibilityPayload,
   type NativeSendResultPayload,
   type OverlayVisibilityPayload,
 } from '../共享/协议';
@@ -67,14 +139,174 @@ type RenderableMessage = {
   message_id: number;
   name: string;
   role: 'system' | 'assistant' | 'user';
+  is_hidden: boolean;
   renderedHtml: string;
 };
+
+type OverlayRegexRule = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  find: string;
+  flags: string;
+  replace: string;
+};
+
+type OverlayStoredSettings = {
+  version: number;
+  nativeMessagesHidden: boolean;
+  regexRules: OverlayRegexRule[];
+};
+
+type CompiledRegexRule = {
+  id: string;
+  regex: RegExp;
+  replace: string;
+};
+
+const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
+const OVERLAY_SETTINGS_VERSION = 1;
 
 const draft = ref('');
 const theme = ref<OverlayTheme>('cyber_blue');
 const chatMessages = ref<RenderableMessage[]>([]);
 const chatScrollRef = ref<HTMLElement | null>(null);
+const regexRules = ref<OverlayRegexRule[]>([]);
+const regexCompileError = ref('');
+const selectedRegexFile = ref<File | null>(null);
+const nativeMessagesHidden = ref(true);
 const stops: EventOnReturn[] = [];
+const draftRegex = ref({
+  name: '',
+  find: '',
+  flags: 'g',
+  replace: '',
+});
+
+const selectedRegexFileName = computed(() => selectedRegexFile.value?.name ?? '');
+
+const persistSettingsDebounced = _.debounce(() => {
+  persistSettingsToVariables();
+}, 80);
+
+function createRuleId() {
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createDefaultStoredSettings(): OverlayStoredSettings {
+  return {
+    version: OVERLAY_SETTINGS_VERSION,
+    nativeMessagesHidden: true,
+    regexRules: [],
+  };
+}
+
+function normalizeString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function splitRegexSource(rawPattern: string, rawFlags: string) {
+  const trimmed = rawPattern.trim();
+  if (rawFlags.trim()) {
+    return { find: trimmed, flags: rawFlags.trim() };
+  }
+
+  if (!trimmed.startsWith('/')) {
+    return { find: trimmed, flags: 'g' };
+  }
+
+  const closingSlashIndex = trimmed.lastIndexOf('/');
+  if (closingSlashIndex <= 0) {
+    return { find: trimmed, flags: 'g' };
+  }
+
+  const extractedFind = trimmed.slice(1, closingSlashIndex);
+  const extractedFlags = trimmed.slice(closingSlashIndex + 1) || 'g';
+  return { find: extractedFind, flags: extractedFlags };
+}
+
+function parseRuleFromUnknown(raw: unknown, index: number): OverlayRegexRule | null {
+  if (!raw || typeof raw !== 'object') {
+    if (typeof raw === 'string' && raw.trim()) {
+      return {
+        id: createRuleId(),
+        name: `导入规则${index + 1}`,
+        enabled: true,
+        find: raw.trim(),
+        flags: 'g',
+        replace: '',
+      };
+    }
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const findRaw = normalizeString(record.find_regex, normalizeString(record.find, normalizeString(record.pattern)));
+  if (!findRaw.trim()) {
+    return null;
+  }
+
+  const flagsRaw = normalizeString(record.flags);
+  const split = splitRegexSource(findRaw, flagsRaw);
+
+  return {
+    id: normalizeString(record.id) || createRuleId(),
+    name: normalizeString(record.script_name, normalizeString(record.name, `导入规则${index + 1}`)),
+    enabled: record.enabled !== false,
+    find: split.find,
+    flags: split.flags || 'g',
+    replace: normalizeString(record.replace_string, normalizeString(record.replace, normalizeString(record.replacement))),
+  };
+}
+
+function parseStoredSettings(raw: unknown): OverlayStoredSettings {
+  const defaults = createDefaultStoredSettings();
+  if (!raw || typeof raw !== 'object') {
+    return defaults;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const storedRules = Array.isArray(record.regexRules) ? record.regexRules : [];
+  const parsedRules = storedRules.map((item, index) => parseRuleFromUnknown(item, index)).filter(Boolean) as OverlayRegexRule[];
+
+  return {
+    version:
+      typeof record.version === 'number' && Number.isFinite(record.version) ? Math.floor(record.version) : defaults.version,
+    nativeMessagesHidden: typeof record.nativeMessagesHidden === 'boolean' ? record.nativeMessagesHidden : defaults.nativeMessagesHidden,
+    regexRules: parsedRules,
+  };
+}
+
+function readScriptVariables(): Record<string, any> {
+  return getVariables({ type: 'script', script_id: getScriptId() });
+}
+
+function loadSettingsFromVariables() {
+  const variables = readScriptVariables();
+  const stored = _.get(variables, OVERLAY_SETTINGS_KEY);
+  const parsed = parseStoredSettings(stored);
+  nativeMessagesHidden.value = parsed.nativeMessagesHidden;
+  regexRules.value = parsed.regexRules;
+}
+
+function persistSettingsToVariables() {
+  const variables = readScriptVariables();
+  const payload: OverlayStoredSettings = {
+    version: OVERLAY_SETTINGS_VERSION,
+    nativeMessagesHidden: nativeMessagesHidden.value,
+    regexRules: regexRules.value.map(rule => ({
+      id: rule.id,
+      name: rule.name,
+      enabled: rule.enabled,
+      find: rule.find,
+      flags: rule.flags,
+      replace: rule.replace,
+    })),
+  };
+
+  _.set(variables, OVERLAY_SETTINGS_KEY, payload);
+  replaceVariables(variables, { type: 'script', script_id: getScriptId() });
+}
 
 function setTheme(next: OverlayTheme) {
   theme.value = next;
@@ -85,6 +317,34 @@ function closeOverlay() {
     visible: false,
     source: 'overlay_ui',
   } satisfies OverlayVisibilityPayload);
+}
+
+function normalizeNativeMessageVisibility(payload: unknown): NativeMessageVisibilityPayload {
+  if (!payload || typeof payload !== 'object') {
+    return { hidden: true, source: 'unknown' };
+  }
+
+  const record = payload as Record<string, unknown>;
+  const source =
+    record.source === 'overlay_ui' || record.source === 'launcher' || record.source === 'script' || record.source === 'unknown'
+      ? record.source
+      : 'unknown';
+  return {
+    hidden: record.hidden !== false,
+    source,
+  };
+}
+
+function requestNativeMessageVisibility(hidden: boolean, source: NativeMessageVisibilityPayload['source']) {
+  nativeMessagesHidden.value = hidden;
+  void eventEmit(OVERLAY_EVENTS.REQUEST_NATIVE_MESSAGE_VISIBILITY, {
+    hidden,
+    source,
+  } satisfies NativeMessageVisibilityPayload);
+}
+
+function toggleNativeMessageVisibility() {
+  requestNativeMessageVisibility(!nativeMessagesHidden.value, 'overlay_ui');
 }
 
 function normalizeMessageName(message: Pick<ChatMessage, 'name' | 'role'>): string {
@@ -123,56 +383,103 @@ function tryReadNativeDisplayedHtml(messageId: number): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function formatMessageForOverlay(message: ChatMessage): string {
-  const nativeDisplayedHtml = tryReadNativeDisplayedHtml(message.message_id);
-  if (nativeDisplayedHtml) {
-    return nativeDisplayedHtml;
+function buildCompiledRegexRules(): CompiledRegexRule[] {
+  regexCompileError.value = '';
+  const compiled: CompiledRegexRule[] = [];
+
+  for (const rule of regexRules.value) {
+    if (!rule.enabled) {
+      continue;
+    }
+    const find = rule.find.trim();
+    if (!find) {
+      continue;
+    }
+    const flags = rule.flags.trim() || 'g';
+
+    try {
+      compiled.push({
+        id: rule.id,
+        regex: new RegExp(find, flags),
+        replace: rule.replace ?? '',
+      });
+    } catch (error) {
+      if (!regexCompileError.value) {
+        regexCompileError.value = `规则「${rule.name || rule.id}」编译失败：${String(error)}`;
+      }
+    }
   }
 
-  const plainText = message.message ?? '';
+  return compiled;
+}
+
+function applyRegexRulesToText(text: string, rules: CompiledRegexRule[]): string {
+  return rules.reduce((result, item) => result.replace(item.regex, item.replace), text);
+}
+
+function renderMessageHtmlFromText(text: string, messageId: number): string {
   try {
-    const rendered = formatAsDisplayedMessage(plainText, { message_id: message.message_id });
+    const rendered = formatAsDisplayedMessage(text, { message_id: messageId });
     if (rendered.trim()) {
       return rendered;
     }
   } catch (error) {
-    console.warn('[全屏覆盖式酒馆前端] 读取原生渲染失败，回退为纯文本渲染。', {
-      message_id: message.message_id,
-      error,
-    });
+    console.warn('[全屏覆盖式酒馆前端] 消息渲染失败，回退为纯文本。', { messageId, error });
   }
 
-  return escapeAsDisplayedParagraph(plainText);
+  return escapeAsDisplayedParagraph(text);
 }
 
-function loadChatMessages() {
+function refreshChatMessages() {
   const lastMessageId = getLastMessageId();
   if (lastMessageId < 0) {
     chatMessages.value = [];
     return;
   }
 
+  const compiledRegexRules = buildCompiledRegexRules();
+  const hasRegexOverrides = compiledRegexRules.length > 0;
   let rawMessages: ChatMessage[] = [];
+
   try {
     rawMessages = getChatMessages('0-', {
-      hide_state: 'unhidden',
+      hide_state: 'all',
       role: 'all',
     });
   } catch {
     rawMessages = getChatMessages(`0-${lastMessageId}`, {
-      hide_state: 'unhidden',
+      hide_state: 'all',
       role: 'all',
     });
   }
 
   chatMessages.value = rawMessages
     .filter(message => message.role === 'assistant' || message.role === 'user' || message.role === 'system')
-    .map(message => ({
-      message_id: message.message_id,
-      name: normalizeMessageName(message),
-      role: message.role,
-      renderedHtml: formatMessageForOverlay(message),
-    }));
+    .map(message => {
+      const plainText = message.message ?? '';
+      const afterRegex = applyRegexRulesToText(plainText, compiledRegexRules);
+
+      if (!hasRegexOverrides) {
+        const nativeDisplayedHtml = tryReadNativeDisplayedHtml(message.message_id);
+        if (nativeDisplayedHtml) {
+          return {
+            message_id: message.message_id,
+            name: normalizeMessageName(message),
+            role: message.role,
+            is_hidden: message.is_hidden === true,
+            renderedHtml: nativeDisplayedHtml,
+          } satisfies RenderableMessage;
+        }
+      }
+
+      return {
+        message_id: message.message_id,
+        name: normalizeMessageName(message),
+        role: message.role,
+        is_hidden: message.is_hidden === true,
+        renderedHtml: renderMessageHtmlFromText(afterRegex, message.message_id),
+      } satisfies RenderableMessage;
+    });
 }
 
 function scrollChatToBottom(behavior: ScrollBehavior = 'auto') {
@@ -201,25 +508,157 @@ function requestNativeSend() {
   });
 }
 
+function appendRegexRule() {
+  const find = draftRegex.value.find.trim();
+  if (!find) {
+    toastr.warning('请填写查找正则。', '正则规则');
+    return;
+  }
+
+  const flags = draftRegex.value.flags.trim() || 'g';
+  try {
+    new RegExp(find, flags);
+  } catch (error) {
+    toastr.error(`正则编译失败：${String(error)}`, '正则规则');
+    return;
+  }
+
+  regexRules.value.push({
+    id: createRuleId(),
+    name: draftRegex.value.name.trim() || `规则${regexRules.value.length + 1}`,
+    enabled: true,
+    find,
+    flags,
+    replace: draftRegex.value.replace,
+  });
+
+  draftRegex.value = {
+    name: '',
+    find: '',
+    flags: 'g',
+    replace: '',
+  };
+
+  refreshChatMessages();
+}
+
+function removeRegexRule(id: string) {
+  regexRules.value = regexRules.value.filter(rule => rule.id !== id);
+  refreshChatMessages();
+}
+
+function onRegexFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  selectedRegexFile.value = input.files?.[0] ?? null;
+}
+
+async function readSelectedFileText() {
+  const file = selectedRegexFile.value;
+  if (!file) {
+    toastr.warning('请先选择一个正则文件。', '正则导入');
+    return null;
+  }
+
+  try {
+    return await file.text();
+  } catch (error) {
+    toastr.error(`读取文件失败：${String(error)}`, '正则导入');
+    return null;
+  }
+}
+
+function collectRuleCandidates(payload: unknown): unknown[] {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+
+  const record = payload as Record<string, unknown>;
+  const arrayKeys = ['regexes', 'items', 'data', 'rules'] as const;
+  for (const key of arrayKeys) {
+    if (Array.isArray(record[key])) {
+      return record[key];
+    }
+  }
+
+  return [payload];
+}
+
+async function importFileAsOverlayRules() {
+  const text = await readSelectedFileText();
+  if (!text) {
+    return;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    toastr.error(`仅支持 JSON 格式导入：${String(error)}`, '正则导入');
+    return;
+  }
+
+  const candidates = collectRuleCandidates(parsed);
+  const importedRules = candidates
+    .map((candidate, index) => parseRuleFromUnknown(candidate, index))
+    .filter(Boolean) as OverlayRegexRule[];
+
+  if (importedRules.length === 0) {
+    toastr.warning('未识别到可用正则规则。', '正则导入');
+    return;
+  }
+
+  regexRules.value = [...regexRules.value, ...importedRules];
+  refreshChatMessages();
+  toastr.success(`已导入 ${importedRules.length} 条规则。`, '正则导入');
+}
+
+async function importFileIntoTavernRegex() {
+  const file = selectedRegexFile.value;
+  const text = await readSelectedFileText();
+  if (!file || !text) {
+    return;
+  }
+
+  try {
+    const imported = importRawTavernRegex(file.name, text);
+    if (!imported) {
+      toastr.error('酒馆正则导入失败。', '正则导入');
+      return;
+    }
+
+    refreshChatMessages();
+    toastr.success('已导入到酒馆正则库。', '正则导入');
+  } catch (error) {
+    toastr.error(`导入失败：${String(error)}`, '正则导入');
+  }
+}
+
 onMounted(() => {
-  const refreshChatMessages = _.debounce(loadChatMessages, 30);
+  loadSettingsFromVariables();
+  requestNativeMessageVisibility(nativeMessagesHidden.value, 'script');
+
+  const refreshDebounced = _.debounce(refreshChatMessages, 30);
   const refreshAndStickBottom = _.debounce(() => {
-    loadChatMessages();
+    refreshChatMessages();
     void nextTick(() => scrollChatToBottom('smooth'));
   }, 30);
 
-  stops.push(eventOn(tavern_events.MESSAGE_SENT, refreshAndStickBottom).stop);
-  stops.push(eventOn(tavern_events.MESSAGE_RECEIVED, refreshAndStickBottom).stop);
-  stops.push(eventOn(tavern_events.GENERATION_ENDED, refreshAndStickBottom).stop);
-  stops.push(eventOn(tavern_events.MESSAGE_UPDATED, refreshChatMessages).stop);
-  stops.push(eventOn(tavern_events.MESSAGE_EDITED, refreshChatMessages).stop);
-  stops.push(eventOn(tavern_events.MESSAGE_DELETED, refreshChatMessages).stop);
-  stops.push(eventOn(tavern_events.MORE_MESSAGES_LOADED, refreshChatMessages).stop);
+  stops.push(eventOn(tavern_events.MESSAGE_SENT, refreshAndStickBottom));
+  stops.push(eventOn(tavern_events.MESSAGE_RECEIVED, refreshAndStickBottom));
+  stops.push(eventOn(tavern_events.GENERATION_ENDED, refreshAndStickBottom));
+  stops.push(eventOn(tavern_events.MESSAGE_UPDATED, refreshDebounced));
+  stops.push(eventOn(tavern_events.MESSAGE_EDITED, refreshDebounced));
+  stops.push(eventOn(tavern_events.MESSAGE_DELETED, refreshDebounced));
+  stops.push(eventOn(tavern_events.MORE_MESSAGES_LOADED, refreshDebounced));
   stops.push(
     eventOn(tavern_events.CHAT_CHANGED, () => {
       draft.value = '';
       refreshAndStickBottom();
-    }).stop,
+    }),
   );
   stops.push(
     eventOn(OVERLAY_EVENTS.NATIVE_SEND_RESULT, payload => {
@@ -229,10 +668,15 @@ onMounted(() => {
         return;
       }
       toastr.error(result.reason ?? '未知原因', '覆盖层发送失败');
-    }).stop,
+    }),
+  );
+  stops.push(
+    eventOn(OVERLAY_EVENTS.NATIVE_MESSAGE_VISIBILITY_CHANGED, payload => {
+      nativeMessagesHidden.value = normalizeNativeMessageVisibility(payload).hidden;
+    }),
   );
 
-  loadChatMessages();
+  refreshChatMessages();
   void nextTick(() => scrollChatToBottom());
 });
 
@@ -247,7 +691,18 @@ watch(
   },
 );
 
+watch(
+  [nativeMessagesHidden, regexRules],
+  () => {
+    persistSettingsDebounced();
+    refreshChatMessages();
+  },
+  { deep: true },
+);
+
 onBeforeUnmount(() => {
+  persistSettingsDebounced.flush();
+  persistSettingsDebounced.cancel();
   stops.forEach(handle => handle.stop());
 });
 </script>
@@ -304,7 +759,7 @@ onBeforeUnmount(() => {
   background: var(--panel-bg);
   box-shadow: 0 0 0 1px var(--accent-soft), 0 20px 50px rgba(0, 0, 0, 0.25);
   display: grid;
-  grid-template-rows: auto auto 1fr auto auto;
+  grid-template-rows: auto auto auto 1fr auto auto;
   gap: 12px;
 }
 
@@ -315,6 +770,12 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 h1 {
   margin: 0;
   font-size: 24px;
@@ -322,13 +783,24 @@ h1 {
   letter-spacing: 0.02em;
 }
 
-.close-btn {
+.close-btn,
+.native-ui-btn,
+.action-btn {
   border: 1px solid var(--line-color);
   border-radius: 999px;
   padding: 8px 14px;
   color: var(--btn-fg);
   background: var(--btn-bg);
   cursor: pointer;
+}
+
+.action-btn:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.action-btn.danger {
+  border-color: rgba(255, 99, 132, 0.7);
 }
 
 .theme-switch {
@@ -364,6 +836,115 @@ h1 {
   background: linear-gradient(150deg, #edeff5, #d8dce8);
 }
 
+.regex-panel {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.regex-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.regex-body {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.regex-creator,
+.regex-rule-top,
+.regex-rule-fields,
+.regex-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.regex-creator {
+  grid-template-columns: 1fr 1.6fr 92px;
+}
+
+.regex-rule-top {
+  grid-template-columns: auto 1fr auto;
+}
+
+.regex-rule-fields {
+  grid-template-columns: 1.6fr 92px;
+}
+
+.regex-actions {
+  grid-template-columns: repeat(auto-fit, minmax(132px, max-content));
+  align-items: center;
+}
+
+.replace-input {
+  grid-column: 1 / -1;
+}
+
+.rule-input {
+  width: 100%;
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  padding: 7px 10px;
+  color: var(--text-color);
+  background: var(--input-bg);
+  outline: none;
+}
+
+.rule-input.flags {
+  text-align: center;
+}
+
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--line-color);
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.file-picker input {
+  display: none;
+}
+
+.file-hint {
+  margin: 0;
+  color: var(--sub-color);
+  font-size: 12px;
+}
+
+.regex-error {
+  margin: 0;
+  color: #ff7fa2;
+  font-size: 12px;
+}
+
+.regex-rule-list {
+  display: grid;
+  gap: 8px;
+}
+
+.regex-rule {
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.rule-enable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--sub-color);
+  font-size: 13px;
+}
+
 .chat-box {
   min-height: 0;
   overflow: auto;
@@ -396,6 +977,14 @@ h1 {
   margin: 0;
   font-size: 12px;
   color: var(--sub-color);
+}
+
+.hidden-tag {
+  color: #ff9abd;
+}
+
+.is-hidden-message .bubble {
+  box-shadow: 0 0 0 1px rgba(255, 128, 168, 0.42) inset;
 }
 
 .bubble {
@@ -498,6 +1087,14 @@ h1 {
   }
 }
 
+@media (max-width: 900px) {
+  .regex-creator,
+  .regex-rule-top,
+  .regex-rule-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .overlay-root {
     padding: 8px;
@@ -506,10 +1103,22 @@ h1 {
   .panel {
     height: calc(100dvh - 16px);
     padding: 14px;
+    gap: 10px;
   }
 
   h1 {
     font-size: 20px;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .head-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 }
 </style>
