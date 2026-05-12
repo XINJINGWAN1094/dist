@@ -439,18 +439,32 @@ function refreshChatMessages() {
 
   const compiledRegexRules = buildCompiledRegexRules();
   const hasRegexOverrides = compiledRegexRules.length > 0;
+  const chatMessageQueryOptions = {
+    hide_state: 'all',
+    role: 'all',
+  } as const;
   let rawMessages: ChatMessage[] = [];
 
   try {
-    rawMessages = getChatMessages('0-', {
-      hide_state: 'all',
-      role: 'all',
-    });
+    rawMessages = getChatMessages(`0-${lastMessageId}`, chatMessageQueryOptions);
   } catch {
-    rawMessages = getChatMessages(`0-${lastMessageId}`, {
-      hide_state: 'all',
-      role: 'all',
-    });
+    rawMessages = [];
+  }
+
+  if (rawMessages.length === 0) {
+    try {
+      rawMessages = getChatMessages('0-{{lastMessageId}}', chatMessageQueryOptions);
+    } catch {
+      rawMessages = [];
+    }
+  }
+
+  if (rawMessages.length === 0) {
+    try {
+      rawMessages = getChatMessages('0-', chatMessageQueryOptions);
+    } catch {
+      rawMessages = [];
+    }
   }
 
   chatMessages.value = rawMessages
