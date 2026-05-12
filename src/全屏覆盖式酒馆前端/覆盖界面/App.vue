@@ -166,6 +166,122 @@ type CompiledRegexRule = {
 
 const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
 const OVERLAY_SETTINGS_VERSION = 1;
+const NOOP_EVENT_ON_RETURN: EventOnReturn = {
+  stop: () => {},
+};
+const FALLBACK_TAVERN_EVENTS = {
+  MESSAGE_SENT: 'message_sent',
+  MESSAGE_RECEIVED: 'message_received',
+  GENERATION_ENDED: 'generation_ended',
+  MESSAGE_UPDATED: 'message_updated',
+  MESSAGE_EDITED: 'message_edited',
+  MESSAGE_DELETED: 'message_deleted',
+  MORE_MESSAGES_LOADED: 'more_messages_loaded',
+  CHAT_CHANGED: 'chat_id_changed',
+} as const;
+
+type OverlayTavernEventKey = keyof typeof FALLBACK_TAVERN_EVENTS;
+type HostRuntime = Window &
+  typeof globalThis & {
+    eventOn?: (eventType: string, listener: (...args: any[]) => void) => EventOnReturn;
+    eventEmit?: (eventType: string, ...data: any[]) => Promise<void>;
+    tavern_events?: Partial<Record<OverlayTavernEventKey, string>>;
+    getScriptId?: () => string;
+  };
+
+function resolveHostRuntime(): HostRuntime | null {
+  const candidates: Array<Window | null | undefined> = [window, window.parent, window.top];
+  const visited = new Set<Window>();
+
+  for (const candidate of candidates) {
+    if (!candidate || visited.has(candidate)) {
+      continue;
+    }
+    visited.add(candidate);
+
+    try {
+      const runtime = candidate as HostRuntime;
+      if (!runtime.TavernHelper) {
+        continue;
+      }
+      if (typeof runtime.eventOn === 'function' && typeof runtime.eventEmit === 'function') {
+        return runtime;
+      }
+      return runtime;
+    } catch {
+      // ignore cross-origin access failures
+    }
+  }
+
+  return null;
+}
+
+function withTavernHelper<T>(context: string, fallback: T, runner: (helper: Window['TavernHelper']) => T): T {
+  const runtime = resolveHostRuntime();
+  const helper = runtime?.TavernHelper;
+  if (!helper) {
+    console.error(`[全屏覆盖式酒馆前端] ${context} 失败：未找到 TavernHelper。`);
+    return fallback;
+  }
+
+  try {
+    return runner(helper);
+  } catch (error) {
+    console.error(`[全屏覆盖式酒馆前端] ${context} 失败。`, error);
+    return fallback;
+  }
+}
+
+function getRuntimeScriptId(): string | null {
+  const runtime = resolveHostRuntime();
+  if (!runtime?.getScriptId) {
+    return null;
+  }
+
+  try {
+    const scriptId = runtime.getScriptId();
+    return scriptId.trim() ? scriptId : null;
+  } catch (error) {
+    console.error('[全屏覆盖式酒馆前端] 读取 script_id 失败。', error);
+    return null;
+  }
+}
+
+function emitOverlayEvent(eventType: string, ...payload: unknown[]) {
+  const runtime = resolveHostRuntime();
+  if (!runtime?.eventEmit) {
+    console.error(`[全屏覆盖式酒馆前端] 发送事件失败：${eventType}`);
+    return Promise.resolve();
+  }
+
+  try {
+    return runtime.eventEmit(eventType, ...payload);
+  } catch (error) {
+    console.error(`[全屏覆盖式酒馆前端] 发送事件失败：${eventType}`, error);
+    return Promise.resolve();
+  }
+}
+
+function onOverlayEvent(eventType: string, listener: (...args: any[]) => void): EventOnReturn {
+  const runtime = resolveHostRuntime();
+  if (!runtime?.eventOn) {
+    console.error(`[全屏覆盖式酒馆前端] 监听事件失败：${eventType}`);
+    return NOOP_EVENT_ON_RETURN;
+  }
+
+  try {
+    return runtime.eventOn(eventType, listener);
+  } catch (error) {
+    console.error(`[全屏覆盖式酒馆前端] 监听事件失败：${eventType}`, error);
+    return NOOP_EVENT_ON_RETURN;
+  }
+}
+
+function getTavernEventName(key: OverlayTavernEventKey): string {
+  const runtime = resolveHostRuntime();
+  const eventName = runtime?.tavern_events?.[key];
+  return typeof eventName === 'string' && eventName.trim() ? eventName : FALLBACK_TAVERN_EVENTS[key];
+}
 
 const draft = ref('');
 const theme = ref<OverlayTheme>('cyber_blue');
@@ -278,7 +394,11 @@ function parseStoredSettings(raw: unknown): OverlayStoredSettings {
 }
 
 function readScriptVariables(): Record<string, any> {
-  return getVariables({ type: 'script', script_id: getScriptId() });
+  const scriptId = getRuntimeScriptId();
+  if (!scriptId) {
+    return {};
+  }
+  return withTavernHelper('读取脚本变量', {}, helper => helper.getVariables({ type: 'script', script_id: scriptId }));
 }
 
 function loadSettingsFromVariables() {
@@ -290,6 +410,11 @@ function loadSettingsFromVariables() {
 }
 
 function persistSettingsToVariables() {
+  const scriptId = getRuntimeScriptId();
+  if (!scriptId) {
+    return;
+  }
+
   const variables = readScriptVariables();
   const payload: OverlayStoredSettings = {
     version: OVERLAY_SETTINGS_VERSION,
@@ -305,7 +430,10 @@ function persistSettingsToVariables() {
   };
 
   _.set(variables, OVERLAY_SETTINGS_KEY, payload);
-  replaceVariables(variables, { type: 'script', script_id: getScriptId() });
+  void withTavernHelper('写入脚本变量', false, helper => {
+    helper.replaceVariables(variables, { type: 'script', script_id: scriptId });
+    return true;
+  });
 }
 
 function setTheme(next: OverlayTheme) {
@@ -313,7 +441,7 @@ function setTheme(next: OverlayTheme) {
 }
 
 function closeOverlay() {
-  void eventEmit(OVERLAY_EVENTS.REQUEST_OVERLAY_VISIBILITY, {
+  void emitOverlayEvent(OVERLAY_EVENTS.REQUEST_OVERLAY_VISIBILITY, {
     visible: false,
     source: 'overlay_ui',
   } satisfies OverlayVisibilityPayload);
@@ -337,7 +465,7 @@ function normalizeNativeMessageVisibility(payload: unknown): NativeMessageVisibi
 
 function requestNativeMessageVisibility(hidden: boolean, source: NativeMessageVisibilityPayload['source']) {
   nativeMessagesHidden.value = hidden;
-  void eventEmit(OVERLAY_EVENTS.REQUEST_NATIVE_MESSAGE_VISIBILITY, {
+  void emitOverlayEvent(OVERLAY_EVENTS.REQUEST_NATIVE_MESSAGE_VISIBILITY, {
     hidden,
     source,
   } satisfies NativeMessageVisibilityPayload);
@@ -369,8 +497,10 @@ function escapeAsDisplayedParagraph(text: string): string {
 }
 
 function tryReadNativeDisplayedHtml(messageId: number): string | null {
-  const $displayed = retrieveDisplayedMessage(messageId);
-  if ($displayed.length === 0) {
+  const $displayed = withTavernHelper('读取原生消息渲染结果', null as JQuery<HTMLElement> | null, helper =>
+    helper.retrieveDisplayedMessage(messageId),
+  );
+  if (!$displayed || $displayed.length === 0) {
     return null;
   }
 
@@ -419,7 +549,7 @@ function applyRegexRulesToText(text: string, rules: CompiledRegexRule[]): string
 
 function renderMessageHtmlFromText(text: string, messageId: number): string {
   try {
-    const rendered = formatAsDisplayedMessage(text, { message_id: messageId });
+    const rendered = withTavernHelper('格式化消息 HTML', '', helper => helper.formatAsDisplayedMessage(text, { message_id: messageId }));
     if (rendered.trim()) {
       return rendered;
     }
@@ -431,7 +561,7 @@ function renderMessageHtmlFromText(text: string, messageId: number): string {
 }
 
 function refreshChatMessages() {
-  const lastMessageId = getLastMessageId();
+  const lastMessageId = withTavernHelper('读取最后一条消息 ID', -1, helper => helper.getLastMessageId());
   if (lastMessageId < 0) {
     chatMessages.value = [];
     return;
@@ -446,14 +576,18 @@ function refreshChatMessages() {
   let rawMessages: ChatMessage[] = [];
 
   try {
-    rawMessages = getChatMessages(`0-${lastMessageId}`, chatMessageQueryOptions);
+    rawMessages = withTavernHelper('读取消息区间 0-lastMessageId', [], helper =>
+      helper.getChatMessages(`0-${lastMessageId}`, chatMessageQueryOptions),
+    );
   } catch {
     rawMessages = [];
   }
 
   if (rawMessages.length === 0) {
     try {
-      rawMessages = getChatMessages('0-{{lastMessageId}}', chatMessageQueryOptions);
+      rawMessages = withTavernHelper('读取消息区间 0-{{lastMessageId}}', [], helper =>
+        helper.getChatMessages('0-{{lastMessageId}}', chatMessageQueryOptions),
+      );
     } catch {
       rawMessages = [];
     }
@@ -461,7 +595,7 @@ function refreshChatMessages() {
 
   if (rawMessages.length === 0) {
     try {
-      rawMessages = getChatMessages('0-', chatMessageQueryOptions);
+      rawMessages = withTavernHelper('读取消息区间 0-', [], helper => helper.getChatMessages('0-', chatMessageQueryOptions));
     } catch {
       rawMessages = [];
     }
@@ -515,7 +649,7 @@ function requestNativeSend() {
     return;
   }
 
-  void eventEmit(OVERLAY_EVENTS.REQUEST_NATIVE_SEND, {
+  void emitOverlayEvent(OVERLAY_EVENTS.REQUEST_NATIVE_SEND, {
     source: 'overlay_ui',
     inputPreview: inputRaw.slice(0, 80),
     inputRaw,
@@ -638,7 +772,7 @@ async function importFileIntoTavernRegex() {
   }
 
   try {
-    const imported = importRawTavernRegex(file.name, text);
+    const imported = withTavernHelper('导入酒馆正则', false, helper => helper.importRawTavernRegex(file.name, text));
     if (!imported) {
       toastr.error('酒馆正则导入失败。', '正则导入');
       return;
@@ -661,21 +795,21 @@ onMounted(() => {
     void nextTick(() => scrollChatToBottom('smooth'));
   }, 30);
 
-  stops.push(eventOn(tavern_events.MESSAGE_SENT, refreshAndStickBottom));
-  stops.push(eventOn(tavern_events.MESSAGE_RECEIVED, refreshAndStickBottom));
-  stops.push(eventOn(tavern_events.GENERATION_ENDED, refreshAndStickBottom));
-  stops.push(eventOn(tavern_events.MESSAGE_UPDATED, refreshDebounced));
-  stops.push(eventOn(tavern_events.MESSAGE_EDITED, refreshDebounced));
-  stops.push(eventOn(tavern_events.MESSAGE_DELETED, refreshDebounced));
-  stops.push(eventOn(tavern_events.MORE_MESSAGES_LOADED, refreshDebounced));
+  stops.push(onOverlayEvent(getTavernEventName('MESSAGE_SENT'), refreshAndStickBottom));
+  stops.push(onOverlayEvent(getTavernEventName('MESSAGE_RECEIVED'), refreshAndStickBottom));
+  stops.push(onOverlayEvent(getTavernEventName('GENERATION_ENDED'), refreshAndStickBottom));
+  stops.push(onOverlayEvent(getTavernEventName('MESSAGE_UPDATED'), refreshDebounced));
+  stops.push(onOverlayEvent(getTavernEventName('MESSAGE_EDITED'), refreshDebounced));
+  stops.push(onOverlayEvent(getTavernEventName('MESSAGE_DELETED'), refreshDebounced));
+  stops.push(onOverlayEvent(getTavernEventName('MORE_MESSAGES_LOADED'), refreshDebounced));
   stops.push(
-    eventOn(tavern_events.CHAT_CHANGED, () => {
+    onOverlayEvent(getTavernEventName('CHAT_CHANGED'), () => {
       draft.value = '';
       refreshAndStickBottom();
     }),
   );
   stops.push(
-    eventOn(OVERLAY_EVENTS.NATIVE_SEND_RESULT, payload => {
+    onOverlayEvent(OVERLAY_EVENTS.NATIVE_SEND_RESULT, payload => {
       const result = payload as NativeSendResultPayload;
       if (result.clicked) {
         draft.value = '';
@@ -685,7 +819,7 @@ onMounted(() => {
     }),
   );
   stops.push(
-    eventOn(OVERLAY_EVENTS.NATIVE_MESSAGE_VISIBILITY_CHANGED, payload => {
+    onOverlayEvent(OVERLAY_EVENTS.NATIVE_MESSAGE_VISIBILITY_CHANGED, payload => {
       nativeMessagesHidden.value = normalizeNativeMessageVisibility(payload).hidden;
     }),
   );
