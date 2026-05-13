@@ -1092,7 +1092,10 @@ h1 {
 }
 
 .battle-view {
+  min-height: 0;
   align-content: stretch;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .placeholder-card {
