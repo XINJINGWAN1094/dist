@@ -1,132 +1,171 @@
 <template>
   <main class="overlay-root" :data-theme="theme">
     <section class="panel">
-      <header class="panel-head">
-        <h1>全屏覆盖式酒馆前端</h1>
-        <div class="head-actions">
-          <button type="button" class="native-ui-btn" @click="toggleNativeMessageVisibility">
-            {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
-          </button>
-          <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
-        </div>
-      </header>
-
-      <div class="theme-switch">
-        <button
-          type="button"
-          class="theme-btn blue"
-          :aria-pressed="theme === 'cyber_blue'"
-          @click="setTheme('cyber_blue')"
-        >
-          黑底蓝光
+      <aside class="page-nav">
+        <p class="nav-title">页面导航</p>
+        <button type="button" class="nav-btn" :aria-pressed="activePage === 'info'" @click="switchPage('info')">信息</button>
+        <button type="button" class="nav-btn" :aria-pressed="activePage === 'battle'" @click="switchPage('battle')">
+          战斗场
         </button>
-        <button
-          type="button"
-          class="theme-btn pink"
-          :aria-pressed="theme === 'cyber_pink'"
-          @click="setTheme('cyber_pink')"
-        >
-          银底粉光
+        <button type="button" class="nav-btn" :aria-pressed="activePage === 'training'" @click="switchPage('training')">
+          训练场
         </button>
-      </div>
+        <button type="button" class="nav-btn" :aria-pressed="activePage === 'settings'" @click="switchPage('settings')">
+          设置
+        </button>
+      </aside>
 
-      <details class="regex-panel">
-        <summary>正则查找替换（仅覆盖层显示）</summary>
-        <div class="regex-body">
-          <div class="regex-creator">
-            <input v-model="draftRegex.name" type="text" class="rule-input" placeholder="规则名（可选）" />
-            <input v-model="draftRegex.find" type="text" class="rule-input" placeholder="查找正则，如：```([\\s\\S]*?)```" />
-            <input v-model="draftRegex.flags" type="text" class="rule-input flags" placeholder="标志，如：gim" />
+      <section class="page-stage">
+        <header class="panel-head">
+          <div class="title-group">
+            <h1>全屏覆盖式酒馆前端</h1>
+            <p class="page-hint">当前页面：{{ currentPageLabel }}</p>
+          </div>
+          <div class="head-actions">
+            <button type="button" class="native-ui-btn" @click="toggleNativeMessageVisibility">
+              {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
+            </button>
+            <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
+          </div>
+        </header>
+
+        <section v-if="activePage === 'info'" class="page-view info-view">
+          <details class="regex-panel">
+            <summary>正则查找替换（仅覆盖层显示）</summary>
+            <div class="regex-body">
+              <div class="regex-creator">
+                <input v-model="draftRegex.name" type="text" class="rule-input" placeholder="规则名（可选）" />
+                <input v-model="draftRegex.find" type="text" class="rule-input" placeholder="查找正则，如：```([\\s\\S]*?)```" />
+                <input v-model="draftRegex.flags" type="text" class="rule-input flags" placeholder="标志，如：gim" />
+                <textarea
+                  v-model="draftRegex.replace"
+                  class="rule-input replace-input"
+                  rows="2"
+                  placeholder="替换文本，支持 $1 等捕获组"
+                ></textarea>
+              </div>
+
+              <div class="regex-actions">
+                <button type="button" class="action-btn" @click="appendRegexRule">添加规则</button>
+                <button type="button" class="action-btn" @click="refreshChatMessages">应用到当前对话</button>
+                <label class="file-picker">
+                  选择正则文件
+                  <input type="file" accept=".json,.txt" @change="onRegexFileSelected" />
+                </label>
+                <button
+                  type="button"
+                  class="action-btn"
+                  :disabled="!selectedRegexFileName"
+                  @click="importFileAsOverlayRules"
+                >
+                  导入为覆盖规则
+                </button>
+                <button
+                  type="button"
+                  class="action-btn"
+                  :disabled="!selectedRegexFileName"
+                  @click="importFileIntoTavernRegex"
+                >
+                  导入到酒馆正则库
+                </button>
+              </div>
+
+              <p class="file-hint">{{ selectedRegexFileName ? `已选文件：${selectedRegexFileName}` : '未选择文件' }}</p>
+              <p v-if="regexCompileError" class="regex-error">{{ regexCompileError }}</p>
+
+              <section class="regex-rule-list">
+                <article v-for="rule in regexRules" :key="rule.id" class="regex-rule">
+                  <div class="regex-rule-top">
+                    <label class="rule-enable">
+                      <input v-model="rule.enabled" type="checkbox" />
+                      启用
+                    </label>
+                    <input v-model="rule.name" type="text" class="rule-input" placeholder="规则名（可选）" />
+                    <button type="button" class="action-btn danger" @click="removeRegexRule(rule.id)">删除</button>
+                  </div>
+                  <div class="regex-rule-fields">
+                    <input v-model="rule.find" type="text" class="rule-input" placeholder="查找正则" />
+                    <input v-model="rule.flags" type="text" class="rule-input flags" placeholder="标志" />
+                    <textarea v-model="rule.replace" class="rule-input replace-input" rows="2" placeholder="替换文本"></textarea>
+                  </div>
+                </article>
+              </section>
+            </div>
+          </details>
+
+          <section ref="chatScrollRef" class="chat-box">
+            <article
+              v-for="message in chatMessages"
+              :key="message.message_id"
+              class="message-row"
+              :class="[`role-${message.role}`, { 'is-hidden-message': message.is_hidden }]"
+            >
+              <p class="meta">
+                {{ message.name }} · #{{ message.message_id }}
+                <span v-if="message.is_hidden" class="hidden-tag">· 原生隐藏</span>
+              </p>
+              <div class="bubble" v-html="message.renderedHtml"></div>
+            </article>
+            <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
+          </section>
+
+          <div class="input-shell">
             <textarea
-              v-model="draftRegex.replace"
-              class="rule-input replace-input"
-              rows="2"
-              placeholder="替换文本，支持 $1 等捕获组"
+              v-model="draft"
+              class="input-box"
+              rows="4"
+              placeholder="输入发送前原始文本。发送会走酒馆原生按钮链路。"
             ></textarea>
           </div>
 
-          <div class="regex-actions">
-            <button type="button" class="action-btn" @click="appendRegexRule">添加规则</button>
-            <button type="button" class="action-btn" @click="refreshChatMessages">应用到当前对话</button>
-            <label class="file-picker">
-              选择正则文件
-              <input type="file" accept=".json,.txt" @change="onRegexFileSelected" />
-            </label>
-            <button
-              type="button"
-              class="action-btn"
-              :disabled="!selectedRegexFileName"
-              @click="importFileAsOverlayRules"
-            >
-              导入为覆盖规则
-            </button>
-            <button
-              type="button"
-              class="action-btn"
-              :disabled="!selectedRegexFileName"
-              @click="importFileIntoTavernRegex"
-            >
-              导入到酒馆正则库
-            </button>
+          <div class="action-row">
+            <button type="button" class="send-btn" @click="requestNativeSend">发送</button>
           </div>
+        </section>
 
-          <p class="file-hint">{{ selectedRegexFileName ? `已选文件：${selectedRegexFileName}` : '未选择文件' }}</p>
-          <p v-if="regexCompileError" class="regex-error">{{ regexCompileError }}</p>
+        <section v-else-if="activePage === 'battle'" class="page-view simple-view battle-view">
+          <BattleArena />
+        </section>
 
-          <section class="regex-rule-list">
-            <article v-for="rule in regexRules" :key="rule.id" class="regex-rule">
-              <div class="regex-rule-top">
-                <label class="rule-enable">
-                  <input v-model="rule.enabled" type="checkbox" />
-                  启用
-                </label>
-                <input v-model="rule.name" type="text" class="rule-input" placeholder="规则名（可选）" />
-                <button type="button" class="action-btn danger" @click="removeRegexRule(rule.id)">删除</button>
-              </div>
-              <div class="regex-rule-fields">
-                <input v-model="rule.find" type="text" class="rule-input" placeholder="查找正则" />
-                <input v-model="rule.flags" type="text" class="rule-input flags" placeholder="标志" />
-                <textarea v-model="rule.replace" class="rule-input replace-input" rows="2" placeholder="替换文本"></textarea>
-              </div>
-            </article>
-          </section>
-        </div>
-      </details>
+        <section v-else-if="activePage === 'training'" class="page-view simple-view">
+          <article class="placeholder-card">
+            <h2>训练场</h2>
+            <p>已预留页面结构。后续可以在这里接入训练项目、属性成长、训练结算等功能。</p>
+          </article>
+        </section>
 
-      <section ref="chatScrollRef" class="chat-box">
-        <article
-          v-for="message in chatMessages"
-          :key="message.message_id"
-          class="message-row"
-          :class="[`role-${message.role}`, { 'is-hidden-message': message.is_hidden }]"
-        >
-          <p class="meta">
-            {{ message.name }} · #{{ message.message_id }}
-            <span v-if="message.is_hidden" class="hidden-tag">· 原生隐藏</span>
-          </p>
-          <div class="bubble" v-html="message.renderedHtml"></div>
-        </article>
-        <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
+        <section v-else class="page-view settings-view">
+          <article class="settings-card">
+            <h2>页面风格</h2>
+            <p class="settings-note">在这里切换覆盖层整体视觉风格。</p>
+            <div class="theme-switch">
+              <button
+                type="button"
+                class="theme-btn blue"
+                :aria-pressed="theme === 'cyber_blue'"
+                @click="setTheme('cyber_blue')"
+              >
+                黑底蓝光
+              </button>
+              <button
+                type="button"
+                class="theme-btn pink"
+                :aria-pressed="theme === 'cyber_pink'"
+                @click="setTheme('cyber_pink')"
+              >
+                银底粉光
+              </button>
+            </div>
+          </article>
+        </section>
       </section>
-
-      <div class="input-shell">
-        <textarea
-          v-model="draft"
-          class="input-box"
-          rows="4"
-          placeholder="输入发送前原始文本。发送会走酒馆原生按钮链路。"
-        ></textarea>
-      </div>
-
-      <div class="action-row">
-        <button type="button" class="send-btn" @click="requestNativeSend">发送</button>
-      </div>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import BattleArena from './页面预留/BattleArena.vue';
 import {
   OVERLAY_EVENTS,
   type NativeMessageVisibilityPayload,
@@ -135,6 +174,7 @@ import {
 } from '../共享/协议';
 
 type OverlayTheme = 'cyber_blue' | 'cyber_pink';
+type OverlayPage = 'info' | 'battle' | 'training' | 'settings';
 type RenderableMessage = {
   message_id: number;
   name: string;
@@ -179,6 +219,12 @@ const FALLBACK_TAVERN_EVENTS = {
   MORE_MESSAGES_LOADED: 'more_messages_loaded',
   CHAT_CHANGED: 'chat_id_changed',
 } as const;
+const PAGE_LABELS: Record<OverlayPage, string> = {
+  info: '信息',
+  battle: '战斗场',
+  training: '训练场',
+  settings: '设置',
+};
 
 type OverlayTavernEventKey = keyof typeof FALLBACK_TAVERN_EVENTS;
 type HostRuntime = Window &
@@ -285,6 +331,7 @@ function getTavernEventName(key: OverlayTavernEventKey): string {
 
 const draft = ref('');
 const theme = ref<OverlayTheme>('cyber_blue');
+const activePage = ref<OverlayPage>('info');
 const chatMessages = ref<RenderableMessage[]>([]);
 const chatScrollRef = ref<HTMLElement | null>(null);
 const regexRules = ref<OverlayRegexRule[]>([]);
@@ -300,6 +347,7 @@ const draftRegex = ref({
 });
 
 const selectedRegexFileName = computed(() => selectedRegexFile.value?.name ?? '');
+const currentPageLabel = computed(() => PAGE_LABELS[activePage.value]);
 
 const persistSettingsDebounced = _.debounce(() => {
   persistSettingsToVariables();
@@ -438,6 +486,14 @@ function persistSettingsToVariables() {
 
 function setTheme(next: OverlayTheme) {
   theme.value = next;
+}
+
+function switchPage(next: OverlayPage) {
+  activePage.value = next;
+  if (next !== 'info') {
+    return;
+  }
+  void nextTick(() => scrollChatToBottom());
 }
 
 function closeOverlay() {
@@ -869,6 +925,8 @@ onBeforeUnmount(() => {
 .overlay-root[data-theme='cyber_blue'] {
   --page-bg: radial-gradient(circle at 18% 10%, #14263f 0%, #070b13 52%, #03050a 100%);
   --panel-bg: linear-gradient(155deg, rgba(10, 13, 21, 0.94), rgba(18, 29, 48, 0.92));
+  --shell-bg: rgba(0, 0, 0, 0.1);
+  --nav-bg: rgba(3, 9, 18, 0.4);
   --line-color: rgba(78, 230, 255, 0.55);
   --text-color: #dff5ff;
   --sub-color: #9ec9db;
@@ -885,6 +943,8 @@ onBeforeUnmount(() => {
 .overlay-root[data-theme='cyber_pink'] {
   --page-bg: radial-gradient(circle at 20% 8%, #f3f4f8 0%, #d0d3dd 55%, #b6b9c3 100%);
   --panel-bg: linear-gradient(150deg, rgba(236, 239, 246, 0.97), rgba(202, 206, 216, 0.95));
+  --shell-bg: rgba(255, 255, 255, 0.22);
+  --nav-bg: rgba(255, 255, 255, 0.32);
   --line-color: rgba(255, 64, 176, 0.55);
   --text-color: #161922;
   --sub-color: #3f475b;
@@ -903,11 +963,62 @@ onBeforeUnmount(() => {
   height: calc(100dvh - 24px);
   border-radius: 18px;
   border: 1px solid var(--line-color);
-  padding: 20px;
+  padding: 14px;
   background: var(--panel-bg);
   box-shadow: 0 0 0 1px var(--accent-soft), 0 20px 50px rgba(0, 0, 0, 0.25);
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto auto;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.page-nav {
+  min-height: 0;
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 12px 10px;
+  background: var(--nav-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-title {
+  margin: 0 4px 2px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--sub-color);
+}
+
+.nav-btn {
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.nav-btn:hover {
+  transform: translateX(1px);
+}
+
+.nav-btn[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.page-stage {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 16px;
+  background: var(--shell-bg);
+  display: grid;
+  grid-template-rows: auto 1fr;
   gap: 12px;
 }
 
@@ -918,10 +1029,21 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.title-group {
+  display: grid;
+  gap: 4px;
+}
+
 .head-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.page-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sub-color);
 }
 
 h1 {
@@ -933,7 +1055,9 @@ h1 {
 
 .close-btn,
 .native-ui-btn,
-.action-btn {
+.action-btn,
+.theme-btn,
+.send-btn {
   border: 1px solid var(--line-color);
   border-radius: 999px;
   padding: 8px 14px;
@@ -951,6 +1075,66 @@ h1 {
   border-color: rgba(255, 99, 132, 0.7);
 }
 
+.page-view {
+  min-height: 0;
+}
+
+.info-view {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 12px;
+}
+
+.simple-view {
+  display: grid;
+  align-content: start;
+}
+
+.battle-view {
+  align-content: stretch;
+}
+
+.placeholder-card {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.placeholder-card h2,
+.settings-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.placeholder-card p,
+.settings-note {
+  margin: 0;
+  color: var(--sub-color);
+  line-height: 1.6;
+}
+
+.settings-view {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.settings-card {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
 .theme-switch {
   display: flex;
   flex-wrap: wrap;
@@ -958,9 +1142,6 @@ h1 {
 }
 
 .theme-btn {
-  border-radius: 999px;
-  padding: 8px 14px;
-  cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease;
 }
 
@@ -988,7 +1169,7 @@ h1 {
   border: 1px solid var(--line-color);
   border-radius: 14px;
   padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--shell-bg);
 }
 
 .regex-panel > summary {
@@ -1102,7 +1283,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--shell-bg);
 }
 
 .message-row {
@@ -1207,13 +1388,8 @@ h1 {
 }
 
 .send-btn {
-  border: 1px solid var(--line-color);
-  border-radius: 999px;
   padding: 9px 18px;
-  color: var(--btn-fg);
-  background: var(--btn-bg);
   box-shadow: 0 0 14px var(--accent-soft);
-  cursor: pointer;
 }
 
 @keyframes borderPulse {
@@ -1236,6 +1412,10 @@ h1 {
 }
 
 @media (max-width: 900px) {
+  .panel {
+    grid-template-columns: 122px minmax(0, 1fr);
+  }
+
   .regex-creator,
   .regex-rule-top,
   .regex-rule-fields {
@@ -1250,12 +1430,18 @@ h1 {
 
   .panel {
     height: calc(100dvh - 16px);
-    padding: 14px;
+    padding: 10px;
+    gap: 8px;
+    grid-template-columns: 108px minmax(0, 1fr);
+  }
+
+  .page-stage {
+    padding: 12px;
     gap: 10px;
   }
 
   h1 {
-    font-size: 20px;
+    font-size: 19px;
   }
 
   .panel-head {
@@ -1267,6 +1453,11 @@ h1 {
     width: 100%;
     justify-content: flex-end;
     flex-wrap: wrap;
+  }
+
+  .nav-btn {
+    padding: 8px 9px;
+    font-size: 13px;
   }
 }
 </style>
