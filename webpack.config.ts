@@ -50,6 +50,7 @@ function common_path(lhs: string, rhs: string) {
 
 function glob_script_files() {
   const results: string[] = [];
+<<<<<<< HEAD
   const force_include_suffix = '/\u611f\u53f9\u53f7\u63d0\u793a\u6309\u94ae/index.ts';
   const is_force_include_entry = (file: string) => {
     const normalized = file.replaceAll('\\', '/');
@@ -57,10 +58,15 @@ function glob_script_files() {
   };
 
   fs.globSync(`{\u793a\u4f8b,src}/**/index.{ts,tsx,js,jsx}`)
+=======
+
+  fs.globSync(`{示例,src}/**/index.{ts,tsx,js,jsx}`)
+>>>>>>> e07e4847e8577cd53101e27231abf7ad096e7318
     .filter(
       file => process.env.CI !== 'true' || !fs.readFileSync(path.join(import.meta.dirname, file)).includes('@no-ci'),
     )
     .forEach(file => {
+<<<<<<< HEAD
       const is_force_include_file = is_force_include_entry(file);
       const file_dirname = path.dirname(file);
       for (const [index, result] of results.entries()) {
@@ -71,6 +77,16 @@ function glob_script_files() {
           return;
         }
         if (!is_force_include_result && common === file_dirname) {
+=======
+      const file_dirname = path.dirname(file);
+      for (const [index, result] of results.entries()) {
+        const result_dirname = path.dirname(result);
+        const common = common_path(result_dirname, file_dirname);
+        if (common === result_dirname) {
+          return;
+        }
+        if (common === file_dirname) {
+>>>>>>> e07e4847e8577cd53101e27231abf7ad096e7318
           results.splice(index, 1, file);
           return;
         }
@@ -459,6 +475,10 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
             { from: 'klona', imports: ['klona'] },
             { from: 'vue-final-modal', imports: ['useModal'] },
             { from: 'zod', imports: ['z'] },
+<<<<<<< HEAD
+=======
+            { from: 'type-fest', imports: [['*', 'TypeFest']], type: true },
+>>>>>>> e07e4847e8577cd53101e27231abf7ad096e7318
           ],
         }),
         unpluginVueComponents({
