@@ -28101,6 +28101,10 @@ exports.humanReadableArgName = humanReadableArgName;
 /***/ 146
 (__unused_webpack_module, exports, __webpack_require__) {
 
+<<<<<<< HEAD
+=======
+var __webpack_unused_export__;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const EventEmitter = (__webpack_require__(8474).EventEmitter);
 const childProcess = __webpack_require__(1421);
 const path = __webpack_require__(6760);
@@ -30762,7 +30766,11 @@ function useColor() {
 }
 
 exports.Command = Command;
+<<<<<<< HEAD
 exports.useColor = useColor; // exporting for tests
+=======
+__webpack_unused_export__ = useColor; // exporting for tests
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 /***/ },
@@ -32319,7 +32327,11 @@ exports.protocol = 4;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 215
+=======
+/***/ 3966
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -32328,6 +32340,7 @@ exports.protocol = exports.Transport = exports.Socket = exports.uServer = export
 exports.listen = listen;
 exports.attach = attach;
 const http_1 = __webpack_require__(8611);
+<<<<<<< HEAD
 const server_1 = __webpack_require__(5512);
 Object.defineProperty(exports, "Server", ({ enumerable: true, get: function () { return server_1.Server; } }));
 const index_1 = __webpack_require__(7806);
@@ -32339,6 +32352,19 @@ Object.defineProperty(exports, "uServer", ({ enumerable: true, get: function () 
 var socket_1 = __webpack_require__(9162);
 Object.defineProperty(exports, "Socket", ({ enumerable: true, get: function () { return socket_1.Socket; } }));
 var transport_1 = __webpack_require__(9150);
+=======
+const server_1 = __webpack_require__(3735);
+Object.defineProperty(exports, "Server", ({ enumerable: true, get: function () { return server_1.Server; } }));
+const index_1 = __webpack_require__(3209);
+exports.transports = index_1.default;
+const parser = __webpack_require__(2680);
+exports.parser = parser;
+var userver_1 = __webpack_require__(6958);
+Object.defineProperty(exports, "uServer", ({ enumerable: true, get: function () { return userver_1.uServer; } }));
+var socket_1 = __webpack_require__(7629);
+Object.defineProperty(exports, "Socket", ({ enumerable: true, get: function () { return socket_1.Socket; } }));
+var transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 Object.defineProperty(exports, "Transport", ({ enumerable: true, get: function () { return transport_1.Transport; } }));
 exports.protocol = parser.protocol;
 /**
@@ -32380,7 +32406,11 @@ function attach(server, options) {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8793
+=======
+/***/ 8084
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -32398,7 +32428,11 @@ exports.decodePayloadAsBinary = decodePayloadAsBinary;
 /**
  * Module dependencies.
  */
+<<<<<<< HEAD
 var utf8 = __webpack_require__(1830);
+=======
+var utf8 = __webpack_require__(2169);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 /**
  * Current protocol version.
  */
@@ -32811,7 +32845,11 @@ function decodePayloadAsBinary(data, binaryType, callback) {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 1830
+=======
+/***/ 2169
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (module) {
 
 /*! https://mths.be/utf8js v2.1.2 by @mathias */
@@ -33005,13 +33043,18 @@ module.exports = {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5512
+=======
+/***/ 3735
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Server = exports.BaseServer = void 0;
 const base64id = __webpack_require__(6821);
+<<<<<<< HEAD
 const transports_1 = __webpack_require__(7806);
 const events_1 = __webpack_require__(4434);
 const socket_1 = __webpack_require__(9162);
@@ -33019,6 +33062,15 @@ const debug_1 = __webpack_require__(7181);
 const cookie_1 = __webpack_require__(4058);
 const ws_1 = __webpack_require__(7159);
 const webtransport_1 = __webpack_require__(6827);
+=======
+const transports_1 = __webpack_require__(3209);
+const events_1 = __webpack_require__(4434);
+const socket_1 = __webpack_require__(7629);
+const debug_1 = __webpack_require__(7181);
+const cookie_1 = __webpack_require__(4058);
+const ws_1 = __webpack_require__(7159);
+const webtransport_1 = __webpack_require__(530);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const engine_io_parser_1 = __webpack_require__(2680);
 const debug = (0, debug_1.default)("engine");
 const kResponseHeaders = Symbol("responseHeaders");
@@ -33031,6 +33083,13 @@ function parseSessionId(data) {
     }
     catch (e) { }
 }
+<<<<<<< HEAD
+=======
+// Object.hasOwn() was introduced in Node.js 16.9
+function hasOwn(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 class BaseServer extends events_1.EventEmitter {
     /**
      * Server constructor.
@@ -33128,7 +33187,11 @@ class BaseServer extends events_1.EventEmitter {
         // sid check
         const sid = req._query.sid;
         if (sid) {
+<<<<<<< HEAD
             if (!this.clients.hasOwnProperty(sid)) {
+=======
+            if (!hasOwn(this.clients, sid)) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 debug('unknown sid "%s"', sid);
                 return fn(Server.errors.UNKNOWN_SID, {
                     sid,
@@ -33217,9 +33280,15 @@ class BaseServer extends events_1.EventEmitter {
      */
     close() {
         debug("closing all open clients");
+<<<<<<< HEAD
         for (let i in this.clients) {
             if (this.clients.hasOwnProperty(i)) {
                 this.clients[i].close(true);
+=======
+        for (const sid in this.clients) {
+            if (hasOwn(this.clients, sid)) {
+                this.clients[sid].close(true);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
         }
         this.cleanup();
@@ -33326,6 +33395,15 @@ class BaseServer extends events_1.EventEmitter {
         return transport;
     }
     async onWebTransportSession(session) {
+<<<<<<< HEAD
+=======
+        if (this.middlewares.length > 0) {
+            // middlewares expect an IncomingMessage argument, which cannot be created from the WebTransport session object
+            // see also: https://github.com/fails-components/webtransport/issues/448
+            debug("closing session since WebTransport is not compatible with middlewares");
+            return session.close();
+        }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         const timeout = setTimeout(() => {
             debug("the client failed to establish a bidirectional stream in the given period");
             session.close();
@@ -33366,7 +33444,11 @@ class BaseServer extends events_1.EventEmitter {
             return;
         }
         const sid = parseSessionId(value.data);
+<<<<<<< HEAD
         if (!sid) {
+=======
+        if (!sid || !hasOwn(this.clients, sid)) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             debug("invalid WebTransport handshake");
             return session.close();
         }
@@ -33503,17 +33585,31 @@ class Server extends BaseServer {
     /**
      * Handles an Engine.IO HTTP request.
      *
+<<<<<<< HEAD
      * @param {EngineRequest} req
+=======
+     * @param {IncomingMessage} req
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
      * @param {ServerResponse} res
      */
     handleRequest(req, res) {
         debug('handling "%s" http request "%s"', req.method, req.url);
+<<<<<<< HEAD
         this.prepare(req);
         req.res = res;
         const callback = (errorCode, errorContext) => {
             if (errorCode !== undefined) {
                 this.emit("connection_error", {
                     req,
+=======
+        const engineRequest = req;
+        this.prepare(engineRequest);
+        engineRequest.res = res;
+        const callback = (errorCode, errorContext) => {
+            if (errorCode !== undefined) {
+                this.emit("connection_error", {
+                    req: engineRequest,
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     code: errorCode,
                     message: Server.errorMessages[errorCode],
                     context: errorContext,
@@ -33521,6 +33617,7 @@ class Server extends BaseServer {
                 abortRequest(res, errorCode, errorContext);
                 return;
             }
+<<<<<<< HEAD
             if (req._query.sid) {
                 debug("setting new request for existing client");
                 this.clients[req._query.sid].transport.onRequest(req);
@@ -33531,11 +33628,27 @@ class Server extends BaseServer {
             }
         };
         this._applyMiddlewares(req, res, (err) => {
+=======
+            if (engineRequest._query.sid) {
+                debug("setting new request for existing client");
+                this.clients[engineRequest._query.sid].transport.onRequest(engineRequest);
+            }
+            else {
+                const closeConnection = (errorCode, errorContext) => abortRequest(res, errorCode, errorContext);
+                this.handshake(engineRequest._query.transport, engineRequest, closeConnection);
+            }
+        };
+        this._applyMiddlewares(engineRequest, res, (err) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             if (err) {
                 callback(Server.errors.BAD_REQUEST, { name: "MIDDLEWARE_FAILURE" });
             }
             else {
+<<<<<<< HEAD
                 this.verify(req, false, callback);
+=======
+                this.verify(engineRequest, false, callback);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
         });
     }
@@ -33543,12 +33656,22 @@ class Server extends BaseServer {
      * Handles an Engine.IO HTTP Upgrade.
      */
     handleUpgrade(req, socket, upgradeHead) {
+<<<<<<< HEAD
         this.prepare(req);
         const res = new WebSocketResponse(req, socket);
         const callback = (errorCode, errorContext) => {
             if (errorCode !== undefined) {
                 this.emit("connection_error", {
                     req,
+=======
+        const engineRequest = req;
+        this.prepare(engineRequest);
+        const res = new WebSocketResponse(engineRequest, socket);
+        const callback = (errorCode, errorContext) => {
+            if (errorCode !== undefined) {
+                this.emit("connection_error", {
+                    req: engineRequest,
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     code: errorCode,
                     message: Server.errorMessages[errorCode],
                     context: errorContext,
@@ -33562,16 +33685,28 @@ class Server extends BaseServer {
             // see https://github.com/expressjs/session/blob/1010fadc2f071ddf2add94235d72224cf65159c6/index.js#L220-L244
             res.writeHead();
             // delegate to ws
+<<<<<<< HEAD
             this.ws.handleUpgrade(req, socket, head, (websocket) => {
                 this.onWebSocket(req, socket, websocket);
             });
         };
         this._applyMiddlewares(req, res, (err) => {
+=======
+            this.ws.handleUpgrade(engineRequest, socket, head, (websocket) => {
+                this.onWebSocket(engineRequest, socket, websocket);
+            });
+        };
+        this._applyMiddlewares(engineRequest, res, (err) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             if (err) {
                 callback(Server.errors.BAD_REQUEST, { name: "MIDDLEWARE_FAILURE" });
             }
             else {
+<<<<<<< HEAD
                 this.verify(req, true, callback);
+=======
+                this.verify(engineRequest, true, callback);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
         });
     }
@@ -33799,7 +33934,11 @@ function checkInvalidHeaderChar(val) {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9162
+=======
+/***/ 7629
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -34266,7 +34405,11 @@ exports.Socket = Socket;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9150
+=======
+/***/ 1119
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -34274,7 +34417,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Transport = void 0;
 const events_1 = __webpack_require__(4434);
 const parser_v4 = __webpack_require__(2680);
+<<<<<<< HEAD
 const parser_v3 = __webpack_require__(8793);
+=======
+const parser_v3 = __webpack_require__(8084);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const debug_1 = __webpack_require__(7181);
 const debug = (0, debug_1.default)("engine:transport");
 function noop() { }
@@ -34394,13 +34541,22 @@ Transport.upgradesTo = [];
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8126
+=======
+/***/ 8341
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+<<<<<<< HEAD
 const polling_1 = __webpack_require__(3157);
 const websocket_1 = __webpack_require__(4617);
+=======
+const polling_1 = __webpack_require__(2850);
+const websocket_1 = __webpack_require__(7978);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 exports["default"] = {
     polling: polling_1.Polling,
     websocket: websocket_1.WebSocket,
@@ -34409,13 +34565,21 @@ exports["default"] = {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3157
+=======
+/***/ 2850
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Polling = void 0;
+<<<<<<< HEAD
 const transport_1 = __webpack_require__(9150);
+=======
+const transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const zlib_1 = __webpack_require__(3106);
 const accepts = __webpack_require__(9);
 const debug_1 = __webpack_require__(7181);
@@ -34520,7 +34684,12 @@ class Polling extends transport_1.Transport {
         }
         const isBinary = "application/octet-stream" === req.headers["content-type"];
         if (isBinary && this.protocol === 4) {
+<<<<<<< HEAD
             return this.onError("invalid content");
+=======
+            this.onError("invalid content");
+            return res.writeStatus("400 Bad Request").end();
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         this.dataReq = req;
         this.dataRes = res;
@@ -34780,13 +34949,21 @@ exports.Polling = Polling;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4617
+=======
+/***/ 7978
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WebSocket = void 0;
+<<<<<<< HEAD
 const transport_1 = __webpack_require__(9150);
+=======
+const transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const debug_1 = __webpack_require__(7181);
 const debug = (0, debug_1.default)("engine:ws");
 class WebSocket extends transport_1.Transport {
@@ -34860,15 +35037,26 @@ exports.WebSocket = WebSocket;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7806
+=======
+/***/ 3209
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+<<<<<<< HEAD
 const polling_1 = __webpack_require__(5413);
 const polling_jsonp_1 = __webpack_require__(5442);
 const websocket_1 = __webpack_require__(3433);
 const webtransport_1 = __webpack_require__(6827);
+=======
+const polling_1 = __webpack_require__(9974);
+const polling_jsonp_1 = __webpack_require__(9313);
+const websocket_1 = __webpack_require__(5438);
+const webtransport_1 = __webpack_require__(530);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 exports["default"] = {
     polling,
     websocket: websocket_1.WebSocket,
@@ -34890,13 +35078,21 @@ polling.upgradesTo = ["websocket", "webtransport"];
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5442
+=======
+/***/ 9313
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JSONP = void 0;
+<<<<<<< HEAD
 const polling_1 = __webpack_require__(5413);
+=======
+const polling_1 = __webpack_require__(9974);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const qs = __webpack_require__(3480);
 const rDoubleSlashes = /\\\\n/g;
 const rSlashes = /(\\)?\\n/g;
@@ -34938,13 +35134,21 @@ exports.JSONP = JSONP;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5413
+=======
+/***/ 9974
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Polling = void 0;
+<<<<<<< HEAD
 const transport_1 = __webpack_require__(9150);
+=======
+const transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const zlib_1 = __webpack_require__(3106);
 const accepts = __webpack_require__(9);
 const debug_1 = __webpack_require__(7181);
@@ -35037,7 +35241,12 @@ class Polling extends transport_1.Transport {
         }
         const isBinary = "application/octet-stream" === req.headers["content-type"];
         if (isBinary && this.protocol === 4) {
+<<<<<<< HEAD
             return this.onError("invalid content");
+=======
+            this.onError("invalid content");
+            return res.writeHead(400).end();
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         this.dataReq = req;
         this.dataRes = res;
@@ -35277,13 +35486,21 @@ exports.Polling = Polling;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3433
+=======
+/***/ 5438
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WebSocket = void 0;
+<<<<<<< HEAD
 const transport_1 = __webpack_require__(9150);
+=======
+const transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const debug_1 = __webpack_require__(7181);
 const debug = (0, debug_1.default)("engine:ws");
 class WebSocket extends transport_1.Transport {
@@ -35377,13 +35594,21 @@ exports.WebSocket = WebSocket;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6827
+=======
+/***/ 530
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WebTransport = void 0;
+<<<<<<< HEAD
 const transport_1 = __webpack_require__(9150);
+=======
+const transport_1 = __webpack_require__(1119);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const debug_1 = __webpack_require__(7181);
 const engine_io_parser_1 = __webpack_require__(2680);
 const debug = (0, debug_1.default)("engine:webtransport");
@@ -35447,15 +35672,24 @@ exports.WebTransport = WebTransport;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8851
+=======
+/***/ 6958
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.uServer = void 0;
 const debug_1 = __webpack_require__(7181);
+<<<<<<< HEAD
 const server_1 = __webpack_require__(5512);
 const transports_uws_1 = __webpack_require__(8126);
+=======
+const server_1 = __webpack_require__(3735);
+const transports_uws_1 = __webpack_require__(8341);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const debug = (0, debug_1.default)("engine:uws");
 /**
  * An Engine.IO server based on the `uWebSockets.js` package.
@@ -37035,7 +37269,11 @@ const zlib_1 = __webpack_require__(3106);
 const accepts = __webpack_require__(9);
 const stream_1 = __webpack_require__(2203);
 const path = __webpack_require__(6928);
+<<<<<<< HEAD
 const engine_io_1 = __webpack_require__(215);
+=======
+const engine_io_1 = __webpack_require__(3966);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const client_1 = __webpack_require__(6941);
 const events_1 = __webpack_require__(4434);
 const namespace_1 = __webpack_require__(5219);
@@ -39741,11 +39979,16 @@ function serveFile(res /* : HttpResponse */, filepath) {
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 818
+=======
+/***/ 7876
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
 var YAMLMap = __webpack_require__(7339);
@@ -39753,6 +39996,15 @@ var YAMLSeq = __webpack_require__(4682);
 var resolveBlockMap = __webpack_require__(4509);
 var resolveBlockSeq = __webpack_require__(7523);
 var resolveFlowCollection = __webpack_require__(8947);
+=======
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+var YAMLMap = __webpack_require__(73);
+var YAMLSeq = __webpack_require__(7028);
+var resolveBlockMap = __webpack_require__(3244);
+var resolveBlockSeq = __webpack_require__(6225);
+var resolveFlowCollection = __webpack_require__(9661);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolveCollection(CN, ctx, token, onError, tagName, tag) {
     const coll = token.type === 'block-map'
@@ -39838,15 +40090,26 @@ exports.composeCollection = composeCollection;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6702
+=======
+/***/ 6040
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Document = __webpack_require__(7238);
 var composeNode = __webpack_require__(1694);
 var resolveEnd = __webpack_require__(3597);
 var resolveProps = __webpack_require__(3450);
+=======
+var Document = __webpack_require__(9960);
+var composeNode = __webpack_require__(9724);
+var resolveEnd = __webpack_require__(4915);
+var resolveProps = __webpack_require__(7800);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function composeDoc(options, directives, { offset, start, value, end }, onError) {
     const opts = Object.assign({ _directives: directives }, options);
@@ -39890,17 +40153,30 @@ exports.composeDoc = composeDoc;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 1694
+=======
+/***/ 9724
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Alias = __webpack_require__(4456);
 var identity = __webpack_require__(5188);
 var composeCollection = __webpack_require__(818);
 var composeScalar = __webpack_require__(4454);
 var resolveEnd = __webpack_require__(3597);
 var utilEmptyScalarPosition = __webpack_require__(9056);
+=======
+var Alias = __webpack_require__(2298);
+var identity = __webpack_require__(6730);
+var composeCollection = __webpack_require__(7876);
+var composeScalar = __webpack_require__(5120);
+var resolveEnd = __webpack_require__(4915);
+var utilEmptyScalarPosition = __webpack_require__(4898);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const CN = { composeNode, composeEmptyNode };
 function composeNode(ctx, token, props, onError) {
@@ -40009,15 +40285,26 @@ exports.composeNode = composeNode;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4454
+=======
+/***/ 5120
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
 var resolveBlockScalar = __webpack_require__(3078);
 var resolveFlowScalar = __webpack_require__(2899);
+=======
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+var resolveBlockScalar = __webpack_require__(2992);
+var resolveFlowScalar = __webpack_require__(3165);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function composeScalar(ctx, token, tagToken, onError) {
     const { value, type, comment, range } = token.type === 'block-scalar'
@@ -40104,18 +40391,31 @@ exports.composeScalar = composeScalar;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2351
+=======
+/***/ 2545
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
 var node_process = __webpack_require__(932);
+<<<<<<< HEAD
 var directives = __webpack_require__(4449);
 var Document = __webpack_require__(7238);
 var errors = __webpack_require__(7027);
 var identity = __webpack_require__(5188);
 var composeDoc = __webpack_require__(6702);
 var resolveEnd = __webpack_require__(3597);
+=======
+var directives = __webpack_require__(7087);
+var Document = __webpack_require__(9960);
+var errors = __webpack_require__(3409);
+var identity = __webpack_require__(6730);
+var composeDoc = __webpack_require__(6040);
+var resolveEnd = __webpack_require__(4915);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function getErrorPos(src) {
     if (typeof src === 'number')
@@ -40206,8 +40506,15 @@ class Composer {
             }
         }
         if (afterDoc) {
+<<<<<<< HEAD
             Array.prototype.push.apply(doc.errors, this.errors);
             Array.prototype.push.apply(doc.warnings, this.warnings);
+=======
+            for (let i = 0; i < this.errors.length; ++i)
+                doc.errors.push(this.errors[i]);
+            for (let i = 0; i < this.warnings.length; ++i)
+                doc.warnings.push(this.warnings[i]);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         else {
             doc.errors = this.errors;
@@ -40333,17 +40640,30 @@ exports.Composer = Composer;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4509
+=======
+/***/ 3244
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Pair = __webpack_require__(2766);
 var YAMLMap = __webpack_require__(7339);
 var resolveProps = __webpack_require__(3450);
 var utilContainsNewline = __webpack_require__(8098);
 var utilFlowIndentCheck = __webpack_require__(5172);
 var utilMapIncludes = __webpack_require__(2110);
+=======
+var Pair = __webpack_require__(7748);
+var YAMLMap = __webpack_require__(73);
+var resolveProps = __webpack_require__(7800);
+var utilContainsNewline = __webpack_require__(6884);
+var utilFlowIndentCheck = __webpack_require__(7090);
+var utilMapIncludes = __webpack_require__(8388);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const startColMsg = 'All mapping items must start at the same column';
 function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, tag) {
@@ -40457,12 +40777,20 @@ exports.resolveBlockMap = resolveBlockMap;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3078
+=======
+/***/ 2992
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
+=======
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolveBlockScalar(ctx, scalar, onError) {
     const start = scalar.offset;
@@ -40664,14 +40992,24 @@ exports.resolveBlockScalar = resolveBlockScalar;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7523
+=======
+/***/ 6225
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var YAMLSeq = __webpack_require__(4682);
 var resolveProps = __webpack_require__(3450);
 var utilFlowIndentCheck = __webpack_require__(5172);
+=======
+var YAMLSeq = __webpack_require__(7028);
+var resolveProps = __webpack_require__(7800);
+var utilFlowIndentCheck = __webpack_require__(7090);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolveBlockSeq({ composeNode, composeEmptyNode }, ctx, bs, onError, tag) {
     const NodeClass = tag?.nodeClass ?? YAMLSeq.YAMLSeq;
@@ -40722,7 +41060,11 @@ exports.resolveBlockSeq = resolveBlockSeq;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3597
+=======
+/***/ 4915
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -40768,11 +41110,16 @@ exports.resolveEnd = resolveEnd;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8947
+=======
+/***/ 9661
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Pair = __webpack_require__(2766);
 var YAMLMap = __webpack_require__(7339);
@@ -40781,6 +41128,16 @@ var resolveEnd = __webpack_require__(3597);
 var resolveProps = __webpack_require__(3450);
 var utilContainsNewline = __webpack_require__(8098);
 var utilMapIncludes = __webpack_require__(2110);
+=======
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var YAMLMap = __webpack_require__(73);
+var YAMLSeq = __webpack_require__(7028);
+var resolveEnd = __webpack_require__(4915);
+var resolveProps = __webpack_require__(7800);
+var utilContainsNewline = __webpack_require__(6884);
+var utilMapIncludes = __webpack_require__(8388);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const blockMsg = 'Block collections are not allowed within flow collections';
 const isBlock = (token) => token && (token.type === 'block-map' || token.type === 'block-seq');
@@ -40984,13 +41341,22 @@ exports.resolveFlowCollection = resolveFlowCollection;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2899
+=======
+/***/ 3165
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var resolveEnd = __webpack_require__(3597);
+=======
+var Scalar = __webpack_require__(8376);
+var resolveEnd = __webpack_require__(4915);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolveFlowScalar(scalar, strict, onError) {
     const { offset, type, source, end } = scalar;
@@ -41133,7 +41499,11 @@ function doubleQuotedValue(source, onError) {
                     next = source[++i + 1];
             }
             else if (next === 'x' || next === 'u' || next === 'U') {
+<<<<<<< HEAD
                 const length = { x: 2, u: 4, U: 8 }[next];
+=======
+                const length = next === 'x' ? 2 : next === 'u' ? 4 : 8;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 res += parseCharCode(source, i + 1, length, onError);
                 i += length;
             }
@@ -41203,12 +41573,22 @@ function parseCharCode(source, offset, length, onError) {
     const cc = source.substr(offset, length);
     const ok = cc.length === length && /^[0-9a-fA-F]+$/.test(cc);
     const code = ok ? parseInt(cc, 16) : NaN;
+<<<<<<< HEAD
     if (isNaN(code)) {
+=======
+    try {
+        return String.fromCodePoint(code);
+    }
+    catch {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         const raw = source.substr(offset - 2, length + 2);
         onError(offset - 2, 'BAD_DQ_ESCAPE', `Invalid escape sequence ${raw}`);
         return raw;
     }
+<<<<<<< HEAD
     return String.fromCodePoint(code);
+=======
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 
 exports.resolveFlowScalar = resolveFlowScalar;
@@ -41216,7 +41596,11 @@ exports.resolveFlowScalar = resolveFlowScalar;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3450
+=======
+/***/ 7800
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -41371,7 +41755,11 @@ exports.resolveProps = resolveProps;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8098
+=======
+/***/ 6884
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -41414,7 +41802,11 @@ exports.containsNewline = containsNewline;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9056
+=======
+/***/ 4898
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -41449,12 +41841,20 @@ exports.emptyScalarPosition = emptyScalarPosition;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5172
+=======
+/***/ 7090
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var utilContainsNewline = __webpack_require__(8098);
+=======
+var utilContainsNewline = __webpack_require__(6884);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function flowIndentCheck(indent, fc, onError) {
     if (fc?.type === 'flow-collection') {
@@ -41473,12 +41873,20 @@ exports.flowIndentCheck = flowIndentCheck;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2110
+=======
+/***/ 8388
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
+=======
+var identity = __webpack_require__(6730);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function mapIncludes(ctx, items, search) {
     const { uniqueKeys } = ctx.options;
@@ -41495,11 +41903,16 @@ exports.mapIncludes = mapIncludes;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7238
+=======
+/***/ 9960
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Alias = __webpack_require__(4456);
 var Collection = __webpack_require__(7550);
 var identity = __webpack_require__(5188);
@@ -41511,6 +41924,19 @@ var anchors = __webpack_require__(9029);
 var applyReviver = __webpack_require__(7914);
 var createNode = __webpack_require__(9043);
 var directives = __webpack_require__(4449);
+=======
+var Alias = __webpack_require__(2298);
+var Collection = __webpack_require__(7580);
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var toJS = __webpack_require__(2234);
+var Schema = __webpack_require__(8227);
+var stringifyDocument = __webpack_require__(5966);
+var anchors = __webpack_require__(9531);
+var applyReviver = __webpack_require__(9768);
+var createNode = __webpack_require__(7377);
+var directives = __webpack_require__(7087);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class Document {
     constructor(value, replacer, options) {
@@ -41839,13 +42265,22 @@ exports.Document = Document;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9029
+=======
+/***/ 9531
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var visit = __webpack_require__(3509);
+=======
+var identity = __webpack_require__(6730);
+var visit = __webpack_require__(7995);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 /**
  * Verify that the input string is a valid anchor.
@@ -41922,7 +42357,11 @@ exports.findNewAnchor = findNewAnchor;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7914
+=======
+/***/ 9768
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -41986,14 +42425,24 @@ exports.applyReviver = applyReviver;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9043
+=======
+/***/ 7377
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Alias = __webpack_require__(4456);
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
+=======
+var Alias = __webpack_require__(2298);
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const defaultTagPrefix = 'tag:yaml.org,2002:';
 function findTagObject(value, tagName, tags) {
@@ -42083,13 +42532,22 @@ exports.createNode = createNode;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4449
+=======
+/***/ 7087
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var visit = __webpack_require__(3509);
+=======
+var identity = __webpack_require__(6730);
+var visit = __webpack_require__(7995);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const escapeChars = {
     '!': '%21',
@@ -42268,7 +42726,11 @@ exports.Directives = Directives;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7027
+=======
+/***/ 3409
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -42337,11 +42799,16 @@ exports.prettifyError = prettifyError;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8638
+=======
+/***/ 2976
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var composer = __webpack_require__(2351);
 var Document = __webpack_require__(7238);
 var Schema = __webpack_require__(6529);
@@ -42358,6 +42825,24 @@ var lineCounter = __webpack_require__(547);
 var parser = __webpack_require__(3239);
 var publicApi = __webpack_require__(3396);
 var visit = __webpack_require__(3509);
+=======
+var composer = __webpack_require__(2545);
+var Document = __webpack_require__(9960);
+var Schema = __webpack_require__(8227);
+var errors = __webpack_require__(3409);
+var Alias = __webpack_require__(2298);
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var Scalar = __webpack_require__(8376);
+var YAMLMap = __webpack_require__(73);
+var YAMLSeq = __webpack_require__(7028);
+var cst = __webpack_require__(9810);
+var lexer = __webpack_require__(7894);
+var lineCounter = __webpack_require__(3813);
+var parser = __webpack_require__(5849);
+var publicApi = __webpack_require__(1094);
+var visit = __webpack_require__(7995);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 
@@ -42394,7 +42879,11 @@ exports.visitAsync = visit.visitAsync;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7796
+=======
+/***/ 2186
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -42420,16 +42909,28 @@ exports.warn = warn;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4456
+=======
+/***/ 2298
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var anchors = __webpack_require__(9029);
 var visit = __webpack_require__(3509);
 var identity = __webpack_require__(5188);
 var Node = __webpack_require__(5586);
 var toJS = __webpack_require__(8164);
+=======
+var anchors = __webpack_require__(9531);
+var visit = __webpack_require__(7995);
+var identity = __webpack_require__(6730);
+var Node = __webpack_require__(5476);
+var toJS = __webpack_require__(2234);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class Alias extends Node.NodeBase {
     constructor(source) {
@@ -42446,6 +42947,11 @@ class Alias extends Node.NodeBase {
      * instance of the `source` anchor before this node.
      */
     resolve(doc, ctx) {
+<<<<<<< HEAD
+=======
+        if (ctx?.maxAliasCount === 0)
+            throw new ReferenceError('Alias resolution is disabled');
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         let nodes;
         if (ctx?.aliasResolveCache) {
             nodes = ctx.aliasResolveCache;
@@ -42543,14 +43049,24 @@ exports.Alias = Alias;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7550
+=======
+/***/ 7580
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var createNode = __webpack_require__(9043);
 var identity = __webpack_require__(5188);
 var Node = __webpack_require__(5586);
+=======
+var createNode = __webpack_require__(7377);
+var identity = __webpack_require__(6730);
+var Node = __webpack_require__(5476);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function collectionFromPath(schema, path, value) {
     let v = value;
@@ -42701,14 +43217,24 @@ exports.isEmptyPath = isEmptyPath;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5586
+=======
+/***/ 5476
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var applyReviver = __webpack_require__(7914);
 var identity = __webpack_require__(5188);
 var toJS = __webpack_require__(8164);
+=======
+var applyReviver = __webpack_require__(9768);
+var identity = __webpack_require__(6730);
+var toJS = __webpack_require__(2234);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class NodeBase {
     constructor(type) {
@@ -42748,15 +43274,26 @@ exports.NodeBase = NodeBase;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2766
+=======
+/***/ 7748
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var createNode = __webpack_require__(9043);
 var stringifyPair = __webpack_require__(625);
 var addPairToJSMap = __webpack_require__(3171);
 var identity = __webpack_require__(5188);
+=======
+var createNode = __webpack_require__(7377);
+var stringifyPair = __webpack_require__(4711);
+var addPairToJSMap = __webpack_require__(3757);
+var identity = __webpack_require__(6730);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function createPair(key, value, ctx) {
     const k = createNode.createNode(key, undefined, ctx);
@@ -42794,14 +43331,24 @@ exports.createPair = createPair;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5410
+=======
+/***/ 8376
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Node = __webpack_require__(5586);
 var toJS = __webpack_require__(8164);
+=======
+var identity = __webpack_require__(6730);
+var Node = __webpack_require__(5476);
+var toJS = __webpack_require__(2234);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const isScalarValue = (value) => !value || (typeof value !== 'function' && typeof value !== 'object');
 class Scalar extends Node.NodeBase {
@@ -42828,17 +43375,30 @@ exports.isScalarValue = isScalarValue;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7339
+=======
+/***/ 73
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var stringifyCollection = __webpack_require__(2945);
 var addPairToJSMap = __webpack_require__(3171);
 var Collection = __webpack_require__(7550);
 var identity = __webpack_require__(5188);
 var Pair = __webpack_require__(2766);
 var Scalar = __webpack_require__(5410);
+=======
+var stringifyCollection = __webpack_require__(8143);
+var addPairToJSMap = __webpack_require__(3757);
+var Collection = __webpack_require__(7580);
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function findPair(items, key) {
     const k = identity.isScalar(key) ? key.value : key;
@@ -42982,17 +43542,30 @@ exports.findPair = findPair;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4682
+=======
+/***/ 7028
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var createNode = __webpack_require__(9043);
 var stringifyCollection = __webpack_require__(2945);
 var Collection = __webpack_require__(7550);
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
 var toJS = __webpack_require__(8164);
+=======
+var createNode = __webpack_require__(7377);
+var stringifyCollection = __webpack_require__(8143);
+var Collection = __webpack_require__(7580);
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+var toJS = __webpack_require__(2234);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class YAMLSeq extends Collection.Collection {
     static get tagName() {
@@ -43104,16 +43677,28 @@ exports.YAMLSeq = YAMLSeq;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3171
+=======
+/***/ 3757
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var log = __webpack_require__(7796);
 var merge = __webpack_require__(8805);
 var stringify = __webpack_require__(5249);
 var identity = __webpack_require__(5188);
 var toJS = __webpack_require__(8164);
+=======
+var log = __webpack_require__(2186);
+var merge = __webpack_require__(8327);
+var stringify = __webpack_require__(6203);
+var identity = __webpack_require__(6730);
+var toJS = __webpack_require__(2234);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function addPairToJSMap(ctx, map, { key, value }) {
     if (identity.isNode(key) && key.addToJSMap)
@@ -43176,7 +43761,11 @@ exports.addPairToJSMap = addPairToJSMap;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5188
+=======
+/***/ 6730
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -43236,12 +43825,20 @@ exports.isSeq = isSeq;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8164
+=======
+/***/ 2234
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
+=======
+var identity = __webpack_require__(6730);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 /**
  * Recursively convert any node or its contents to native JavaScript
@@ -43282,15 +43879,26 @@ exports.toJS = toJS;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2437
+=======
+/***/ 8215
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var resolveBlockScalar = __webpack_require__(3078);
 var resolveFlowScalar = __webpack_require__(2899);
 var errors = __webpack_require__(7027);
 var stringifyString = __webpack_require__(3468);
+=======
+var resolveBlockScalar = __webpack_require__(2992);
+var resolveFlowScalar = __webpack_require__(3165);
+var errors = __webpack_require__(3409);
+var stringifyString = __webpack_require__(4286);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolveAsScalar(token, strict = true, onError) {
     if (token) {
@@ -43507,7 +44115,11 @@ exports.setScalarValue = setScalarValue;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 1168
+=======
+/***/ 2142
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -43577,7 +44189,11 @@ exports.stringify = stringify;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2898
+=======
+/***/ 1844
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -43683,14 +44299,24 @@ exports.visit = visit;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8328
+=======
+/***/ 9810
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var cstScalar = __webpack_require__(2437);
 var cstStringify = __webpack_require__(1168);
 var cstVisit = __webpack_require__(2898);
+=======
+var cstScalar = __webpack_require__(8215);
+var cstStringify = __webpack_require__(2142);
+var cstVisit = __webpack_require__(1844);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 /** The byte order mark */
 const BOM = '\u{FEFF}';
@@ -43802,12 +44428,20 @@ exports.tokenType = tokenType;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6296
+=======
+/***/ 7894
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var cst = __webpack_require__(8328);
+=======
+var cst = __webpack_require__(9810);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 /*
 START -> stream
@@ -44119,7 +44753,11 @@ class Lexer {
             const n = (yield* this.pushCount(1)) + (yield* this.pushSpaces(true));
             this.indentNext = this.indentValue + 1;
             this.indentValue += n;
+<<<<<<< HEAD
             return yield* this.parseBlockStart();
+=======
+            return 'block-start';
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         return 'doc';
     }
@@ -44440,6 +45078,7 @@ class Lexer {
         return 0;
     }
     *pushIndicators() {
+<<<<<<< HEAD
         switch (this.charAt(0)) {
             case '!':
                 return ((yield* this.pushTag()) +
@@ -44449,6 +45088,19 @@ class Lexer {
                 return ((yield* this.pushUntil(isNotAnchorChar)) +
                     (yield* this.pushSpaces(true)) +
                     (yield* this.pushIndicators()));
+=======
+        let n = 0;
+        loop: while (true) {
+            switch (this.charAt(0)) {
+                case '!':
+                    n += yield* this.pushTag();
+                    n += yield* this.pushSpaces(true);
+                    continue loop;
+                case '&':
+                    n += yield* this.pushUntil(isNotAnchorChar);
+                    n += yield* this.pushSpaces(true);
+                    continue loop;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             case '-': // this is an error
             case '?': // this is an error outside flow collections
             case ':': {
@@ -44459,6 +45111,7 @@ class Lexer {
                         this.indentNext = this.indentValue + 1;
                     else if (this.flowKey)
                         this.flowKey = false;
+<<<<<<< HEAD
                     return ((yield* this.pushCount(1)) +
                         (yield* this.pushSpaces(true)) +
                         (yield* this.pushIndicators()));
@@ -44466,6 +45119,17 @@ class Lexer {
             }
         }
         return 0;
+=======
+                        n += yield* this.pushCount(1);
+                        n += yield* this.pushSpaces(true);
+                        continue loop;
+                    }
+                }
+            }
+            break loop;
+        }
+        return n;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     }
     *pushTag() {
         if (this.charAt(1) === '<') {
@@ -44528,7 +45192,11 @@ exports.Lexer = Lexer;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 547
+=======
+/***/ 3813
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -44576,14 +45244,23 @@ exports.LineCounter = LineCounter;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3239
+=======
+/***/ 5849
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
 var node_process = __webpack_require__(932);
+<<<<<<< HEAD
 var cst = __webpack_require__(8328);
 var lexer = __webpack_require__(6296);
+=======
+var cst = __webpack_require__(9810);
+var lexer = __webpack_require__(7894);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function includesToken(list, type) {
     for (let i = 0; i < list.length; ++i)
@@ -44651,6 +45328,17 @@ function getFirstKeyStartProps(prev) {
     }
     return prev.splice(i, prev.length);
 }
+<<<<<<< HEAD
+=======
+function arrayPushArray(target, source) {
+    // May exhaust call stack with large `source` array
+    if (source.length < 1e5)
+        Array.prototype.push.apply(target, source);
+    else
+        for (let i = 0; i < source.length; ++i)
+            target.push(source[i]);
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function fixFlowSeqItems(fc) {
     if (fc.start.type === 'flow-seq-start') {
         for (const it of fc.items) {
@@ -44663,12 +45351,20 @@ function fixFlowSeqItems(fc) {
                 delete it.key;
                 if (isFlowToken(it.value)) {
                     if (it.value.end)
+<<<<<<< HEAD
                         Array.prototype.push.apply(it.value.end, it.sep);
+=======
+                        arrayPushArray(it.value.end, it.sep);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     else
                         it.value.end = it.sep;
                 }
                 else
+<<<<<<< HEAD
                     Array.prototype.push.apply(it.start, it.sep);
+=======
+                    arrayPushArray(it.start, it.sep);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 delete it.sep;
             }
         }
@@ -45088,7 +45784,11 @@ class Parser {
                         const prev = map.items[map.items.length - 2];
                         const end = prev?.value?.end;
                         if (Array.isArray(end)) {
+<<<<<<< HEAD
                             Array.prototype.push.apply(end, it.start);
+=======
+                            arrayPushArray(end, it.start);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                             end.push(this.sourceToken);
                             map.items.pop();
                             return;
@@ -45303,7 +46003,11 @@ class Parser {
                         const prev = seq.items[seq.items.length - 2];
                         const end = prev?.value?.end;
                         if (Array.isArray(end)) {
+<<<<<<< HEAD
                             Array.prototype.push.apply(end, it.start);
+=======
+                            arrayPushArray(end, it.start);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                             end.push(this.sourceToken);
                             seq.items.pop();
                             return;
@@ -45555,11 +46259,16 @@ exports.Parser = Parser;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3396
+=======
+/***/ 1094
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var composer = __webpack_require__(2351);
 var Document = __webpack_require__(7238);
 var errors = __webpack_require__(7027);
@@ -45567,6 +46276,15 @@ var log = __webpack_require__(7796);
 var identity = __webpack_require__(5188);
 var lineCounter = __webpack_require__(547);
 var parser = __webpack_require__(3239);
+=======
+var composer = __webpack_require__(2545);
+var Document = __webpack_require__(9960);
+var errors = __webpack_require__(3409);
+var log = __webpack_require__(2186);
+var identity = __webpack_require__(6730);
+var lineCounter = __webpack_require__(3813);
+var parser = __webpack_require__(5849);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function parseOptions(options) {
     const prettyErrors = options.prettyErrors !== false;
@@ -45669,16 +46387,28 @@ exports.stringify = stringify;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6529
+=======
+/***/ 8227
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var map = __webpack_require__(7526);
 var seq = __webpack_require__(3647);
 var string = __webpack_require__(8627);
 var tags = __webpack_require__(3071);
+=======
+var identity = __webpack_require__(6730);
+var map = __webpack_require__(9988);
+var seq = __webpack_require__(505);
+var string = __webpack_require__(5613);
+var tags = __webpack_require__(7545);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
 class Schema {
@@ -45715,13 +46445,22 @@ exports.Schema = Schema;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7526
+=======
+/***/ 9988
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var YAMLMap = __webpack_require__(7339);
+=======
+var identity = __webpack_require__(6730);
+var YAMLMap = __webpack_require__(73);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const map = {
     collection: 'map',
@@ -45741,12 +46480,20 @@ exports.map = map;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5863
+=======
+/***/ 5725
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
+=======
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const nullTag = {
     identify: value => value == null,
@@ -45765,13 +46512,22 @@ exports.nullTag = nullTag;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3647
+=======
+/***/ 505
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var YAMLSeq = __webpack_require__(4682);
+=======
+var identity = __webpack_require__(6730);
+var YAMLSeq = __webpack_require__(7028);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const seq = {
     collection: 'seq',
@@ -45791,12 +46547,20 @@ exports.seq = seq;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8627
+=======
+/***/ 5613
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var stringifyString = __webpack_require__(3468);
+=======
+var stringifyString = __webpack_require__(4286);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const string = {
     identify: value => typeof value === 'string',
@@ -45814,12 +46578,20 @@ exports.string = string;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4892
+=======
+/***/ 4302
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
+=======
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const boolTag = {
     identify: value => typeof value === 'boolean',
@@ -45842,13 +46614,22 @@ exports.boolTag = boolTag;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8956
+=======
+/***/ 7878
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var stringifyNumber = __webpack_require__(9032);
+=======
+var Scalar = __webpack_require__(8376);
+var stringifyNumber = __webpack_require__(4374);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const floatNaN = {
     identify: value => typeof value === 'number',
@@ -45896,12 +46677,20 @@ exports.floatNaN = floatNaN;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5435
+=======
+/***/ 9305
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var stringifyNumber = __webpack_require__(9032);
+=======
+var stringifyNumber = __webpack_require__(4374);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const intIdentify = (value) => typeof value === 'bigint' || Number.isInteger(value);
 const intResolve = (str, offset, radix, { intAsBigInt }) => (intAsBigInt ? BigInt(str) : parseInt(str.substring(offset), radix));
@@ -45945,11 +46734,16 @@ exports.intOct = intOct;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3595
+=======
+/***/ 8537
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var map = __webpack_require__(7526);
 var _null = __webpack_require__(5863);
 var seq = __webpack_require__(3647);
@@ -45957,6 +46751,15 @@ var string = __webpack_require__(8627);
 var bool = __webpack_require__(4892);
 var float = __webpack_require__(8956);
 var int = __webpack_require__(5435);
+=======
+var map = __webpack_require__(9988);
+var _null = __webpack_require__(5725);
+var seq = __webpack_require__(505);
+var string = __webpack_require__(5613);
+var bool = __webpack_require__(4302);
+var float = __webpack_require__(7878);
+var int = __webpack_require__(9305);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const schema = [
     map.map,
@@ -45977,14 +46780,24 @@ exports.schema = schema;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9372
+=======
+/***/ 7150
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var map = __webpack_require__(7526);
 var seq = __webpack_require__(3647);
+=======
+var Scalar = __webpack_require__(8376);
+var map = __webpack_require__(9988);
+var seq = __webpack_require__(505);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function intIdentify(value) {
     return typeof value === 'bigint' || Number.isInteger(value);
@@ -46048,11 +46861,16 @@ exports.schema = schema;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3071
+=======
+/***/ 7545
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var map = __webpack_require__(7526);
 var _null = __webpack_require__(5863);
 var seq = __webpack_require__(3647);
@@ -46069,6 +46887,24 @@ var pairs = __webpack_require__(6960);
 var schema$2 = __webpack_require__(6526);
 var set = __webpack_require__(4813);
 var timestamp = __webpack_require__(797);
+=======
+var map = __webpack_require__(9988);
+var _null = __webpack_require__(5725);
+var seq = __webpack_require__(505);
+var string = __webpack_require__(5613);
+var bool = __webpack_require__(4302);
+var float = __webpack_require__(7878);
+var int = __webpack_require__(9305);
+var schema = __webpack_require__(8537);
+var schema$1 = __webpack_require__(7150);
+var binary = __webpack_require__(298);
+var merge = __webpack_require__(8327);
+var omap = __webpack_require__(8822);
+var pairs = __webpack_require__(9946);
+var schema$2 = __webpack_require__(3908);
+var set = __webpack_require__(6675);
+var timestamp = __webpack_require__(9859);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const schemas = new Map([
     ['core', schema.schema],
@@ -46154,14 +46990,23 @@ exports.getTags = getTags;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 7744
+=======
+/***/ 298
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
 var node_buffer = __webpack_require__(181);
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var stringifyString = __webpack_require__(3468);
+=======
+var Scalar = __webpack_require__(8376);
+var stringifyString = __webpack_require__(4286);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const binary = {
     identify: value => value instanceof Uint8Array, // Buffer inherits from Uint8Array
@@ -46231,12 +47076,20 @@ exports.binary = binary;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 481
+=======
+/***/ 4211
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
+=======
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function boolStringify({ value, source }, ctx) {
     const boolObj = value ? trueTag : falseTag;
@@ -46267,13 +47120,22 @@ exports.trueTag = trueTag;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 1895
+=======
+/***/ 1489
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var stringifyNumber = __webpack_require__(9032);
+=======
+var Scalar = __webpack_require__(8376);
+var stringifyNumber = __webpack_require__(4374);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const floatNaN = {
     identify: value => typeof value === 'number',
@@ -46324,12 +47186,20 @@ exports.floatNaN = floatNaN;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8616
+=======
+/***/ 5566
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var stringifyNumber = __webpack_require__(9032);
+=======
+var stringifyNumber = __webpack_require__(4374);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const intIdentify = (value) => typeof value === 'bigint' || Number.isInteger(value);
 function intResolve(str, offset, radix, { intAsBigInt }) {
@@ -46407,13 +47277,22 @@ exports.intOct = intOct;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 8805
+=======
+/***/ 8327
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
+=======
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 // If the value associated with a merge key is a single mapping node, each of
 // its key/value pairs is inserted into the current mapping, unless the key
@@ -46440,6 +47319,7 @@ const isMergeKey = (ctx, key) => (merge.identify(key) ||
         merge.identify(key.value))) &&
     ctx?.doc.schema.tags.some(tag => tag.tag === merge.tag && tag.default);
 function addMergeToJSMap(ctx, map, value) {
+<<<<<<< HEAD
     value = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
     if (identity.isSeq(value))
         for (const it of value.items)
@@ -46452,6 +47332,20 @@ function addMergeToJSMap(ctx, map, value) {
 }
 function mergeValue(ctx, map, value) {
     const source = ctx && identity.isAlias(value) ? value.resolve(ctx.doc) : value;
+=======
+    const source = resolveAliasValue(ctx, value);
+    if (identity.isSeq(source))
+        for (const it of source.items)
+            mergeValue(ctx, map, it);
+    else if (Array.isArray(source))
+        for (const it of source)
+            mergeValue(ctx, map, it);
+    else
+        mergeValue(ctx, map, source);
+}
+function mergeValue(ctx, map, value) {
+    const source = resolveAliasValue(ctx, value);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     if (!identity.isMap(source))
         throw new Error('Merge sources must be maps or map aliases');
     const srcMap = source.toJSON(null, ctx, Map);
@@ -46474,6 +47368,12 @@ function mergeValue(ctx, map, value) {
     }
     return map;
 }
+<<<<<<< HEAD
+=======
+function resolveAliasValue(ctx, value) {
+    return ctx && identity.isAlias(value) ? value.resolve(ctx.doc, ctx) : value;
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 exports.addMergeToJSMap = addMergeToJSMap;
 exports.isMergeKey = isMergeKey;
@@ -46482,16 +47382,28 @@ exports.merge = merge;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4132
+=======
+/***/ 8822
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var toJS = __webpack_require__(8164);
 var YAMLMap = __webpack_require__(7339);
 var YAMLSeq = __webpack_require__(4682);
 var pairs = __webpack_require__(6960);
+=======
+var identity = __webpack_require__(6730);
+var toJS = __webpack_require__(2234);
+var YAMLMap = __webpack_require__(73);
+var YAMLSeq = __webpack_require__(7028);
+var pairs = __webpack_require__(9946);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class YAMLOMap extends YAMLSeq.YAMLSeq {
     constructor() {
@@ -46566,15 +47478,26 @@ exports.omap = omap;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6960
+=======
+/***/ 9946
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Pair = __webpack_require__(2766);
 var Scalar = __webpack_require__(5410);
 var YAMLSeq = __webpack_require__(4682);
+=======
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var Scalar = __webpack_require__(8376);
+var YAMLSeq = __webpack_require__(7028);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function resolvePairs(seq, onError) {
     if (identity.isSeq(seq)) {
@@ -46655,11 +47578,16 @@ exports.resolvePairs = resolvePairs;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6526
+=======
+/***/ 3908
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var map = __webpack_require__(7526);
 var _null = __webpack_require__(5863);
 var seq = __webpack_require__(3647);
@@ -46673,6 +47601,21 @@ var omap = __webpack_require__(4132);
 var pairs = __webpack_require__(6960);
 var set = __webpack_require__(4813);
 var timestamp = __webpack_require__(797);
+=======
+var map = __webpack_require__(9988);
+var _null = __webpack_require__(5725);
+var seq = __webpack_require__(505);
+var string = __webpack_require__(5613);
+var binary = __webpack_require__(298);
+var bool = __webpack_require__(4211);
+var float = __webpack_require__(1489);
+var int = __webpack_require__(5566);
+var merge = __webpack_require__(8327);
+var omap = __webpack_require__(8822);
+var pairs = __webpack_require__(9946);
+var set = __webpack_require__(6675);
+var timestamp = __webpack_require__(9859);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const schema = [
     map.map,
@@ -46703,14 +47646,24 @@ exports.schema = schema;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 4813
+=======
+/***/ 6675
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Pair = __webpack_require__(2766);
 var YAMLMap = __webpack_require__(7339);
+=======
+var identity = __webpack_require__(6730);
+var Pair = __webpack_require__(7748);
+var YAMLMap = __webpack_require__(73);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 class YAMLSet extends YAMLMap.YAMLMap {
     constructor(schema) {
@@ -46806,12 +47759,20 @@ exports.set = set;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 797
+=======
+/***/ 9859
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var stringifyNumber = __webpack_require__(9032);
+=======
+var stringifyNumber = __webpack_require__(4374);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 /** Internal types handle bigint as number, because TS can't figure it out. */
 function parseSexagesimal(str, asBigInt) {
@@ -46918,7 +47879,11 @@ exports.timestamp = timestamp;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6890
+=======
+/***/ 3980
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -47076,15 +48041,26 @@ exports.foldFlowLines = foldFlowLines;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 5249
+=======
+/***/ 6203
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var anchors = __webpack_require__(9029);
 var identity = __webpack_require__(5188);
 var stringifyComment = __webpack_require__(2088);
 var stringifyString = __webpack_require__(3468);
+=======
+var anchors = __webpack_require__(9531);
+var identity = __webpack_require__(6730);
+var stringifyComment = __webpack_require__(3202);
+var stringifyString = __webpack_require__(4286);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function createStringifyContext(doc, options) {
     const opt = Object.assign({
@@ -47215,14 +48191,24 @@ exports.stringify = stringify;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2945
+=======
+/***/ 8143
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var stringify = __webpack_require__(5249);
 var stringifyComment = __webpack_require__(2088);
+=======
+var identity = __webpack_require__(6730);
+var stringify = __webpack_require__(6203);
+var stringifyComment = __webpack_require__(3202);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function stringifyCollection(collection, ctx, options) {
     const flow = ctx.inFlow ?? collection.flow;
@@ -47377,7 +48363,11 @@ exports.stringifyCollection = stringifyCollection;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 2088
+=======
+/***/ 3202
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -47408,14 +48398,24 @@ exports.stringifyComment = stringifyComment;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 6072
+=======
+/***/ 5966
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var stringify = __webpack_require__(5249);
 var stringifyComment = __webpack_require__(2088);
+=======
+var identity = __webpack_require__(6730);
+var stringify = __webpack_require__(6203);
+var stringifyComment = __webpack_require__(3202);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function stringifyDocument(doc, options) {
     const lines = [];
@@ -47502,7 +48502,11 @@ exports.stringifyDocument = stringifyDocument;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 9032
+=======
+/***/ 4374
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports) {
 
 
@@ -47517,7 +48521,12 @@ function stringifyNumber({ format, minFractionDigits, tag, value }) {
     if (!format &&
         minFractionDigits &&
         (!tag || tag === 'tag:yaml.org,2002:float') &&
+<<<<<<< HEAD
         /^\d/.test(n)) {
+=======
+        /^-?\d/.test(n) &&
+        !n.includes('e')) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         let i = n.indexOf('.');
         if (i < 0) {
             i = n.length;
@@ -47535,15 +48544,26 @@ exports.stringifyNumber = stringifyNumber;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 625
+=======
+/***/ 4711
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
 var Scalar = __webpack_require__(5410);
 var stringify = __webpack_require__(5249);
 var stringifyComment = __webpack_require__(2088);
+=======
+var identity = __webpack_require__(6730);
+var Scalar = __webpack_require__(8376);
+var stringify = __webpack_require__(6203);
+var stringifyComment = __webpack_require__(3202);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 function stringifyPair({ key, value }, ctx, onComment, onChompKeep) {
     const { allNullValues, doc, indent, indentStep, options: { commentString, indentSeq, simpleKeys } } = ctx;
@@ -47694,13 +48714,22 @@ exports.stringifyPair = stringifyPair;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3468
+=======
+/***/ 4286
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var Scalar = __webpack_require__(5410);
 var foldFlowLines = __webpack_require__(6890);
+=======
+var Scalar = __webpack_require__(8376);
+var foldFlowLines = __webpack_require__(3980);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const getFoldOptions = (ctx, isBlock) => ({
     indentAtStart: isBlock ? ctx.indent.length : ctx.indentAtStart,
@@ -48039,12 +49068,20 @@ exports.stringifyString = stringifyString;
 
 /***/ },
 
+<<<<<<< HEAD
 /***/ 3509
+=======
+/***/ 7995
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 (__unused_webpack_module, exports, __webpack_require__) {
 
 
 
+<<<<<<< HEAD
 var identity = __webpack_require__(5188);
+=======
+var identity = __webpack_require__(6730);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 const BREAK = Symbol('break visit');
 const SKIP = Symbol('skip children');
@@ -48556,6 +49593,7 @@ module.exports = {"rE":"4.8.3"};
 /******/ })();
 /******/ 
 /************************************************************************/
+<<<<<<< HEAD
 var __webpack_exports__ = {};
 
 // NAMESPACE OBJECT: ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/regexes.js
@@ -48840,15 +49878,24 @@ __webpack_require__.d(classic_schemas_namespaceObject, {
   xid: () => (schemas_xid),
   xor: () => (xor)
 });
+=======
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 ;// ./src/server/settings_default.yaml?raw
 const settings_defaultraw_namespaceObject = "# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/settings.zh.json\n\n# 在此填入 user 名称, 提示词中如果有这个名字则会被替换成 <user> 宏\nuser名称: 青空黎\n\n# 在此填入新的\"角色卡\"、\"世界书\"或\"预设\"配置\n配置:\n  # 配置名称, 可以和酒馆中的不同. 你使用脚本时需要填写配置名称来指出用哪个配置, 因此尽量配置名称尽量简单点方便填写\n  角色卡示例:\n    # 类型可以是\"角色卡\"、\"世界书\"或\"预设\"\n    类型: 角色卡\n\n    # 在酒馆中这个\"角色卡\"、\"世界书\"或\"预设\"叫什么\n    酒馆中的名称: 呕吐内心的少女\n\n    # 这个\"角色卡\"、\"世界书\"或\"预设\"的等效配置文件要提取到本地哪个文件中, 可以是绝对路径或相对于本文件的相对路径\n    # 如果不满足路径格式将会报错\n    # - 绝对路径: 如 Windows 中, 想将世界书提取到 C 盘\"角色卡示例\"文件夹中, 则填入 `C:/角色卡示例`\n    # - 相对路径:\n    #   - 想将配置文件提取到本文件相同的文件夹中, 则填入 `./角色卡示例` 或 `角色卡示例`\n    #   - 想将配置文件提取到本文件所在文件夹的子文件夹\"世界书\"中, 则填入 `./世界书/角色卡示例` 或 `世界书/角色卡示例`\n    #   - 想将配置文件提取到本文件所在文件夹的父文件夹中, 则填入 `../角色卡示例`\n    本地文件路径: 角色卡示例/index\n\n    # 当使用打包功能 `node tavern_sync.mjs bundle 配置名称` 直接生成\"角色卡\"、\"世界书\"或\"预设\"文件时, 要将它存放在哪个文件中\n    # 你也可以直接删去下面一行不填, 则默认会导出到本地文件路径的同目录下\n    导出文件路径: 角色卡示例/角色卡示例\n";
 // EXTERNAL MODULE: ./node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/lodash.js
 var lodash = __webpack_require__(6746);
 var lodash_default = /*#__PURE__*/__webpack_require__.n(lodash);
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/core.js
 /** A special constant with type `never` */
 const NEVER = Object.freeze({
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/core.js
+var _a;
+/** A special constant with type `never` */
+const NEVER = /*@__PURE__*/ Object.freeze({
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     status: "aborted",
 });
 function $constructor(name, initializer, params) {
@@ -48917,14 +49964,24 @@ class $ZodEncodeError extends Error {
         this.name = "ZodEncodeError";
     }
 }
+<<<<<<< HEAD
 const globalConfig = {};
+=======
+(_a = globalThis).__zod_globalConfig ?? (_a.__zod_globalConfig = {});
+const globalConfig = globalThis.__zod_globalConfig;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function config(newConfig) {
     if (newConfig)
         Object.assign(globalConfig, newConfig);
     return globalConfig;
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/util.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/util.js
+
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 // functions
 function assertEqual(val) {
     return val;
@@ -48974,6 +50031,7 @@ function cleanRegex(source) {
     return source.slice(start, end);
 }
 function floatSafeRemainder(val, step) {
+<<<<<<< HEAD
     const valDecCount = (val.toString().split(".")[1] || "").length;
     const stepString = step.toString();
     let stepDecCount = (stepString.split(".")[1] || "").length;
@@ -48989,6 +50047,17 @@ function floatSafeRemainder(val, step) {
     return (valInt % stepInt) / 10 ** decCount;
 }
 const EVALUATING = Symbol("evaluating");
+=======
+    const ratio = val / step;
+    const roundedRatio = Math.round(ratio);
+    // Use a relative epsilon scaled to the magnitude of the result
+    const tolerance = Number.EPSILON * Math.max(Math.abs(ratio), 1);
+    if (Math.abs(ratio - roundedRatio) < tolerance)
+        return 0;
+    return ratio - roundedRatio;
+}
+const EVALUATING = /* @__PURE__*/ Symbol("evaluating");
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function defineLazy(object, key, getter) {
     let value = undefined;
     Object.defineProperty(object, key, {
@@ -49074,7 +50143,16 @@ const captureStackTrace = ("captureStackTrace" in Error ? Error.captureStackTrac
 function util_isObject(data) {
     return typeof data === "object" && data !== null && !Array.isArray(data);
 }
+<<<<<<< HEAD
 const util_allowsEval = cached(() => {
+=======
+const util_allowsEval = /* @__PURE__*/ cached(() => {
+    // Skip the probe under `jitless`: strict CSPs report the caught `new Function`
+    // as a `securitypolicyviolation` even though the throw is swallowed.
+    if (globalConfig.jitless) {
+        return false;
+    }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     // @ts-ignore
     if (typeof navigator !== "undefined" && navigator?.userAgent?.includes("Cloudflare")) {
         return false;
@@ -49112,6 +50190,13 @@ function shallowClone(o) {
         return { ...o };
     if (Array.isArray(o))
         return [...o];
+<<<<<<< HEAD
+=======
+    if (o instanceof Map)
+        return new Map(o);
+    if (o instanceof Set)
+        return new Set(o);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     return o;
 }
 function numKeys(data) {
@@ -49168,8 +50253,20 @@ const getParsedType = (data) => {
             throw new Error(`Unknown data type: ${t}`);
     }
 };
+<<<<<<< HEAD
 const propertyKeyTypes = new Set(["string", "number", "symbol"]);
 const primitiveTypes = new Set(["string", "number", "bigint", "boolean", "symbol", "undefined"]);
+=======
+const propertyKeyTypes = /* @__PURE__*/ new Set(["string", "number", "symbol"]);
+const primitiveTypes = /* @__PURE__*/ new Set([
+    "string",
+    "number",
+    "bigint",
+    "boolean",
+    "symbol",
+    "undefined",
+]);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -49341,6 +50438,12 @@ function safeExtend(schema, shape) {
     return clone(schema, def);
 }
 function merge(a, b) {
+<<<<<<< HEAD
+=======
+    if (a._zod.def.checks?.length) {
+        throw new Error(".merge() cannot be used on object schemas containing refinements. Use .safeExtend() instead.");
+    }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const def = mergeDefs(a._zod.def, {
         get shape() {
             const _shape = { ...a._zod.def.shape, ...b._zod.def.shape };
@@ -49350,7 +50453,11 @@ function merge(a, b) {
         get catchall() {
             return b._zod.def.catchall;
         },
+<<<<<<< HEAD
         checks: [], // delete existing checks
+=======
+        checks: b._zod.def.checks ?? [],
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
     return clone(a, def);
 }
@@ -49444,6 +50551,21 @@ function aborted(x, startIndex = 0) {
     }
     return false;
 }
+<<<<<<< HEAD
+=======
+// Checks for explicit abort (continue === false), as opposed to implicit abort (continue === undefined).
+// Used to respect `abort: true` in .refine() even for checks that have a `when` function.
+function explicitlyAborted(x, startIndex = 0) {
+    if (x.aborted === true)
+        return true;
+    for (let i = startIndex; i < x.issues.length; i++) {
+        if (x.issues[i]?.continue === false) {
+            return true;
+        }
+    }
+    return false;
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function prefixIssues(path, issues) {
     return issues.map((iss) => {
         var _a;
@@ -49456,6 +50578,7 @@ function unwrapMessage(message) {
     return typeof message === "string" ? message : message?.message;
 }
 function finalizeIssue(iss, ctx, config) {
+<<<<<<< HEAD
     const full = { ...iss, path: iss.path ?? [] };
     // for backwards compatibility
     if (!iss.message) {
@@ -49473,6 +50596,22 @@ function finalizeIssue(iss, ctx, config) {
         delete full.input;
     }
     return full;
+=======
+    const message = iss.message
+        ? iss.message
+        : (unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ??
+            unwrapMessage(ctx?.error?.(iss)) ??
+            unwrapMessage(config.customError?.(iss)) ??
+            unwrapMessage(config.localeError?.(iss)) ??
+            "Invalid input");
+    const { inst: _inst, continue: _continue, input: _input, ...rest } = iss;
+    rest.path ?? (rest.path = []);
+    rest.message = message;
+    if (ctx?.reportInput) {
+        rest.input = _input;
+    }
+    return rest;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 function getSizableOrigin(input) {
     if (input instanceof Set)
@@ -49577,7 +50716,11 @@ class Class {
     constructor(..._args) { }
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/errors.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/errors.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 const initializer = (inst, def) => {
@@ -49614,6 +50757,7 @@ function flattenError(error, mapper = (issue) => issue.message) {
 }
 function formatError(error, mapper = (issue) => issue.message) {
     const fieldErrors = { _errors: [] };
+<<<<<<< HEAD
     const processError = (error) => {
         for (const issue of error.issues) {
             if (issue.code === "invalid_union" && issue.errors.length) {
@@ -49626,14 +50770,36 @@ function formatError(error, mapper = (issue) => issue.message) {
                 processError({ issues: issue.issues });
             }
             else if (issue.path.length === 0) {
+=======
+    const processError = (error, path = []) => {
+        for (const issue of error.issues) {
+            if (issue.code === "invalid_union" && issue.errors.length) {
+                issue.errors.map((issues) => processError({ issues }, [...path, ...issue.path]));
+            }
+            else if (issue.code === "invalid_key") {
+                processError({ issues: issue.issues }, [...path, ...issue.path]);
+            }
+            else if (issue.code === "invalid_element") {
+                processError({ issues: issue.issues }, [...path, ...issue.path]);
+            }
+            else {
+                const fullpath = [...path, ...issue.path];
+                if (fullpath.length === 0) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 fieldErrors._errors.push(mapper(issue));
             }
             else {
                 let curr = fieldErrors;
                 let i = 0;
+<<<<<<< HEAD
                 while (i < issue.path.length) {
                     const el = issue.path[i];
                     const terminal = i === issue.path.length - 1;
+=======
+                    while (i < fullpath.length) {
+                        const el = fullpath[i];
+                        const terminal = i === fullpath.length - 1;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     if (!terminal) {
                         curr[el] = curr[el] || { _errors: [] };
                     }
@@ -49646,6 +50812,10 @@ function formatError(error, mapper = (issue) => issue.message) {
                 }
             }
         }
+<<<<<<< HEAD
+=======
+        }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     };
     processError(error);
     return fieldErrors;
@@ -49657,6 +50827,7 @@ function treeifyError(error, mapper = (issue) => issue.message) {
         for (const issue of error.issues) {
             if (issue.code === "invalid_union" && issue.errors.length) {
                 // regular union error
+<<<<<<< HEAD
                 issue.errors.map((issues) => processError({ issues }, issue.path));
             }
             else if (issue.code === "invalid_key") {
@@ -49664,6 +50835,15 @@ function treeifyError(error, mapper = (issue) => issue.message) {
             }
             else if (issue.code === "invalid_element") {
                 processError({ issues: issue.issues }, issue.path);
+=======
+                issue.errors.map((issues) => processError({ issues }, [...path, ...issue.path]));
+            }
+            else if (issue.code === "invalid_key") {
+                processError({ issues: issue.issues }, [...path, ...issue.path]);
+            }
+            else if (issue.code === "invalid_element") {
+                processError({ issues: issue.issues }, [...path, ...issue.path]);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
             else {
                 const fullpath = [...path, ...issue.path];
@@ -49761,6 +50941,7 @@ function prettifyError(error) {
     return lines.join("\n");
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/parse.js
 
 
@@ -49859,6 +51040,117 @@ const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/regexes.js
 
 const cuid = /^[cC][^\s-]{8,}$/;
+=======
+;// ./src/server/util/prettify_error_with_input.ts
+
+
+function prettify_error_with_input(error) {
+    return lodash_default()([...error.issues])
+        .sortBy(issue => issue.path?.length ?? 0)
+        .flatMap(issue => {
+        const lines = [`✖ ${issue.message}`];
+        if (issue.path?.length) {
+            lines.push(`  → 路径: ${toDotPath(issue.path)}`);
+        }
+        if (issue.input !== undefined) {
+            lines.push(`  → 输入: ${JSON.stringify(issue.input)}`);
+        }
+        return lines;
+    })
+        .join('\n');
+}
+
+;// ./src/server/util/prettified_parse.ts
+
+function detailed_parse(schema, data) {
+    const result = schema.safeParse(data, { reportInput: true });
+    if (!result.success) {
+        throw Error(prettify_error_with_input(result.error));
+    }
+    return result.data;
+}
+
+;// ./src/server/util/map_deep.ts
+
+function map_keys_deep_impl(data, fn, is_recursive) {
+    if (!data && !is_recursive) {
+        return {};
+    }
+    if (!is_recursive) {
+        if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+            return {};
+        }
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => map_keys_deep_impl(item, fn, true));
+    }
+    if (!lodash_default().isPlainObject(data)) {
+        return data;
+    }
+    const result = lodash_default().mapKeys(data, fn);
+    return lodash_default().mapValues(result, value => map_keys_deep_impl(value, fn, true));
+}
+function map_keys_deep(data, fn) {
+    return map_keys_deep_impl(data, fn, false);
+}
+function map_values_deep(data, fn) {
+    if (Array.isArray(data)) {
+        return data.map(item => map_values_deep(item, fn));
+    }
+    if (!lodash_default().isPlainObject(data)) {
+        return fn(data);
+    }
+    return lodash_default().mapValues(data, value => map_values_deep(value, fn));
+}
+
+;// ./src/server/util/translate.ts
+
+function translate(data, map) {
+    const try_map = (string) => {
+        if (typeof string !== 'string') {
+            return string;
+        }
+        if (map[string]) {
+            return map[string];
+        }
+        return string;
+    };
+    data = map_keys_deep(data, (_value, key) => {
+        return try_map(key);
+    });
+    data = map_values_deep(data, try_map);
+    return data;
+}
+
+;// external "node:fs"
+
+;// external "node:path"
+
+;// ./src/server/util/write_file_recursively.ts
+
+
+function write_file_recursively(base, file, content) {
+    try {
+        __WEBPACK_EXTERNAL_MODULE_node_fs_75ed2103_mkdirSync__(__WEBPACK_EXTERNAL_MODULE_node_path_02319fef_resolve__(base, __WEBPACK_EXTERNAL_MODULE_node_path_02319fef_dirname__(file)), { recursive: true });
+        __WEBPACK_EXTERNAL_MODULE_node_fs_75ed2103_writeFileSync__(__WEBPACK_EXTERNAL_MODULE_node_path_02319fef_resolve__(base, file), content);
+    }
+    catch (error) {
+        throw Error(`写入文件 '${file}' 失败: ${error}`);
+    }
+}
+
+;// external "path"
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/regexes.js
+/* unused harmony import specifier */ var util;
+
+/**
+ * @deprecated CUID v1 is deprecated by its authors due to information leakage
+ * (timestamps embedded in the id). Use {@link cuid2} instead.
+ * See https://github.com/paralleldrive/cuid.
+ */
+const cuid = /^[cC][0-9a-z]{6,}$/;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const cuid2 = /^[0-9a-z]+$/;
 const ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
 const xid = /^[0-9a-vA-V]{20}$/;
@@ -49878,9 +51170,15 @@ const uuid = (version) => {
         return /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
     return new RegExp(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-${version}[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$`);
 };
+<<<<<<< HEAD
 const uuid4 = /*@__PURE__*/ uuid(4);
 const uuid6 = /*@__PURE__*/ uuid(6);
 const uuid7 = /*@__PURE__*/ uuid(7);
+=======
+const uuid4 = /*@__PURE__*/ (/* unused pure expression or super */ null && (uuid(4)));
+const uuid6 = /*@__PURE__*/ (/* unused pure expression or super */ null && (uuid(6)));
+const uuid7 = /*@__PURE__*/ (/* unused pure expression or super */ null && (uuid(7)));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 /** Practical email validation */
 const email = /^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
 /** Equivalent to the HTML5 input[type=email] validation implemented by browsers. Source: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email */
@@ -49889,7 +51187,11 @@ const html5Email = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]
 const rfc5322Email = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 /** A loose regex that allows Unicode characters, enforces length limits, and that's about it. */
 const unicodeEmail = /^[^\s@"]{1,64}@[^\s@]{1,255}$/u;
+<<<<<<< HEAD
 const idnEmail = unicodeEmail;
+=======
+const idnEmail = (/* unused pure expression or super */ null && (unicodeEmail));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const browserEmail = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 // from https://thekevinscott.com/emojis-in-javascript/#writing-a-regular-expression
 const _emoji = `^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$`;
@@ -49899,7 +51201,11 @@ function emoji() {
 const ipv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
 const ipv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$/;
 const mac = (delimiter) => {
+<<<<<<< HEAD
     const escapedDelim = escapeRegex(delimiter ?? ":");
+=======
+    const escapedDelim = util.escapeRegex(delimiter ?? ":");
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     return new RegExp(`^(?:[0-9A-F]{2}${escapedDelim}){5}[0-9A-F]{2}$|^(?:[0-9a-f]{2}${escapedDelim}){5}[0-9a-f]{2}$`);
 };
 const cidrv4 = /^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/([0-9]|[1-2][0-9]|3[0-2])$/;
@@ -49911,6 +51217,10 @@ const base64url = /^[A-Za-z0-9_-]*$/;
 // export const hostname: RegExp = /^([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+$/;
 const hostname = /^(?=.{1,253}\.?$)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[-0-9a-zA-Z]{0,61}[0-9a-zA-Z])?)*\.?$/;
 const domain = /^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+<<<<<<< HEAD
+=======
+const httpProtocol = /^https?$/;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 // https://blog.stevenlevithan.com/archives/validate-phone-number#r4-3 (regex sans spaces)
 // E.164: leading digit must be 1-9; total digits (excluding '+') between 7-15
 const e164 = /^\+[1-9]\d{6,14}$/;
@@ -49972,6 +51282,7 @@ function fixedBase64url(length) {
 }
 // MD5 (16 bytes): base64 = 24 chars total (22 + "==")
 const md5_hex = /^[0-9a-fA-F]{32}$/;
+<<<<<<< HEAD
 const md5_base64 = /*@__PURE__*/ fixedBase64(22, "==");
 const md5_base64url = /*@__PURE__*/ fixedBase64url(22);
 // SHA1 (20 bytes): base64 = 28 chars total (27 + "=")
@@ -49992,6 +51303,30 @@ const sha512_base64 = /*@__PURE__*/ fixedBase64(86, "==");
 const sha512_base64url = /*@__PURE__*/ fixedBase64url(86);
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/checks.js
+=======
+const md5_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(22, "==")));
+const md5_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(22)));
+// SHA1 (20 bytes): base64 = 28 chars total (27 + "=")
+const sha1_hex = /^[0-9a-fA-F]{40}$/;
+const sha1_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(27, "=")));
+const sha1_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(27)));
+// SHA256 (32 bytes): base64 = 44 chars total (43 + "=")
+const sha256_hex = /^[0-9a-fA-F]{64}$/;
+const sha256_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(43, "=")));
+const sha256_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(43)));
+// SHA384 (48 bytes): base64 = 64 chars total (no padding)
+const sha384_hex = /^[0-9a-fA-F]{96}$/;
+const sha384_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(64, "")));
+const sha384_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(64)));
+// SHA512 (64 bytes): base64 = 88 chars total (86 + "==")
+const sha512_hex = /^[0-9a-fA-F]{128}$/;
+const sha512_base64 = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64(86, "==")));
+const sha512_base64url = /*@__PURE__*/ (/* unused pure expression or super */ null && (fixedBase64url(86)));
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/checks.js
+/* unused harmony import specifier */ var core;
+/* unused harmony import specifier */ var checks_util;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 // import { $ZodType } from "./schemas.js";
 
 
@@ -50187,9 +51522,15 @@ const $ZodCheckNumberFormat = /*@__PURE__*/ $constructor("$ZodCheckNumberFormat"
         }
     };
 });
+<<<<<<< HEAD
 const $ZodCheckBigIntFormat = /*@__PURE__*/ $constructor("$ZodCheckBigIntFormat", (inst, def) => {
     $ZodCheck.init(inst, def); // no format checks
     const [minimum, maximum] = BIGINT_FORMAT_RANGES[def.format];
+=======
+const $ZodCheckBigIntFormat = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckBigIntFormat", (inst, def) => {
+    $ZodCheck.init(inst, def); // no format checks
+    const [minimum, maximum] = checks_util.BIGINT_FORMAT_RANGES[def.format];
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.onattach.push((inst) => {
         const bag = inst._zod.bag;
         bag.format = def.format;
@@ -50221,13 +51562,22 @@ const $ZodCheckBigIntFormat = /*@__PURE__*/ $constructor("$ZodCheckBigIntFormat"
             });
         }
     };
+<<<<<<< HEAD
 });
 const $ZodCheckMaxSize = /*@__PURE__*/ $constructor("$ZodCheckMaxSize", (inst, def) => {
+=======
+})));
+const $ZodCheckMaxSize = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckMaxSize", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     var _a;
     $ZodCheck.init(inst, def);
     (_a = inst._zod.def).when ?? (_a.when = (payload) => {
         const val = payload.value;
+<<<<<<< HEAD
         return !nullish(val) && val.size !== undefined;
+=======
+        return !checks_util.nullish(val) && val.size !== undefined;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
     inst._zod.onattach.push((inst) => {
         const curr = (inst._zod.bag.maximum ?? Number.POSITIVE_INFINITY);
@@ -50240,7 +51590,11 @@ const $ZodCheckMaxSize = /*@__PURE__*/ $constructor("$ZodCheckMaxSize", (inst, d
         if (size <= def.maximum)
             return;
         payload.issues.push({
+<<<<<<< HEAD
             origin: getSizableOrigin(input),
+=======
+            origin: checks_util.getSizableOrigin(input),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             code: "too_big",
             maximum: def.maximum,
             inclusive: true,
@@ -50249,13 +51603,22 @@ const $ZodCheckMaxSize = /*@__PURE__*/ $constructor("$ZodCheckMaxSize", (inst, d
             continue: !def.abort,
         });
     };
+<<<<<<< HEAD
 });
 const $ZodCheckMinSize = /*@__PURE__*/ $constructor("$ZodCheckMinSize", (inst, def) => {
+=======
+})));
+const $ZodCheckMinSize = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckMinSize", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     var _a;
     $ZodCheck.init(inst, def);
     (_a = inst._zod.def).when ?? (_a.when = (payload) => {
         const val = payload.value;
+<<<<<<< HEAD
         return !nullish(val) && val.size !== undefined;
+=======
+        return !checks_util.nullish(val) && val.size !== undefined;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
     inst._zod.onattach.push((inst) => {
         const curr = (inst._zod.bag.minimum ?? Number.NEGATIVE_INFINITY);
@@ -50268,7 +51631,11 @@ const $ZodCheckMinSize = /*@__PURE__*/ $constructor("$ZodCheckMinSize", (inst, d
         if (size >= def.minimum)
             return;
         payload.issues.push({
+<<<<<<< HEAD
             origin: getSizableOrigin(input),
+=======
+            origin: checks_util.getSizableOrigin(input),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             code: "too_small",
             minimum: def.minimum,
             inclusive: true,
@@ -50277,13 +51644,22 @@ const $ZodCheckMinSize = /*@__PURE__*/ $constructor("$ZodCheckMinSize", (inst, d
             continue: !def.abort,
         });
     };
+<<<<<<< HEAD
 });
 const $ZodCheckSizeEquals = /*@__PURE__*/ $constructor("$ZodCheckSizeEquals", (inst, def) => {
+=======
+})));
+const $ZodCheckSizeEquals = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckSizeEquals", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     var _a;
     $ZodCheck.init(inst, def);
     (_a = inst._zod.def).when ?? (_a.when = (payload) => {
         const val = payload.value;
+<<<<<<< HEAD
         return !nullish(val) && val.size !== undefined;
+=======
+        return !checks_util.nullish(val) && val.size !== undefined;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
     inst._zod.onattach.push((inst) => {
         const bag = inst._zod.bag;
@@ -50298,7 +51674,11 @@ const $ZodCheckSizeEquals = /*@__PURE__*/ $constructor("$ZodCheckSizeEquals", (i
             return;
         const tooBig = size > def.size;
         payload.issues.push({
+<<<<<<< HEAD
             origin: getSizableOrigin(input),
+=======
+            origin: checks_util.getSizableOrigin(input),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             ...(tooBig ? { code: "too_big", maximum: def.size } : { code: "too_small", minimum: def.size }),
             inclusive: true,
             exact: true,
@@ -50307,7 +51687,11 @@ const $ZodCheckSizeEquals = /*@__PURE__*/ $constructor("$ZodCheckSizeEquals", (i
             continue: !def.abort,
         });
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodCheckMaxLength = /*@__PURE__*/ $constructor("$ZodCheckMaxLength", (inst, def) => {
     var _a;
     $ZodCheck.init(inst, def);
@@ -50526,10 +51910,17 @@ const $ZodCheckEndsWith = /*@__PURE__*/ $constructor("$ZodCheckEndsWith", (inst,
 ///////////////////////////////////
 function handleCheckPropertyResult(result, payload, property) {
     if (result.issues.length) {
+<<<<<<< HEAD
         payload.issues.push(...prefixIssues(property, result.issues));
     }
 }
 const $ZodCheckProperty = /*@__PURE__*/ $constructor("$ZodCheckProperty", (inst, def) => {
+=======
+        payload.issues.push(...checks_util.prefixIssues(property, result.issues));
+    }
+}
+const $ZodCheckProperty = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckProperty", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodCheck.init(inst, def);
     inst._zod.check = (payload) => {
         const result = def.schema._zod.run({
@@ -50542,8 +51933,13 @@ const $ZodCheckProperty = /*@__PURE__*/ $constructor("$ZodCheckProperty", (inst,
         handleCheckPropertyResult(result, payload, def.property);
         return;
     };
+<<<<<<< HEAD
 });
 const $ZodCheckMimeType = /*@__PURE__*/ $constructor("$ZodCheckMimeType", (inst, def) => {
+=======
+})));
+const $ZodCheckMimeType = /*@__PURE__*/ (/* unused pure expression or super */ null && (core.$constructor("$ZodCheckMimeType", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodCheck.init(inst, def);
     const mimeSet = new Set(def.mime);
     inst._zod.onattach.push((inst) => {
@@ -50560,7 +51956,11 @@ const $ZodCheckMimeType = /*@__PURE__*/ $constructor("$ZodCheckMimeType", (inst,
             continue: !def.abort,
         });
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (inst, def) => {
     $ZodCheck.init(inst, def);
     inst._zod.check = (payload) => {
@@ -50568,7 +51968,11 @@ const $ZodCheckOverwrite = /*@__PURE__*/ $constructor("$ZodCheckOverwrite", (ins
     };
 });
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/doc.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/doc.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 class Doc {
     constructor(args = []) {
         this.content = [];
@@ -50605,6 +52009,7 @@ class Doc {
     }
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/versions.js
 const version = {
     major: 4,
@@ -50613,6 +52018,117 @@ const version = {
 };
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/schemas.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/parse.js
+
+
+
+const _parse = (_Err) => (schema, value, _ctx, _params) => {
+    const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
+    const result = schema._zod.run({ value, issues: [] }, ctx);
+    if (result instanceof Promise) {
+        throw new $ZodAsyncError();
+    }
+    if (result.issues.length) {
+        const e = new (_params?.Err ?? _Err)(result.issues.map((iss) => finalizeIssue(iss, ctx, config())));
+        captureStackTrace(e, _params?.callee);
+        throw e;
+    }
+    return result.value;
+};
+const parse = /* @__PURE__*/ _parse($ZodRealError);
+const _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
+    const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
+    let result = schema._zod.run({ value, issues: [] }, ctx);
+    if (result instanceof Promise)
+        result = await result;
+    if (result.issues.length) {
+        const e = new (params?.Err ?? _Err)(result.issues.map((iss) => finalizeIssue(iss, ctx, config())));
+        captureStackTrace(e, params?.callee);
+        throw e;
+    }
+    return result.value;
+};
+const parseAsync = /* @__PURE__*/ _parseAsync($ZodRealError);
+const _safeParse = (_Err) => (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
+    const result = schema._zod.run({ value, issues: [] }, ctx);
+    if (result instanceof Promise) {
+        throw new $ZodAsyncError();
+    }
+    return result.issues.length
+        ? {
+            success: false,
+            error: new (_Err ?? $ZodError)(result.issues.map((iss) => finalizeIssue(iss, ctx, config()))),
+        }
+        : { success: true, data: result.value };
+};
+const safeParse = /* @__PURE__*/ _safeParse($ZodRealError);
+const _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
+    let result = schema._zod.run({ value, issues: [] }, ctx);
+    if (result instanceof Promise)
+        result = await result;
+    return result.issues.length
+        ? {
+            success: false,
+            error: new _Err(result.issues.map((iss) => finalizeIssue(iss, ctx, config()))),
+        }
+        : { success: true, data: result.value };
+};
+const safeParseAsync = /* @__PURE__*/ _safeParseAsync($ZodRealError);
+const _encode = (_Err) => (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
+    return _parse(_Err)(schema, value, ctx);
+};
+const encode = /* @__PURE__*/ _encode($ZodRealError);
+const _decode = (_Err) => (schema, value, _ctx) => {
+    return _parse(_Err)(schema, value, _ctx);
+};
+const decode = /* @__PURE__*/ _decode($ZodRealError);
+const _encodeAsync = (_Err) => async (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
+    return _parseAsync(_Err)(schema, value, ctx);
+};
+const encodeAsync = /* @__PURE__*/ _encodeAsync($ZodRealError);
+const _decodeAsync = (_Err) => async (schema, value, _ctx) => {
+    return _parseAsync(_Err)(schema, value, _ctx);
+};
+const decodeAsync = /* @__PURE__*/ _decodeAsync($ZodRealError);
+const _safeEncode = (_Err) => (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
+    return _safeParse(_Err)(schema, value, ctx);
+};
+const safeEncode = /* @__PURE__*/ _safeEncode($ZodRealError);
+const _safeDecode = (_Err) => (schema, value, _ctx) => {
+    return _safeParse(_Err)(schema, value, _ctx);
+};
+const safeDecode = /* @__PURE__*/ _safeDecode($ZodRealError);
+const _safeEncodeAsync = (_Err) => async (schema, value, _ctx) => {
+    const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
+    return _safeParseAsync(_Err)(schema, value, ctx);
+};
+const safeEncodeAsync = /* @__PURE__*/ _safeEncodeAsync($ZodRealError);
+const _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
+    return _safeParseAsync(_Err)(schema, value, _ctx);
+};
+const safeDecodeAsync = /* @__PURE__*/ _safeDecodeAsync($ZodRealError);
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/versions.js
+const version = {
+    major: 4,
+    minor: 4,
+    patch: 3,
+};
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/schemas.js
+/* unused harmony import specifier */ var checks;
+/* unused harmony import specifier */ var schemas_core;
+/* unused harmony import specifier */ var schemas_parse;
+/* unused harmony import specifier */ var schemas_parseAsync;
+/* unused harmony import specifier */ var regexes;
+/* unused harmony import specifier */ var schemas_util;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 
@@ -50650,6 +52166,11 @@ const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
             let asyncResult;
             for (const ch of checks) {
                 if (ch._zod.def.when) {
+<<<<<<< HEAD
+=======
+                    if (explicitlyAborted(payload))
+                        continue;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     const shouldRun = ch._zod.def.when(payload);
                     if (!shouldRun)
                         continue;
@@ -50803,6 +52324,24 @@ const $ZodURL = /*@__PURE__*/ $constructor("$ZodURL", (inst, def) => {
         try {
             // Trim whitespace from input
             const trimmed = payload.value.trim();
+<<<<<<< HEAD
+=======
+            // When normalize is off, require :// for http/https URLs
+            // This prevents strings like "http:example.com" or "https:/path" from being silently accepted
+            if (!def.normalize && def.protocol?.source === httpProtocol.source) {
+                if (!/^https?:\/\//i.test(trimmed)) {
+                    payload.issues.push({
+                        code: "invalid_format",
+                        format: "url",
+                        note: "Invalid URL format",
+                        input: payload.value,
+                        inst,
+                        continue: !def.abort,
+                    });
+                    return;
+                }
+            }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             // @ts-ignore
             const url = new URL(trimmed);
             if (def.hostname) {
@@ -50863,6 +52402,14 @@ const $ZodNanoID = /*@__PURE__*/ $constructor("$ZodNanoID", (inst, def) => {
     def.pattern ?? (def.pattern = nanoid);
     $ZodStringFormat.init(inst, def);
 });
+<<<<<<< HEAD
+=======
+/**
+ * @deprecated CUID v1 is deprecated by its authors due to information leakage
+ * (timestamps embedded in the id). Use {@link $ZodCUID2} instead.
+ * See https://github.com/paralleldrive/cuid.
+ */
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodCUID = /*@__PURE__*/ $constructor("$ZodCUID", (inst, def) => {
     def.pattern ?? (def.pattern = cuid);
     $ZodStringFormat.init(inst, def);
@@ -50925,11 +52472,19 @@ const $ZodIPv6 = /*@__PURE__*/ $constructor("$ZodIPv6", (inst, def) => {
         }
     };
 });
+<<<<<<< HEAD
 const $ZodMAC = /*@__PURE__*/ $constructor("$ZodMAC", (inst, def) => {
     def.pattern ?? (def.pattern = mac(def.delimiter));
     $ZodStringFormat.init(inst, def);
     inst._zod.bag.format = `mac`;
 });
+=======
+const $ZodMAC = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodMAC", (inst, def) => {
+    def.pattern ?? (def.pattern = regexes.mac(def.delimiter));
+    $ZodStringFormat.init(inst, def);
+    inst._zod.bag.format = `mac`;
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodCIDRv4 = /*@__PURE__*/ $constructor("$ZodCIDRv4", (inst, def) => {
     def.pattern ?? (def.pattern = cidrv4);
     $ZodStringFormat.init(inst, def);
@@ -50968,6 +52523,12 @@ const $ZodCIDRv6 = /*@__PURE__*/ $constructor("$ZodCIDRv6", (inst, def) => {
 function isValidBase64(data) {
     if (data === "")
         return true;
+<<<<<<< HEAD
+=======
+    // atob ignores whitespace, so reject it up front.
+    if (/\s/.test(data))
+        return false;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     if (data.length % 4 !== 0)
         return false;
     try {
@@ -51060,7 +52621,11 @@ const $ZodJWT = /*@__PURE__*/ $constructor("$ZodJWT", (inst, def) => {
         });
     };
 });
+<<<<<<< HEAD
 const $ZodCustomStringFormat = /*@__PURE__*/ $constructor("$ZodCustomStringFormat", (inst, def) => {
+=======
+const $ZodCustomStringFormat = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodCustomStringFormat", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodStringFormat.init(inst, def);
     inst._zod.check = (payload) => {
         if (def.fn(payload.value))
@@ -51073,7 +52638,11 @@ const $ZodCustomStringFormat = /*@__PURE__*/ $constructor("$ZodCustomStringForma
             continue: !def.abort,
         });
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodNumber = /*@__PURE__*/ $constructor("$ZodNumber", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = inst._zod.bag.pattern ?? number;
@@ -51129,9 +52698,15 @@ const $ZodBoolean = /*@__PURE__*/ $constructor("$ZodBoolean", (inst, def) => {
         return payload;
     };
 });
+<<<<<<< HEAD
 const $ZodBigInt = /*@__PURE__*/ $constructor("$ZodBigInt", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = bigint;
+=======
+const $ZodBigInt = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodBigInt", (inst, def) => {
+    $ZodType.init(inst, def);
+    inst._zod.pattern = regexes.bigint;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.parse = (payload, _ctx) => {
         if (def.coerce)
             try {
@@ -51148,12 +52723,21 @@ const $ZodBigInt = /*@__PURE__*/ $constructor("$ZodBigInt", (inst, def) => {
         });
         return payload;
     };
+<<<<<<< HEAD
 });
 const $ZodBigIntFormat = /*@__PURE__*/ $constructor("$ZodBigIntFormat", (inst, def) => {
     $ZodCheckBigIntFormat.init(inst, def);
     $ZodBigInt.init(inst, def); // no format checks
 });
 const $ZodSymbol = /*@__PURE__*/ $constructor("$ZodSymbol", (inst, def) => {
+=======
+})));
+const $ZodBigIntFormat = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodBigIntFormat", (inst, def) => {
+    checks.$ZodCheckBigIntFormat.init(inst, def);
+    $ZodBigInt.init(inst, def); // no format checks
+})));
+const $ZodSymbol = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodSymbol", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, _ctx) => {
         const input = payload.value;
@@ -51167,6 +52751,7 @@ const $ZodSymbol = /*@__PURE__*/ $constructor("$ZodSymbol", (inst, def) => {
         });
         return payload;
     };
+<<<<<<< HEAD
 });
 const $ZodUndefined = /*@__PURE__*/ $constructor("$ZodUndefined", (inst, def) => {
     $ZodType.init(inst, def);
@@ -51174,6 +52759,13 @@ const $ZodUndefined = /*@__PURE__*/ $constructor("$ZodUndefined", (inst, def) =>
     inst._zod.values = new Set([undefined]);
     inst._zod.optin = "optional";
     inst._zod.optout = "optional";
+=======
+})));
+const $ZodUndefined = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodUndefined", (inst, def) => {
+    $ZodType.init(inst, def);
+    inst._zod.pattern = regexes.undefined;
+    inst._zod.values = new Set([undefined]);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.parse = (payload, _ctx) => {
         const input = payload.value;
         if (typeof input === "undefined")
@@ -51186,7 +52778,11 @@ const $ZodUndefined = /*@__PURE__*/ $constructor("$ZodUndefined", (inst, def) =>
         });
         return payload;
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodNull = /*@__PURE__*/ $constructor("$ZodNull", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.pattern = _null;
@@ -51239,7 +52835,11 @@ const $ZodVoid = /*@__PURE__*/ $constructor("$ZodVoid", (inst, def) => {
         return payload;
     };
 });
+<<<<<<< HEAD
 const $ZodDate = /*@__PURE__*/ $constructor("$ZodDate", (inst, def) => {
+=======
+const $ZodDate = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodDate", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, _ctx) => {
         if (def.coerce) {
@@ -51262,7 +52862,11 @@ const $ZodDate = /*@__PURE__*/ $constructor("$ZodDate", (inst, def) => {
         });
         return payload;
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function handleArrayResult(result, final, index) {
     if (result.issues.length) {
         final.issues.push(...prefixIssues(index, result.issues));
@@ -51303,16 +52907,40 @@ const $ZodArray = /*@__PURE__*/ $constructor("$ZodArray", (inst, def) => {
         return payload; //handleArrayResultsAsync(parseResults, final);
     };
 });
+<<<<<<< HEAD
 function handlePropertyResult(result, final, key, input, isOptionalOut) {
     if (result.issues.length) {
         // For optional-out schemas, ignore errors on absent keys
         if (isOptionalOut && !(key in input)) {
+=======
+function handlePropertyResult(result, final, key, input, isOptionalIn, isOptionalOut) {
+    const isPresent = key in input;
+    if (result.issues.length) {
+        // For optional-in/out schemas, ignore errors on absent keys.
+        if (isOptionalIn && isOptionalOut && !isPresent) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             return;
         }
         final.issues.push(...prefixIssues(key, result.issues));
     }
+<<<<<<< HEAD
     if (result.value === undefined) {
         if (key in input) {
+=======
+    if (!isPresent && !isOptionalIn) {
+        if (!result.issues.length) {
+            final.issues.push({
+                code: "invalid_type",
+                expected: "nonoptional",
+                input: undefined,
+                path: [key],
+            });
+        }
+        return;
+    }
+    if (result.value === undefined) {
+        if (isPresent) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             final.value[key] = undefined;
         }
     }
@@ -51338,12 +52966,25 @@ function normalizeDef(def) {
 }
 function handleCatchall(proms, input, payload, ctx, def, inst) {
     const unrecognized = [];
+<<<<<<< HEAD
     // iterate over input keys
     const keySet = def.keySet;
     const _catchall = def.catchall._zod;
     const t = _catchall.def.type;
     const isOptionalOut = _catchall.optout === "optional";
     for (const key in input) {
+=======
+    const keySet = def.keySet;
+    const _catchall = def.catchall._zod;
+    const t = _catchall.def.type;
+    const isOptionalIn = _catchall.optin === "optional";
+    const isOptionalOut = _catchall.optout === "optional";
+    for (const key in input) {
+        // skip __proto__ so it can't replace the result prototype via the
+        // assignment setter on the plain {} we build into
+        if (key === "__proto__")
+            continue;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         if (keySet.has(key))
             continue;
         if (t === "never") {
@@ -51352,10 +52993,17 @@ function handleCatchall(proms, input, payload, ctx, def, inst) {
         }
         const r = _catchall.run({ value: input[key], issues: [] }, ctx);
         if (r instanceof Promise) {
+<<<<<<< HEAD
             proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalOut)));
         }
         else {
             handlePropertyResult(r, payload, key, input, isOptionalOut);
+=======
+            proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
+        }
+        else {
+            handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
     }
     if (unrecognized.length) {
@@ -51423,6 +53071,7 @@ const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
         const shape = value.shape;
         for (const key of value.keys) {
             const el = shape[key];
+<<<<<<< HEAD
             const isOptionalOut = el._zod.optout === "optional";
             const r = el._zod.run({ value: input[key], issues: [] }, ctx);
             if (r instanceof Promise) {
@@ -51430,6 +53079,16 @@ const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
             }
             else {
                 handlePropertyResult(r, payload, key, input, isOptionalOut);
+=======
+            const isOptionalIn = el._zod.optin === "optional";
+            const isOptionalOut = el._zod.optout === "optional";
+            const r = el._zod.run({ value: input[key], issues: [] }, ctx);
+            if (r instanceof Promise) {
+                proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
+            }
+            else {
+                handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
         }
         if (!catchall) {
@@ -51462,10 +53121,18 @@ const $ZodObjectJIT = /*@__PURE__*/ $constructor("$ZodObjectJIT", (inst, def) =>
             const id = ids[key];
             const k = esc(key);
             const schema = shape[key];
+<<<<<<< HEAD
             const isOptionalOut = schema?._zod?.optout === "optional";
             doc.write(`const ${id} = ${parseStr(key)};`);
             if (isOptionalOut) {
                 // For optional-out schemas, ignore errors on absent keys
+=======
+            const isOptionalIn = schema?._zod?.optin === "optional";
+            const isOptionalOut = schema?._zod?.optout === "optional";
+            doc.write(`const ${id} = ${parseStr(key)};`);
+            if (isOptionalIn && isOptionalOut) {
+                // For optional-in/out schemas, ignore errors on absent keys
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 doc.write(`
         if (${id}.issues.length) {
           if (${k} in input) {
@@ -51486,6 +53153,37 @@ const $ZodObjectJIT = /*@__PURE__*/ $constructor("$ZodObjectJIT", (inst, def) =>
         
       `);
             }
+<<<<<<< HEAD
+=======
+            else if (!isOptionalIn) {
+                doc.write(`
+        const ${id}_present = ${k} in input;
+        if (${id}.issues.length) {
+          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+            ...iss,
+            path: iss.path ? [${k}, ...iss.path] : [${k}]
+          })));
+        }
+        if (!${id}_present && !${id}.issues.length) {
+          payload.issues.push({
+            code: "invalid_type",
+            expected: "nonoptional",
+            input: undefined,
+            path: [${k}]
+          });
+        }
+
+        if (${id}_present) {
+          if (${id}.value === undefined) {
+            newResult[${k}] = undefined;
+          } else {
+            newResult[${k}] = ${id}.value;
+          }
+        }
+
+      `);
+            }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             else {
                 doc.write(`
         if (${id}.issues.length) {
@@ -51579,10 +53277,16 @@ const $ZodUnion = /*@__PURE__*/ $constructor("$ZodUnion", (inst, def) => {
         }
         return undefined;
     });
+<<<<<<< HEAD
     const single = def.options.length === 1;
     const first = def.options[0]._zod.run;
     inst._zod.parse = (payload, ctx) => {
         if (single) {
+=======
+    const first = def.options.length === 1 ? def.options[0]._zod.run : null;
+    inst._zod.parse = (payload, ctx) => {
+        if (first) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             return first(payload, ctx);
         }
         let async = false;
@@ -51621,7 +53325,11 @@ function handleExclusiveUnionResults(results, final, inst, ctx) {
             code: "invalid_union",
             input: final.value,
             inst,
+<<<<<<< HEAD
             errors: results.map((result) => result.issues.map((iss) => finalizeIssue(iss, ctx, config()))),
+=======
+            errors: results.map((result) => result.issues.map((iss) => schemas_util.finalizeIssue(iss, ctx, schemas_core.config()))),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         });
     }
     else {
@@ -51636,6 +53344,7 @@ function handleExclusiveUnionResults(results, final, inst, ctx) {
     }
     return final;
 }
+<<<<<<< HEAD
 const $ZodXor = /*@__PURE__*/ $constructor("$ZodXor", (inst, def) => {
     $ZodUnion.init(inst, def);
     def.inclusive = false;
@@ -51643,6 +53352,14 @@ const $ZodXor = /*@__PURE__*/ $constructor("$ZodXor", (inst, def) => {
     const first = def.options[0]._zod.run;
     inst._zod.parse = (payload, ctx) => {
         if (single) {
+=======
+const $ZodXor = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodXor", (inst, def) => {
+    $ZodUnion.init(inst, def);
+    def.inclusive = false;
+    const first = def.options.length === 1 ? def.options[0]._zod.run : null;
+    inst._zod.parse = (payload, ctx) => {
+        if (first) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             return first(payload, ctx);
         }
         let async = false;
@@ -51666,7 +53383,11 @@ const $ZodXor = /*@__PURE__*/ $constructor("$ZodXor", (inst, def) => {
             return handleExclusiveUnionResults(results, payload, inst, ctx);
         });
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodDiscriminatedUnion = 
 /*@__PURE__*/
 $constructor("$ZodDiscriminatedUnion", (inst, def) => {
@@ -51720,7 +53441,15 @@ $constructor("$ZodDiscriminatedUnion", (inst, def) => {
         if (opt) {
             return opt._zod.run(payload, ctx);
         }
+<<<<<<< HEAD
         if (def.unionFallback) {
+=======
+        // Fall back to union matching when the fast discriminator path fails:
+        // - explicitly enabled via unionFallback, or
+        // - during backward direction (encode), since codec-based discriminators
+        //   have different values in forward vs backward directions
+        if (def.unionFallback || ctx.direction === "backward") {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             return _super(payload, ctx);
         }
         // no matching discriminator
@@ -51729,6 +53458,10 @@ $constructor("$ZodDiscriminatedUnion", (inst, def) => {
             errors: [],
             note: "No matching discriminator",
             discriminator: def.discriminator,
+<<<<<<< HEAD
+=======
+            options: Array.from(disc.value.keys()),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             input,
             path: [def.discriminator],
             inst,
@@ -51840,7 +53573,11 @@ function handleIntersectionResults(result, left, right) {
     result.value = merged.data;
     return result;
 }
+<<<<<<< HEAD
 const $ZodTuple = /*@__PURE__*/ $constructor("$ZodTuple", (inst, def) => {
+=======
+const $ZodTuple = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodTuple", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     const items = def.items;
     inst._zod.parse = (payload, ctx) => {
@@ -51856,6 +53593,7 @@ const $ZodTuple = /*@__PURE__*/ $constructor("$ZodTuple", (inst, def) => {
         }
         payload.value = [];
         const proms = [];
+<<<<<<< HEAD
         const reversedIndex = [...items].reverse().findIndex((item) => item._zod.optin !== "optional");
         const optStart = reversedIndex === -1 ? 0 : items.length - reversedIndex;
         if (!def.rest) {
@@ -51866,12 +53604,23 @@ const $ZodTuple = /*@__PURE__*/ $constructor("$ZodTuple", (inst, def) => {
                     ...(tooBig
                         ? { code: "too_big", maximum: items.length, inclusive: true }
                         : { code: "too_small", minimum: items.length }),
+=======
+        const optinStart = getTupleOptStart(items, "optin");
+        const optoutStart = getTupleOptStart(items, "optout");
+        if (!def.rest) {
+            if (input.length < optinStart) {
+                payload.issues.push({
+                    code: "too_small",
+                    minimum: optinStart,
+                    inclusive: true,
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     input,
                     inst,
                     origin: "array",
                 });
                 return payload;
             }
+<<<<<<< HEAD
         }
         let i = -1;
         for (const item of items) {
@@ -51900,12 +53649,50 @@ const $ZodTuple = /*@__PURE__*/ $constructor("$ZodTuple", (inst, def) => {
                 }, ctx);
                 if (result instanceof Promise) {
                     proms.push(result.then((result) => handleTupleResult(result, payload, i)));
+=======
+            if (input.length > items.length) {
+                payload.issues.push({
+                    code: "too_big",
+                    maximum: items.length,
+                    inclusive: true,
+                    input,
+                    inst,
+                    origin: "array",
+                });
+            }
+        }
+        // Run every item in parallel, collecting results into an indexed
+        // array. The post-processing in `handleTupleResults` walks them in
+        // order so it can decide whether an absent optional-output error can
+        // truncate the tail or must be reported to preserve required output.
+        const itemResults = new Array(items.length);
+        for (let i = 0; i < items.length; i++) {
+            const r = items[i]._zod.run({ value: input[i], issues: [] }, ctx);
+            if (r instanceof Promise) {
+                proms.push(r.then((rr) => {
+                    itemResults[i] = rr;
+                }));
+            }
+            else {
+                itemResults[i] = r;
+            }
+        }
+        if (def.rest) {
+            let i = items.length - 1;
+            const rest = input.slice(items.length);
+            for (const el of rest) {
+                i++;
+                const result = def.rest._zod.run({ value: el, issues: [] }, ctx);
+                if (result instanceof Promise) {
+                    proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 }
                 else {
                     handleTupleResult(result, payload, i);
                 }
             }
         }
+<<<<<<< HEAD
         if (proms.length)
             return Promise.all(proms).then(() => payload);
         return payload;
@@ -51917,6 +53704,59 @@ function handleTupleResult(result, final, index) {
     }
     final.value[index] = result.value;
 }
+=======
+        if (proms.length) {
+            return Promise.all(proms).then(() => handleTupleResults(itemResults, payload, items, input, optoutStart));
+        }
+        return handleTupleResults(itemResults, payload, items, input, optoutStart);
+    };
+})));
+function getTupleOptStart(items, key) {
+    for (let i = items.length - 1; i >= 0; i--) {
+        if (items[i]._zod[key] !== "optional")
+            return i + 1;
+    }
+    return 0;
+}
+function handleTupleResult(result, final, index) {
+    if (result.issues.length) {
+        final.issues.push(...schemas_util.prefixIssues(index, result.issues));
+    }
+    final.value[index] = result.value;
+}
+function handleTupleResults(itemResults, final, items, input, optoutStart) {
+    // Walk results in order. Mirror $ZodObject's swallow-on-absent-optional
+    // rule, but only after `optoutStart`: the first index where the output
+    // tuple tail can be absent.
+    for (let i = 0; i < items.length; i++) {
+        const r = itemResults[i];
+        const isPresent = i < input.length;
+        if (r.issues.length) {
+            if (!isPresent && i >= optoutStart) {
+                final.value.length = i;
+                break;
+            }
+            final.issues.push(...schemas_util.prefixIssues(i, r.issues));
+        }
+        final.value[i] = r.value;
+    }
+    // Drop trailing slots that produced `undefined` for absent input
+    // (the array analog of an absent optional key on an object). The
+    // `i >= input.length` floor is critical: an explicit `undefined`
+    // *inside* the input must be preserved even when the schema is
+    // optional-out (e.g. `z.string().or(z.undefined())` accepting an
+    // explicit undefined value).
+    for (let i = final.value.length - 1; i >= input.length; i--) {
+        if (items[i]._zod.optout === "optional" && final.value[i] === undefined) {
+            final.value.length = i;
+        }
+        else {
+            break;
+        }
+    }
+    return final;
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
@@ -51938,20 +53778,47 @@ const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
             for (const key of values) {
                 if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
                     recordKeys.add(typeof key === "number" ? key.toString() : key);
+<<<<<<< HEAD
+=======
+                    const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+                    if (keyResult instanceof Promise) {
+                        throw new Error("Async schemas not supported in object keys currently");
+                    }
+                    if (keyResult.issues.length) {
+                        payload.issues.push({
+                            code: "invalid_key",
+                            origin: "record",
+                            issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+                            input: key,
+                            path: [key],
+                            inst,
+                        });
+                        continue;
+                    }
+                    const outKey = keyResult.value;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
                     if (result instanceof Promise) {
                         proms.push(result.then((result) => {
                             if (result.issues.length) {
                                 payload.issues.push(...prefixIssues(key, result.issues));
                             }
+<<<<<<< HEAD
                             payload.value[key] = result.value;
+=======
+                            payload.value[outKey] = result.value;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                         }));
                     }
                     else {
                         if (result.issues.length) {
                             payload.issues.push(...prefixIssues(key, result.issues));
                         }
+<<<<<<< HEAD
                         payload.value[key] = result.value;
+=======
+                        payload.value[outKey] = result.value;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                     }
                 }
             }
@@ -51973,9 +53840,18 @@ const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
         }
         else {
             payload.value = {};
+<<<<<<< HEAD
             for (const key of Reflect.ownKeys(input)) {
                 if (key === "__proto__")
                     continue;
+=======
+            // Reflect.ownKeys for Symbol-key support; filter non-enumerable to match z.object()
+            for (const key of Reflect.ownKeys(input)) {
+                if (key === "__proto__")
+                    continue;
+                if (!Object.prototype.propertyIsEnumerable.call(input, key))
+                    continue;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 let keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
                 if (keyResult instanceof Promise) {
                     throw new Error("Async schemas not supported in object keys currently");
@@ -52033,7 +53909,11 @@ const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
         return payload;
     };
 });
+<<<<<<< HEAD
 const $ZodMap = /*@__PURE__*/ $constructor("$ZodMap", (inst, def) => {
+=======
+const $ZodMap = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodMap", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
         const input = payload.value;
@@ -52064,11 +53944,19 @@ const $ZodMap = /*@__PURE__*/ $constructor("$ZodMap", (inst, def) => {
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+<<<<<<< HEAD
 });
 function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
     if (keyResult.issues.length) {
         if (propertyKeyTypes.has(typeof key)) {
             final.issues.push(...prefixIssues(key, keyResult.issues));
+=======
+})));
+function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
+    if (keyResult.issues.length) {
+        if (schemas_util.propertyKeyTypes.has(typeof key)) {
+            final.issues.push(...schemas_util.prefixIssues(key, keyResult.issues));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         else {
             final.issues.push({
@@ -52076,13 +53964,22 @@ function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
                 origin: "map",
                 input,
                 inst,
+<<<<<<< HEAD
                 issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+=======
+                issues: keyResult.issues.map((iss) => schemas_util.finalizeIssue(iss, ctx, schemas_core.config())),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             });
         }
     }
     if (valueResult.issues.length) {
+<<<<<<< HEAD
         if (propertyKeyTypes.has(typeof key)) {
             final.issues.push(...prefixIssues(key, valueResult.issues));
+=======
+        if (schemas_util.propertyKeyTypes.has(typeof key)) {
+            final.issues.push(...schemas_util.prefixIssues(key, valueResult.issues));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         else {
             final.issues.push({
@@ -52091,13 +53988,21 @@ function handleMapResult(keyResult, valueResult, final, key, input, inst, ctx) {
                 input,
                 inst,
                 key: key,
+<<<<<<< HEAD
                 issues: valueResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+=======
+                issues: valueResult.issues.map((iss) => schemas_util.finalizeIssue(iss, ctx, schemas_core.config())),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             });
         }
     }
     final.value.set(keyResult.value, valueResult.value);
 }
+<<<<<<< HEAD
 const $ZodSet = /*@__PURE__*/ $constructor("$ZodSet", (inst, def) => {
+=======
+const $ZodSet = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodSet", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
         const input = payload.value;
@@ -52124,7 +54029,11 @@ const $ZodSet = /*@__PURE__*/ $constructor("$ZodSet", (inst, def) => {
             return Promise.all(proms).then(() => payload);
         return payload;
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function handleSetResult(result, final) {
     if (result.issues.length) {
         final.issues.push(...result.issues);
@@ -52178,7 +54087,11 @@ const $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
         return payload;
     };
 });
+<<<<<<< HEAD
 const $ZodFile = /*@__PURE__*/ $constructor("$ZodFile", (inst, def) => {
+=======
+const $ZodFile = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodFile", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, _ctx) => {
         const input = payload.value;
@@ -52193,9 +54106,16 @@ const $ZodFile = /*@__PURE__*/ $constructor("$ZodFile", (inst, def) => {
         });
         return payload;
     };
+<<<<<<< HEAD
 });
 const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) => {
     $ZodType.init(inst, def);
+=======
+})));
+const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) => {
+    $ZodType.init(inst, def);
+    inst._zod.optin = "optional";
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.parse = (payload, ctx) => {
         if (ctx.direction === "backward") {
             throw new $ZodEncodeError(inst.constructor.name);
@@ -52205,6 +54125,10 @@ const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) =>
             const output = _out instanceof Promise ? _out : Promise.resolve(_out);
             return output.then((output) => {
                 payload.value = output;
+<<<<<<< HEAD
+=======
+                payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 return payload;
             });
         }
@@ -52212,11 +54136,19 @@ const $ZodTransform = /*@__PURE__*/ $constructor("$ZodTransform", (inst, def) =>
             throw new $ZodAsyncError();
         }
         payload.value = _out;
+<<<<<<< HEAD
+=======
+        payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         return payload;
     };
 });
 function handleOptionalResult(result, input) {
+<<<<<<< HEAD
     if (result.issues.length && input === undefined) {
+=======
+    if (input === undefined && (result.issues.length || result.fallback)) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         return { issues: [], value: undefined };
     }
     return result;
@@ -52234,10 +54166,18 @@ const $ZodOptional = /*@__PURE__*/ $constructor("$ZodOptional", (inst, def) => {
     });
     inst._zod.parse = (payload, ctx) => {
         if (def.innerType._zod.optin === "optional") {
+<<<<<<< HEAD
             const result = def.innerType._zod.run(payload, ctx);
             if (result instanceof Promise)
                 return result.then((r) => handleOptionalResult(r, payload.value));
             return handleOptionalResult(result, payload.value);
+=======
+            const input = payload.value;
+            const result = def.innerType._zod.run(payload, ctx);
+            if (result instanceof Promise)
+                return result.then((r) => handleOptionalResult(r, input));
+            return handleOptionalResult(result, input);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         if (payload.value === undefined) {
             return payload;
@@ -52345,11 +54285,19 @@ function handleNonOptionalResult(payload, inst) {
     }
     return payload;
 }
+<<<<<<< HEAD
 const $ZodSuccess = /*@__PURE__*/ $constructor("$ZodSuccess", (inst, def) => {
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
         if (ctx.direction === "backward") {
             throw new $ZodEncodeError("ZodSuccess");
+=======
+const $ZodSuccess = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodSuccess", (inst, def) => {
+    $ZodType.init(inst, def);
+    inst._zod.parse = (payload, ctx) => {
+        if (ctx.direction === "backward") {
+            throw new schemas_core.$ZodEncodeError("ZodSuccess");
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         const result = def.innerType._zod.run(payload, ctx);
         if (result instanceof Promise) {
@@ -52361,10 +54309,17 @@ const $ZodSuccess = /*@__PURE__*/ $constructor("$ZodSuccess", (inst, def) => {
         payload.value = result.issues.length === 0;
         return payload;
     };
+<<<<<<< HEAD
 });
 const $ZodCatch = /*@__PURE__*/ $constructor("$ZodCatch", (inst, def) => {
     $ZodType.init(inst, def);
     defineLazy(inst._zod, "optin", () => def.innerType._zod.optin);
+=======
+})));
+const $ZodCatch = /*@__PURE__*/ $constructor("$ZodCatch", (inst, def) => {
+    $ZodType.init(inst, def);
+    inst._zod.optin = "optional";
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
     defineLazy(inst._zod, "values", () => def.innerType._zod.values);
     inst._zod.parse = (payload, ctx) => {
@@ -52385,6 +54340,10 @@ const $ZodCatch = /*@__PURE__*/ $constructor("$ZodCatch", (inst, def) => {
                         input: payload.value,
                     });
                     payload.issues = [];
+<<<<<<< HEAD
+=======
+                    payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 }
                 return payload;
             });
@@ -52399,11 +54358,19 @@ const $ZodCatch = /*@__PURE__*/ $constructor("$ZodCatch", (inst, def) => {
                 input: payload.value,
             });
             payload.issues = [];
+<<<<<<< HEAD
+=======
+            payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         return payload;
     };
 });
+<<<<<<< HEAD
 const $ZodNaN = /*@__PURE__*/ $constructor("$ZodNaN", (inst, def) => {
+=======
+const $ZodNaN = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodNaN", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, _ctx) => {
         if (typeof payload.value !== "number" || !Number.isNaN(payload.value)) {
@@ -52417,7 +54384,11 @@ const $ZodNaN = /*@__PURE__*/ $constructor("$ZodNaN", (inst, def) => {
         }
         return payload;
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodPipe = /*@__PURE__*/ $constructor("$ZodPipe", (inst, def) => {
     $ZodType.init(inst, def);
     defineLazy(inst._zod, "values", () => def.in._zod.values);
@@ -52445,6 +54416,7 @@ function handlePipeResult(left, next, ctx) {
         left.aborted = true;
         return left;
     }
+<<<<<<< HEAD
     return next._zod.run({ value: left.value, issues: left.issues }, ctx);
 }
 const $ZodCodec = /*@__PURE__*/ $constructor("$ZodCodec", (inst, def) => {
@@ -52453,6 +54425,16 @@ const $ZodCodec = /*@__PURE__*/ $constructor("$ZodCodec", (inst, def) => {
     defineLazy(inst._zod, "optin", () => def.in._zod.optin);
     defineLazy(inst._zod, "optout", () => def.out._zod.optout);
     defineLazy(inst._zod, "propValues", () => def.in._zod.propValues);
+=======
+    return next._zod.run({ value: left.value, issues: left.issues, fallback: left.fallback }, ctx);
+}
+const $ZodCodec = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodCodec", (inst, def) => {
+    $ZodType.init(inst, def);
+    schemas_util.defineLazy(inst._zod, "values", () => def.in._zod.values);
+    schemas_util.defineLazy(inst._zod, "optin", () => def.in._zod.optin);
+    schemas_util.defineLazy(inst._zod, "optout", () => def.out._zod.optout);
+    schemas_util.defineLazy(inst._zod, "propValues", () => def.in._zod.propValues);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.parse = (payload, ctx) => {
         const direction = ctx.direction || "forward";
         if (direction === "forward") {
@@ -52470,7 +54452,11 @@ const $ZodCodec = /*@__PURE__*/ $constructor("$ZodCodec", (inst, def) => {
             return handleCodecAResult(right, def, ctx);
         }
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function handleCodecAResult(result, def, ctx) {
     if (result.issues.length) {
         // prevent further checks
@@ -52501,6 +54487,12 @@ function handleCodecTxResult(left, value, nextSchema, ctx) {
     }
     return nextSchema._zod.run({ value, issues: left.issues }, ctx);
 }
+<<<<<<< HEAD
+=======
+const $ZodPreprocess = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodPreprocess", (inst, def) => {
+    $ZodPipe.init(inst, def);
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodReadonly = /*@__PURE__*/ $constructor("$ZodReadonly", (inst, def) => {
     $ZodType.init(inst, def);
     defineLazy(inst._zod, "propValues", () => def.innerType._zod.propValues);
@@ -52522,7 +54514,11 @@ function handleReadonlyResult(payload) {
     payload.value = Object.freeze(payload.value);
     return payload;
 }
+<<<<<<< HEAD
 const $ZodTemplateLiteral = /*@__PURE__*/ $constructor("$ZodTemplateLiteral", (inst, def) => {
+=======
+const $ZodTemplateLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodTemplateLiteral", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     const regexParts = [];
     for (const part of def.parts) {
@@ -52539,8 +54535,13 @@ const $ZodTemplateLiteral = /*@__PURE__*/ $constructor("$ZodTemplateLiteral", (i
             const end = source.endsWith("$") ? source.length - 1 : source.length;
             regexParts.push(source.slice(start, end));
         }
+<<<<<<< HEAD
         else if (part === null || primitiveTypes.has(typeof part)) {
             regexParts.push(escapeRegex(`${part}`));
+=======
+        else if (part === null || schemas_util.primitiveTypes.has(typeof part)) {
+            regexParts.push(schemas_util.escapeRegex(`${part}`));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         }
         else {
             throw new Error(`Invalid template literal part: ${part}`);
@@ -52570,8 +54571,13 @@ const $ZodTemplateLiteral = /*@__PURE__*/ $constructor("$ZodTemplateLiteral", (i
         }
         return payload;
     };
+<<<<<<< HEAD
 });
 const $ZodFunction = /*@__PURE__*/ $constructor("$ZodFunction", (inst, def) => {
+=======
+})));
+const $ZodFunction = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodFunction", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._def = def;
     inst._zod.def = def;
@@ -52580,10 +54586,17 @@ const $ZodFunction = /*@__PURE__*/ $constructor("$ZodFunction", (inst, def) => {
             throw new Error("implement() must be called with a function");
         }
         return function (...args) {
+<<<<<<< HEAD
             const parsedArgs = inst._def.input ? parse(inst._def.input, args) : args;
             const result = Reflect.apply(func, this, parsedArgs);
             if (inst._def.output) {
                 return parse(inst._def.output, result);
+=======
+            const parsedArgs = inst._def.input ? schemas_parse(inst._def.input, args) : args;
+            const result = Reflect.apply(func, this, parsedArgs);
+            if (inst._def.output) {
+                return schemas_parse(inst._def.output, result);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
             return result;
         };
@@ -52593,10 +54606,17 @@ const $ZodFunction = /*@__PURE__*/ $constructor("$ZodFunction", (inst, def) => {
             throw new Error("implementAsync() must be called with a function");
         }
         return async function (...args) {
+<<<<<<< HEAD
             const parsedArgs = inst._def.input ? await parseAsync(inst._def.input, args) : args;
             const result = await Reflect.apply(func, this, parsedArgs);
             if (inst._def.output) {
                 return await parseAsync(inst._def.output, result);
+=======
+            const parsedArgs = inst._def.input ? await schemas_parseAsync(inst._def.input, args) : args;
+            const result = await Reflect.apply(func, this, parsedArgs);
+            if (inst._def.output) {
+                return await schemas_parseAsync(inst._def.output, result);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             }
             return result;
         };
@@ -52649,12 +54669,18 @@ const $ZodFunction = /*@__PURE__*/ $constructor("$ZodFunction", (inst, def) => {
         });
     };
     return inst;
+<<<<<<< HEAD
 });
 const $ZodPromise = /*@__PURE__*/ $constructor("$ZodPromise", (inst, def) => {
+=======
+})));
+const $ZodPromise = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodPromise", (inst, def) => {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     $ZodType.init(inst, def);
     inst._zod.parse = (payload, ctx) => {
         return Promise.resolve(payload.value).then((inner) => def.innerType._zod.run({ value: inner, issues: [] }, ctx));
     };
+<<<<<<< HEAD
 });
 const $ZodLazy = /*@__PURE__*/ $constructor("$ZodLazy", (inst, def) => {
     $ZodType.init(inst, def);
@@ -52670,11 +54696,33 @@ const $ZodLazy = /*@__PURE__*/ $constructor("$ZodLazy", (inst, def) => {
     defineLazy(inst._zod, "propValues", () => inst._zod.innerType?._zod?.propValues);
     defineLazy(inst._zod, "optin", () => inst._zod.innerType?._zod?.optin ?? undefined);
     defineLazy(inst._zod, "optout", () => inst._zod.innerType?._zod?.optout ?? undefined);
+=======
+})));
+const $ZodLazy = /*@__PURE__*/ (/* unused pure expression or super */ null && (schemas_core.$constructor("$ZodLazy", (inst, def) => {
+    $ZodType.init(inst, def);
+    // Cache the resolved inner type on the shared `def` so all clones of this
+    // lazy (e.g. via `.describe()`/`.meta()`) share the same inner instance,
+    // preserving identity for cycle detection on recursive schemas.
+    schemas_util.defineLazy(inst._zod, "innerType", () => {
+        const d = def;
+        if (!d._cachedInner)
+            d._cachedInner = def.getter();
+        return d._cachedInner;
+    });
+    schemas_util.defineLazy(inst._zod, "pattern", () => inst._zod.innerType?._zod?.pattern);
+    schemas_util.defineLazy(inst._zod, "propValues", () => inst._zod.innerType?._zod?.propValues);
+    schemas_util.defineLazy(inst._zod, "optin", () => inst._zod.innerType?._zod?.optin ?? undefined);
+    schemas_util.defineLazy(inst._zod, "optout", () => inst._zod.innerType?._zod?.optout ?? undefined);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst._zod.parse = (payload, ctx) => {
         const inner = inst._zod.innerType;
         return inner._zod.run(payload, ctx);
     };
+<<<<<<< HEAD
 });
+=======
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $ZodCustom = /*@__PURE__*/ $constructor("$ZodCustom", (inst, def) => {
     $ZodCheck.init(inst, def);
     $ZodType.init(inst, def);
@@ -52707,6 +54755,7 @@ function handleRefineResult(result, payload, input, inst) {
     }
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/locales/ar.js
 
 const error = () => {
@@ -58354,6 +60403,10 @@ const yo_error = () => {
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/registries.js
 var _a;
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/registries.js
+var registries_a;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const $output = Symbol("ZodOutput");
 const $input = Symbol("ZodInput");
 class $ZodRegistry {
@@ -58402,12 +60455,22 @@ class $ZodRegistry {
 function registry() {
     return new $ZodRegistry();
 }
+<<<<<<< HEAD
 (_a = globalThis).__zod_globalRegistry ?? (_a.__zod_globalRegistry = registry());
 const globalRegistry = globalThis.__zod_globalRegistry;
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/api.js
 /* unused harmony import specifier */ var schemas;
 /* unused harmony import specifier */ var util;
+=======
+(registries_a = globalThis).__zod_globalRegistry ?? (registries_a.__zod_globalRegistry = registry());
+const globalRegistry = globalThis.__zod_globalRegistry;
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/api.js
+/* unused harmony import specifier */ var api_checks;
+/* unused harmony import specifier */ var schemas;
+/* unused harmony import specifier */ var api_util;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 
@@ -58520,6 +60583,14 @@ function _nanoid(Class, params) {
         ...normalizeParams(params),
     });
 }
+<<<<<<< HEAD
+=======
+/**
+ * @deprecated CUID v1 is deprecated by its authors due to information leakage
+ * (timestamps embedded in the id). Use {@link _cuid2} instead.
+ * See https://github.com/paralleldrive/cuid.
+ */
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 // @__NO_SIDE_EFFECTS__
 function _cuid(Class, params) {
     return new Class({
@@ -58597,7 +60668,11 @@ function _mac(Class, params) {
         format: "mac",
         check: "string_format",
         abort: false,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58721,7 +60796,11 @@ function _coercedNumber(Class, params) {
         type: "number",
         coerce: true,
         checks: [],
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58741,7 +60820,11 @@ function _float32(Class, params) {
         check: "number_format",
         abort: false,
         format: "float32",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58751,7 +60834,11 @@ function _float64(Class, params) {
         check: "number_format",
         abort: false,
         format: "float64",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58761,7 +60848,11 @@ function _int32(Class, params) {
         check: "number_format",
         abort: false,
         format: "int32",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58771,7 +60862,11 @@ function _uint32(Class, params) {
         check: "number_format",
         abort: false,
         format: "uint32",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58786,14 +60881,22 @@ function _coercedBoolean(Class, params) {
     return new Class({
         type: "boolean",
         coerce: true,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _bigint(Class, params) {
     return new Class({
         type: "bigint",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58801,7 +60904,11 @@ function _coercedBigint(Class, params) {
     return new Class({
         type: "bigint",
         coerce: true,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58811,7 +60918,11 @@ function _int64(Class, params) {
         check: "bigint_format",
         abort: false,
         format: "int64",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58821,21 +60932,33 @@ function _uint64(Class, params) {
         check: "bigint_format",
         abort: false,
         format: "uint64",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _symbol(Class, params) {
     return new Class({
         type: "symbol",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function api_undefined(Class, params) {
     return new Class({
         type: "undefined",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58875,7 +60998,11 @@ function _void(Class, params) {
 function _date(Class, params) {
     return new Class({
         type: "date",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58883,14 +61010,22 @@ function _coercedDate(Class, params) {
     return new Class({
         type: "date",
         coerce: true,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _nan(Class, params) {
     return new Class({
         type: "nan",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -58960,25 +61095,43 @@ function _multipleOf(value, params) {
 }
 // @__NO_SIDE_EFFECTS__
 function _maxSize(maximum, params) {
+<<<<<<< HEAD
     return new $ZodCheckMaxSize({
         check: "max_size",
         ...normalizeParams(params),
+=======
+    return new api_checks.$ZodCheckMaxSize({
+        check: "max_size",
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         maximum,
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _minSize(minimum, params) {
+<<<<<<< HEAD
     return new $ZodCheckMinSize({
         check: "min_size",
         ...normalizeParams(params),
+=======
+    return new api_checks.$ZodCheckMinSize({
+        check: "min_size",
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         minimum,
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _size(size, params) {
+<<<<<<< HEAD
     return new $ZodCheckSizeEquals({
         check: "size_equals",
         ...normalizeParams(params),
+=======
+    return new api_checks.$ZodCheckSizeEquals({
+        check: "size_equals",
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         size,
     });
 }
@@ -59061,19 +61214,34 @@ function _endsWith(suffix, params) {
 }
 // @__NO_SIDE_EFFECTS__
 function _property(property, schema, params) {
+<<<<<<< HEAD
     return new $ZodCheckProperty({
         check: "property",
         property,
         schema,
         ...normalizeParams(params),
+=======
+    return new api_checks.$ZodCheckProperty({
+        check: "property",
+        property,
+        schema,
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _mime(types, params) {
+<<<<<<< HEAD
     return new $ZodCheckMimeType({
         check: "mime_type",
         mime: types,
         ...normalizeParams(params),
+=======
+    return new api_checks.$ZodCheckMimeType({
+        check: "mime_type",
+        mime: types,
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59124,7 +61292,11 @@ function _union(Class, options, params) {
     return new Class({
         type: "union",
         options,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 function _xor(Class, options, params) {
@@ -59132,7 +61304,11 @@ function _xor(Class, options, params) {
         type: "union",
         options,
         inclusive: false,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59141,7 +61317,11 @@ function _discriminatedUnion(Class, discriminator, options, params) {
         type: "union",
         options,
         discriminator,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59166,7 +61346,11 @@ function _tuple(Class, items, _paramsOrRest, _params) {
         type: "tuple",
         items,
         rest,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59175,7 +61359,11 @@ function _record(Class, keyType, valueType, params) {
         type: "record",
         keyType,
         valueType,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59184,7 +61372,11 @@ function _map(Class, keyType, valueType, params) {
         type: "map",
         keyType,
         valueType,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59192,7 +61384,11 @@ function _set(Class, valueType, params) {
     return new Class({
         type: "set",
         valueType,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59212,7 +61408,11 @@ function _enum(Class, values, params) {
     return new Class({
         type: "enum",
         entries,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59227,7 +61427,11 @@ function _nativeEnum(Class, entries, params) {
     return new Class({
         type: "enum",
         entries,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59235,14 +61439,22 @@ function _literal(Class, value, params) {
     return new Class({
         type: "literal",
         values: Array.isArray(value) ? value : [value],
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
 function _file(Class, params) {
     return new Class({
         type: "file",
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59272,7 +61484,11 @@ function _default(Class, innerType, defaultValue) {
         type: "default",
         innerType,
         get defaultValue() {
+<<<<<<< HEAD
             return typeof defaultValue === "function" ? defaultValue() : util.shallowClone(defaultValue);
+=======
+            return typeof defaultValue === "function" ? defaultValue() : api_util.shallowClone(defaultValue);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         },
     });
 }
@@ -59281,7 +61497,11 @@ function _nonoptional(Class, innerType, params) {
     return new Class({
         type: "nonoptional",
         innerType,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59319,7 +61539,11 @@ function _templateLiteral(Class, parts, params) {
     return new Class({
         type: "template_literal",
         parts,
+<<<<<<< HEAD
         ...util.normalizeParams(params),
+=======
+        ...api_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 // @__NO_SIDE_EFFECTS__
@@ -59338,7 +61562,11 @@ function _promise(Class, innerType) {
 }
 // @__NO_SIDE_EFFECTS__
 function _custom(Class, fn, _params) {
+<<<<<<< HEAD
     const norm = normalizeParams(_params);
+=======
+    const norm = api_util.normalizeParams(_params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     norm.abort ?? (norm.abort = true); // default to abort:false
     const schema = new Class({
         type: "custom",
@@ -59360,7 +61588,11 @@ function _refine(Class, fn, _params) {
     return schema;
 }
 // @__NO_SIDE_EFFECTS__
+<<<<<<< HEAD
 function _superRefine(fn) {
+=======
+function _superRefine(fn, params) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const ch = _check((payload) => {
         payload.addIssue = (issue) => {
             if (typeof issue === "string") {
@@ -59379,7 +61611,11 @@ function _superRefine(fn) {
             }
         };
         return fn(payload.value, payload);
+<<<<<<< HEAD
     });
+=======
+    }, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     return ch;
 }
 // @__NO_SIDE_EFFECTS__
@@ -59417,7 +61653,11 @@ function meta(metadata) {
 }
 // @__NO_SIDE_EFFECTS__
 function _stringbool(Classes, _params) {
+<<<<<<< HEAD
     const params = normalizeParams(_params);
+=======
+    const params = api_util.normalizeParams(_params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     let truthyArray = params.truthy ?? ["true", "1", "yes", "on", "y", "enabled"];
     let falsyArray = params.falsy ?? ["false", "0", "no", "off", "n", "disabled"];
     if (params.case !== "sensitive") {
@@ -59426,9 +61666,15 @@ function _stringbool(Classes, _params) {
     }
     const truthySet = new Set(truthyArray);
     const falsySet = new Set(falsyArray);
+<<<<<<< HEAD
     const _Codec = Classes.Codec ?? $ZodCodec;
     const _Boolean = Classes.Boolean ?? $ZodBoolean;
     const _String = Classes.String ?? $ZodString;
+=======
+    const _Codec = Classes.Codec ?? schemas.$ZodCodec;
+    const _Boolean = Classes.Boolean ?? schemas.$ZodBoolean;
+    const _String = Classes.String ?? schemas.$ZodString;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const stringSchema = new _String({ type: "string", error: params.error });
     const booleanSchema = new _Boolean({ type: "boolean", error: params.error });
     const codec = new _Codec({
@@ -59471,9 +61717,15 @@ function _stringbool(Classes, _params) {
 }
 // @__NO_SIDE_EFFECTS__
 function _stringFormat(Class, format, fnOrRegex, _params = {}) {
+<<<<<<< HEAD
     const params = normalizeParams(_params);
     const def = {
         ...normalizeParams(_params),
+=======
+    const params = api_util.normalizeParams(_params);
+    const def = {
+        ...api_util.normalizeParams(_params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         check: "string_format",
         type: "string",
         format,
@@ -59487,7 +61739,11 @@ function _stringFormat(Class, format, fnOrRegex, _params = {}) {
     return inst;
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/to-json-schema.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/to-json-schema.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 // function initializeContext<T extends schemas.$ZodType>(inputs: JSONSchemaGeneratorParams<T>): ToJSONSchemaContext<T> {
 //   return {
@@ -59576,7 +61832,11 @@ function to_json_schema_process(schema, ctx, _params = { path: [], schemaPath: [
         delete result.schema.default;
     }
     // set prefault as default
+<<<<<<< HEAD
     if (ctx.io === "input" && result.schema._prefault)
+=======
+    if (ctx.io === "input" && "_prefault" in result.schema)
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         (_a = result.schema).default ?? (_a.default = result.schema._prefault);
     delete result.schema._prefault;
     // pulling fresh from ctx.seen in case it was overwritten
@@ -59808,11 +62068,26 @@ function finalize(ctx, schema) {
         result.$id = ctx.external.uri(id);
     }
     Object.assign(result, root.def ?? root.schema);
+<<<<<<< HEAD
+=======
+    // The `id` in `.meta()` is a Zod-specific registration tag used to extract
+    // schemas into $defs — it is not user-facing JSON Schema metadata. Strip it
+    // from the output body where it would otherwise leak. The id is preserved
+    // implicitly via the $defs key (and via $ref paths).
+    const rootMetaId = ctx.metadataRegistry.get(schema)?.id;
+    if (rootMetaId !== undefined && result.id === rootMetaId)
+        delete result.id;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     // build defs object
     const defs = ctx.external?.defs ?? {};
     for (const entry of ctx.seen.entries()) {
         const seen = entry[1];
         if (seen.def && seen.defId) {
+<<<<<<< HEAD
+=======
+            if (seen.def.id === seen.defId)
+                delete seen.def.id;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             defs[seen.defId] = seen.def;
         }
     }
@@ -59881,6 +62156,11 @@ function isTransforming(_schema, _ctx) {
         return isTransforming(def.keyType, ctx) || isTransforming(def.valueType, ctx);
     }
     if (def.type === "pipe") {
+<<<<<<< HEAD
+=======
+        if (_schema._zod.traits.has("$ZodCodec"))
+            return true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         return isTransforming(def.in, ctx) || isTransforming(def.out, ctx);
     }
     if (def.type === "object") {
@@ -59926,7 +62206,11 @@ const createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params)
     return finalize(ctx, schema);
 };
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/json-schema-processors.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/core/json-schema-processors.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 /* unused harmony import specifier */ var json_schema_processors_initializeContext;
 /* unused harmony import specifier */ var json_schema_processors_process;
 /* unused harmony import specifier */ var json_schema_processors_extractDefs;
@@ -59986,8 +62270,17 @@ const numberProcessor = (schema, ctx, _json, _params) => {
         json.type = "integer";
     else
         json.type = "number";
+<<<<<<< HEAD
     if (typeof exclusiveMinimum === "number") {
         if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
+=======
+    // when both minimum and exclusiveMinimum exist, pick the more restrictive one
+    const exMin = typeof exclusiveMinimum === "number" && exclusiveMinimum >= (minimum ?? Number.NEGATIVE_INFINITY);
+    const exMax = typeof exclusiveMaximum === "number" && exclusiveMaximum <= (maximum ?? Number.POSITIVE_INFINITY);
+    const legacy = ctx.target === "draft-04" || ctx.target === "openapi-3.0";
+    if (exMin) {
+        if (legacy) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             json.minimum = exclusiveMinimum;
             json.exclusiveMinimum = true;
         }
@@ -59995,6 +62288,7 @@ const numberProcessor = (schema, ctx, _json, _params) => {
             json.exclusiveMinimum = exclusiveMinimum;
         }
     }
+<<<<<<< HEAD
     if (typeof minimum === "number") {
         json.minimum = minimum;
         if (typeof exclusiveMinimum === "number" && ctx.target !== "draft-04") {
@@ -60006,6 +62300,13 @@ const numberProcessor = (schema, ctx, _json, _params) => {
     }
     if (typeof exclusiveMaximum === "number") {
         if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
+=======
+    else if (typeof minimum === "number") {
+        json.minimum = minimum;
+    }
+    if (exMax) {
+        if (legacy) {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
             json.maximum = exclusiveMaximum;
             json.exclusiveMaximum = true;
         }
@@ -60013,6 +62314,7 @@ const numberProcessor = (schema, ctx, _json, _params) => {
             json.exclusiveMaximum = exclusiveMaximum;
         }
     }
+<<<<<<< HEAD
     if (typeof maximum === "number") {
         json.maximum = maximum;
         if (typeof exclusiveMaximum === "number" && ctx.target !== "draft-04") {
@@ -60021,6 +62323,10 @@ const numberProcessor = (schema, ctx, _json, _params) => {
             else
                 delete json.exclusiveMaximum;
         }
+=======
+    else if (typeof maximum === "number") {
+        json.maximum = maximum;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     }
     if (typeof multipleOf === "number")
         json.multipleOf = multipleOf;
@@ -60208,7 +62514,14 @@ const arrayProcessor = (schema, ctx, _json, params) => {
     if (typeof maximum === "number")
         json.maxItems = maximum;
     json.type = "array";
+<<<<<<< HEAD
     json.items = to_json_schema_process(def.element, ctx, { ...params, path: [...params.path, "items"] });
+=======
+    json.items = to_json_schema_process(def.element, ctx, {
+        ...params,
+        path: [...params.path, "items"],
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 };
 const objectProcessor = (schema, ctx, _json, params) => {
     const json = _json;
@@ -60425,7 +62738,12 @@ const catchProcessor = (schema, ctx, json, params) => {
 };
 const pipeProcessor = (schema, ctx, _json, params) => {
     const def = schema._zod.def;
+<<<<<<< HEAD
     const innerType = ctx.io === "input" ? (def.in._zod.def.type === "transform" ? def.out : def.in) : def.out;
+=======
+    const inIsTransform = def.in._zod.traits.has("$ZodTransform");
+    const innerType = ctx.io === "input" ? (inIsTransform ? def.out : def.in) : def.out;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     to_json_schema_process(innerType, ctx, params);
     const seen = ctx.seen.get(schema);
     seen.ref = innerType;
@@ -60537,6 +62855,7 @@ function toJSONSchema(input, params) {
     return json_schema_processors_finalize(ctx, input);
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/core/json-schema-generator.js
 /* unused harmony import specifier */ var json_schema_generator_allProcessors;
 /* unused harmony import specifier */ var json_schema_generator_initializeContext;
@@ -60761,6 +63080,9 @@ function write_file_recursively(base, file, content) {
 
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/classic/iso.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/iso.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 const ZodISODateTime = /*@__PURE__*/ $constructor("ZodISODateTime", (inst, def) => {
@@ -60792,7 +63114,12 @@ function iso_duration(params) {
     return _isoDuration(ZodISODuration, params);
 }
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/classic/errors.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/errors.js
+/* unused harmony import specifier */ var errors_core;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 
@@ -60835,14 +63162,23 @@ const errors_initializer = (inst, issues) => {
     //   },
     // });
 };
+<<<<<<< HEAD
 const ZodError = $constructor("ZodError", errors_initializer);
 const ZodRealError = $constructor("ZodError", errors_initializer, {
+=======
+const ZodError = /*@__PURE__*/ (/* unused pure expression or super */ null && (errors_core.$constructor("ZodError", errors_initializer)));
+const ZodRealError = /*@__PURE__*/ $constructor("ZodError", errors_initializer, {
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     Parent: Error,
 });
 // /** @deprecated Use `z.core.$ZodErrorMapCtx` instead. */
 // export type ErrorMapCtx = core.$ZodErrorMapCtx;
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/classic/parse.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/parse.js
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 const parse_parse = /* @__PURE__ */ _parse(ZodRealError);
@@ -60859,7 +63195,15 @@ const parse_safeDecode = /* @__PURE__ */ _safeDecode(ZodRealError);
 const parse_safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 const parse_safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
+<<<<<<< HEAD
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/classic/schemas.js
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/schemas.js
+/* unused harmony import specifier */ var classic_schemas_core;
+/* unused harmony import specifier */ var classic_schemas_util;
+/* unused harmony import specifier */ var processors;
+/* unused harmony import specifier */ var schemas_checks;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 
@@ -60867,6 +63211,57 @@ const parse_safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
 
 
+<<<<<<< HEAD
+=======
+// Lazy-bind builder methods.
+//
+// Builder methods (`.optional`, `.array`, `.refine`, ...) live as
+// non-enumerable getters on each concrete schema constructor's
+// prototype. On first access from an instance the getter allocates
+// `fn.bind(this)` and caches it as an own property on that instance,
+// so detached usage (`const m = schema.optional; m()`) still works
+// and the per-instance allocation only happens for methods actually
+// touched.
+//
+// One install per (prototype, group), memoized by `_installedGroups`.
+const _installedGroups = /* @__PURE__ */ new WeakMap();
+function _installLazyMethods(inst, group, methods) {
+    const proto = Object.getPrototypeOf(inst);
+    let installed = _installedGroups.get(proto);
+    if (!installed) {
+        installed = new Set();
+        _installedGroups.set(proto, installed);
+    }
+    if (installed.has(group))
+        return;
+    installed.add(group);
+    for (const key in methods) {
+        const fn = methods[key];
+        Object.defineProperty(proto, key, {
+            configurable: true,
+            enumerable: false,
+            get() {
+                const bound = fn.bind(this);
+                Object.defineProperty(this, key, {
+                    configurable: true,
+                    writable: true,
+                    enumerable: true,
+                    value: bound,
+                });
+                return bound;
+            },
+            set(v) {
+                Object.defineProperty(this, key, {
+                    configurable: true,
+                    writable: true,
+                    enumerable: true,
+                    value: v,
+                });
+            },
+        });
+    }
+}
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
     $ZodType.init(inst, def);
     Object.assign(inst["~standard"], {
@@ -60879,6 +63274,7 @@ const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
     inst.def = def;
     inst.type = def.type;
     Object.defineProperty(inst, "_def", { value: def });
+<<<<<<< HEAD
     // base methods
     inst.check = (...checks) => {
         return inst.clone(mergeDefs(def, {
@@ -60898,12 +63294,22 @@ const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
         return inst;
     });
     // parsing
+=======
+    // Parse-family is intentionally kept as per-instance closures: these are
+    // the hot path AND the most-detached methods (`arr.map(schema.parse)`,
+    // `const { parse } = schema`, etc.). Eager closures here mean callers pay
+    // ~12 closure allocations per schema but get monomorphic call sites and
+    // detached usage that "just works".
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst.parse = (data, params) => parse_parse(inst, data, params, { callee: inst.parse });
     inst.safeParse = (data, params) => parse_safeParse(inst, data, params);
     inst.parseAsync = async (data, params) => parse_parseAsync(inst, data, params, { callee: inst.parseAsync });
     inst.safeParseAsync = async (data, params) => parse_safeParseAsync(inst, data, params);
     inst.spa = inst.safeParseAsync;
+<<<<<<< HEAD
     // encoding/decoding
+=======
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst.encode = (data, params) => parse_encode(inst, data, params);
     inst.decode = (data, params) => parse_decode(inst, data, params);
     inst.encodeAsync = async (data, params) => parse_encodeAsync(inst, data, params);
@@ -60912,6 +63318,7 @@ const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
     inst.safeDecode = (data, params) => parse_safeDecode(inst, data, params);
     inst.safeEncodeAsync = async (data, params) => parse_safeEncodeAsync(inst, data, params);
     inst.safeDecodeAsync = async (data, params) => parse_safeDecodeAsync(inst, data, params);
+<<<<<<< HEAD
     // refinements
     inst.refine = (check, params) => inst.check(refine(check, params));
     inst.superRefine = (refinement) => inst.check(superRefine(refinement));
@@ -60938,12 +63345,121 @@ const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
         globalRegistry.add(cl, { description });
         return cl;
     };
+=======
+    // All builder methods are placed on the internal prototype as lazy-bind
+    // getters. On first access per-instance, a bound thunk is allocated and
+    // cached as an own property; subsequent accesses skip the getter. This
+    // means: no per-instance allocation for unused methods, full
+    // detachability preserved (`const m = schema.optional; m()` works), and
+    // shared underlying function references across all instances.
+    _installLazyMethods(inst, "ZodType", {
+        check(...chks) {
+            const def = this.def;
+            return this.clone(mergeDefs(def, {
+                checks: [
+                    ...(def.checks ?? []),
+                    ...chks.map((ch) => typeof ch === "function" ? { _zod: { check: ch, def: { check: "custom" }, onattach: [] } } : ch),
+                ],
+            }), { parent: true });
+        },
+        with(...chks) {
+            return this.check(...chks);
+        },
+        clone(def, params) {
+            return clone(this, def, params);
+        },
+        brand() {
+            return this;
+        },
+        register(reg, meta) {
+            reg.add(this, meta);
+            return this;
+        },
+        refine(check, params) {
+            return this.check(refine(check, params));
+        },
+        superRefine(refinement, params) {
+            return this.check(superRefine(refinement, params));
+        },
+        overwrite(fn) {
+            return this.check(_overwrite(fn));
+        },
+        optional() {
+            return optional(this);
+        },
+        exactOptional() {
+            return exactOptional(this);
+        },
+        nullable() {
+            return nullable(this);
+        },
+        nullish() {
+            return optional(nullable(this));
+        },
+        nonoptional(params) {
+            return nonoptional(this, params);
+        },
+        array() {
+            return array(this);
+        },
+        or(arg) {
+            return union([this, arg]);
+        },
+        and(arg) {
+            return intersection(this, arg);
+        },
+        transform(tx) {
+            return pipe(this, transform(tx));
+        },
+        default(d) {
+            return schemas_default(this, d);
+        },
+        prefault(d) {
+            return prefault(this, d);
+        },
+        catch(params) {
+            return schemas_catch(this, params);
+        },
+        pipe(target) {
+            return pipe(this, target);
+        },
+        readonly() {
+            return readonly(this);
+        },
+        describe(description) {
+            const cl = this.clone();
+            globalRegistry.add(cl, { description });
+            return cl;
+        },
+        meta(...args) {
+            // overloaded: meta() returns the registered metadata, meta(data)
+            // returns a clone with `data` registered. The mapped type picks
+            // up the second overload, so we accept variadic any-args and
+            // return `any` to satisfy both at runtime.
+            if (args.length === 0)
+                return globalRegistry.get(this);
+            const cl = this.clone();
+            globalRegistry.add(cl, args[0]);
+            return cl;
+        },
+        isOptional() {
+            return this.safeParse(undefined).success;
+        },
+        isNullable() {
+            return this.safeParse(null).success;
+        },
+        apply(fn) {
+            return fn(this);
+        },
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     Object.defineProperty(inst, "description", {
         get() {
             return globalRegistry.get(inst)?.description;
         },
         configurable: true,
     });
+<<<<<<< HEAD
     inst.meta = (...args) => {
         if (args.length === 0) {
             return globalRegistry.get(inst);
@@ -60956,6 +63472,8 @@ const ZodType = /*@__PURE__*/ $constructor("ZodType", (inst, def) => {
     inst.isOptional = () => inst.safeParse(undefined).success;
     inst.isNullable = () => inst.safeParse(null).success;
     inst.apply = (fn) => fn(inst);
+=======
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     return inst;
 });
 /** @internal */
@@ -60967,6 +63485,7 @@ const _ZodString = /*@__PURE__*/ $constructor("_ZodString", (inst, def) => {
     inst.format = bag.format ?? null;
     inst.minLength = bag.minimum ?? null;
     inst.maxLength = bag.maximum ?? null;
+<<<<<<< HEAD
     // validations
     inst.regex = (...args) => inst.check(_regex(...args));
     inst.includes = (...args) => inst.check(_includes(...args));
@@ -60984,6 +63503,55 @@ const _ZodString = /*@__PURE__*/ $constructor("_ZodString", (inst, def) => {
     inst.toLowerCase = () => inst.check(_toLowerCase());
     inst.toUpperCase = () => inst.check(_toUpperCase());
     inst.slugify = () => inst.check(_slugify());
+=======
+    _installLazyMethods(inst, "_ZodString", {
+        regex(...args) {
+            return this.check(_regex(...args));
+        },
+        includes(...args) {
+            return this.check(_includes(...args));
+        },
+        startsWith(...args) {
+            return this.check(_startsWith(...args));
+        },
+        endsWith(...args) {
+            return this.check(_endsWith(...args));
+        },
+        min(...args) {
+            return this.check(_minLength(...args));
+        },
+        max(...args) {
+            return this.check(_maxLength(...args));
+        },
+        length(...args) {
+            return this.check(_length(...args));
+        },
+        nonempty(...args) {
+            return this.check(_minLength(1, ...args));
+        },
+        lowercase(params) {
+            return this.check(_lowercase(params));
+        },
+        uppercase(params) {
+            return this.check(_uppercase(params));
+        },
+        trim() {
+            return this.check(_trim());
+        },
+        normalize(...args) {
+            return this.check(_normalize(...args));
+        },
+        toLowerCase() {
+            return this.check(_toLowerCase());
+        },
+        toUpperCase() {
+            return this.check(_toUpperCase());
+        },
+        slugify() {
+            return this.check(_slugify());
+        },
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 });
 const ZodString = /*@__PURE__*/ $constructor("ZodString", (inst, def) => {
     $ZodString.init(inst, def);
@@ -61030,7 +63598,11 @@ const ZodEmail = /*@__PURE__*/ $constructor("ZodEmail", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_email(params) {
+<<<<<<< HEAD
     return _email(ZodEmail, params);
+=======
+    return classic_schemas_core._email(ZodEmail, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodGUID = /*@__PURE__*/ $constructor("ZodGUID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61038,7 +63610,11 @@ const ZodGUID = /*@__PURE__*/ $constructor("ZodGUID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_guid(params) {
+<<<<<<< HEAD
     return _guid(ZodGUID, params);
+=======
+    return classic_schemas_core._guid(ZodGUID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodUUID = /*@__PURE__*/ $constructor("ZodUUID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61046,6 +63622,7 @@ const ZodUUID = /*@__PURE__*/ $constructor("ZodUUID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_uuid(params) {
+<<<<<<< HEAD
     return _uuid(ZodUUID, params);
 }
 function uuidv4(params) {
@@ -61058,6 +63635,20 @@ function uuidv6(params) {
 // ZodUUIDv7
 function uuidv7(params) {
     return _uuidv7(ZodUUID, params);
+=======
+    return classic_schemas_core._uuid(ZodUUID, params);
+}
+function uuidv4(params) {
+    return classic_schemas_core._uuidv4(ZodUUID, params);
+}
+// ZodUUIDv6
+function uuidv6(params) {
+    return classic_schemas_core._uuidv6(ZodUUID, params);
+}
+// ZodUUIDv7
+function uuidv7(params) {
+    return classic_schemas_core._uuidv7(ZodUUID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodURL = /*@__PURE__*/ $constructor("ZodURL", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61065,6 +63656,7 @@ const ZodURL = /*@__PURE__*/ $constructor("ZodURL", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function url(params) {
+<<<<<<< HEAD
     return _url(ZodURL, params);
 }
 function httpUrl(params) {
@@ -61072,6 +63664,15 @@ function httpUrl(params) {
         protocol: /^https?$/,
         hostname: domain,
         ...normalizeParams(params),
+=======
+    return classic_schemas_core._url(ZodURL, params);
+}
+function httpUrl(params) {
+    return classic_schemas_core._url(ZodURL, {
+        protocol: classic_schemas_core.regexes.httpProtocol,
+        hostname: classic_schemas_core.regexes.domain,
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 const ZodEmoji = /*@__PURE__*/ $constructor("ZodEmoji", (inst, def) => {
@@ -61080,7 +63681,11 @@ const ZodEmoji = /*@__PURE__*/ $constructor("ZodEmoji", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_emoji(params) {
+<<<<<<< HEAD
     return api_emoji(ZodEmoji, params);
+=======
+    return classic_schemas_core._emoji(ZodEmoji, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodNanoID = /*@__PURE__*/ $constructor("ZodNanoID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61088,15 +63693,37 @@ const ZodNanoID = /*@__PURE__*/ $constructor("ZodNanoID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_nanoid(params) {
+<<<<<<< HEAD
     return _nanoid(ZodNanoID, params);
 }
+=======
+    return classic_schemas_core._nanoid(ZodNanoID, params);
+}
+/**
+ * @deprecated CUID v1 is deprecated by its authors due to information leakage
+ * (timestamps embedded in the id). Use {@link ZodCUID2} instead.
+ * See https://github.com/paralleldrive/cuid.
+ */
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const ZodCUID = /*@__PURE__*/ $constructor("ZodCUID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
     $ZodCUID.init(inst, def);
     ZodStringFormat.init(inst, def);
 });
+<<<<<<< HEAD
 function schemas_cuid(params) {
     return _cuid(ZodCUID, params);
+=======
+/**
+ * Validates a CUID v1 string.
+ *
+ * @deprecated CUID v1 is deprecated by its authors due to information leakage
+ * (timestamps embedded in the id). Use {@link cuid2 | `z.cuid2()`} instead.
+ * See https://github.com/paralleldrive/cuid.
+ */
+function schemas_cuid(params) {
+    return classic_schemas_core._cuid(ZodCUID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodCUID2 = /*@__PURE__*/ $constructor("ZodCUID2", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61104,7 +63731,11 @@ const ZodCUID2 = /*@__PURE__*/ $constructor("ZodCUID2", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_cuid2(params) {
+<<<<<<< HEAD
     return _cuid2(ZodCUID2, params);
+=======
+    return classic_schemas_core._cuid2(ZodCUID2, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodULID = /*@__PURE__*/ $constructor("ZodULID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61112,7 +63743,11 @@ const ZodULID = /*@__PURE__*/ $constructor("ZodULID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_ulid(params) {
+<<<<<<< HEAD
     return _ulid(ZodULID, params);
+=======
+    return classic_schemas_core._ulid(ZodULID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodXID = /*@__PURE__*/ $constructor("ZodXID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61120,7 +63755,11 @@ const ZodXID = /*@__PURE__*/ $constructor("ZodXID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_xid(params) {
+<<<<<<< HEAD
     return _xid(ZodXID, params);
+=======
+    return classic_schemas_core._xid(ZodXID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodKSUID = /*@__PURE__*/ $constructor("ZodKSUID", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61128,7 +63767,11 @@ const ZodKSUID = /*@__PURE__*/ $constructor("ZodKSUID", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_ksuid(params) {
+<<<<<<< HEAD
     return _ksuid(ZodKSUID, params);
+=======
+    return classic_schemas_core._ksuid(ZodKSUID, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodIPv4 = /*@__PURE__*/ $constructor("ZodIPv4", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61136,6 +63779,7 @@ const ZodIPv4 = /*@__PURE__*/ $constructor("ZodIPv4", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_ipv4(params) {
+<<<<<<< HEAD
     return _ipv4(ZodIPv4, params);
 }
 const ZodMAC = /*@__PURE__*/ $constructor("ZodMAC", (inst, def) => {
@@ -61145,6 +63789,17 @@ const ZodMAC = /*@__PURE__*/ $constructor("ZodMAC", (inst, def) => {
 });
 function schemas_mac(params) {
     return _mac(ZodMAC, params);
+=======
+    return classic_schemas_core._ipv4(ZodIPv4, params);
+}
+const ZodMAC = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodMAC", (inst, def) => {
+    // ZodStringFormat.init(inst, def);
+    classic_schemas_core.$ZodMAC.init(inst, def);
+    ZodStringFormat.init(inst, def);
+})));
+function schemas_mac(params) {
+    return classic_schemas_core._mac(ZodMAC, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodIPv6 = /*@__PURE__*/ $constructor("ZodIPv6", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61152,21 +63807,33 @@ const ZodIPv6 = /*@__PURE__*/ $constructor("ZodIPv6", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_ipv6(params) {
+<<<<<<< HEAD
     return _ipv6(ZodIPv6, params);
+=======
+    return classic_schemas_core._ipv6(ZodIPv6, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodCIDRv4 = /*@__PURE__*/ $constructor("ZodCIDRv4", (inst, def) => {
     $ZodCIDRv4.init(inst, def);
     ZodStringFormat.init(inst, def);
 });
 function schemas_cidrv4(params) {
+<<<<<<< HEAD
     return _cidrv4(ZodCIDRv4, params);
+=======
+    return classic_schemas_core._cidrv4(ZodCIDRv4, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodCIDRv6 = /*@__PURE__*/ $constructor("ZodCIDRv6", (inst, def) => {
     $ZodCIDRv6.init(inst, def);
     ZodStringFormat.init(inst, def);
 });
 function schemas_cidrv6(params) {
+<<<<<<< HEAD
     return _cidrv6(ZodCIDRv6, params);
+=======
+    return classic_schemas_core._cidrv6(ZodCIDRv6, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodBase64 = /*@__PURE__*/ $constructor("ZodBase64", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61174,7 +63841,11 @@ const ZodBase64 = /*@__PURE__*/ $constructor("ZodBase64", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_base64(params) {
+<<<<<<< HEAD
     return _base64(ZodBase64, params);
+=======
+    return classic_schemas_core._base64(ZodBase64, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodBase64URL = /*@__PURE__*/ $constructor("ZodBase64URL", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61182,7 +63853,11 @@ const ZodBase64URL = /*@__PURE__*/ $constructor("ZodBase64URL", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_base64url(params) {
+<<<<<<< HEAD
     return _base64url(ZodBase64URL, params);
+=======
+    return classic_schemas_core._base64url(ZodBase64URL, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodE164 = /*@__PURE__*/ $constructor("ZodE164", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61190,7 +63865,11 @@ const ZodE164 = /*@__PURE__*/ $constructor("ZodE164", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function schemas_e164(params) {
+<<<<<<< HEAD
     return _e164(ZodE164, params);
+=======
+    return classic_schemas_core._e164(ZodE164, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodJWT = /*@__PURE__*/ $constructor("ZodJWT", (inst, def) => {
     // ZodStringFormat.init(inst, def);
@@ -61198,6 +63877,7 @@ const ZodJWT = /*@__PURE__*/ $constructor("ZodJWT", (inst, def) => {
     ZodStringFormat.init(inst, def);
 });
 function jwt(params) {
+<<<<<<< HEAD
     return _jwt(ZodJWT, params);
 }
 const ZodCustomStringFormat = /*@__PURE__*/ $constructor("ZodCustomStringFormat", (inst, def) => {
@@ -61213,19 +63893,44 @@ function schemas_hostname(_params) {
 }
 function schemas_hex(_params) {
     return _stringFormat(ZodCustomStringFormat, "hex", hex, _params);
+=======
+    return classic_schemas_core._jwt(ZodJWT, params);
+}
+const ZodCustomStringFormat = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodCustomStringFormat", (inst, def) => {
+    // ZodStringFormat.init(inst, def);
+    classic_schemas_core.$ZodCustomStringFormat.init(inst, def);
+    ZodStringFormat.init(inst, def);
+})));
+function stringFormat(format, fnOrRegex, _params = {}) {
+    return classic_schemas_core._stringFormat(ZodCustomStringFormat, format, fnOrRegex, _params);
+}
+function schemas_hostname(_params) {
+    return classic_schemas_core._stringFormat(ZodCustomStringFormat, "hostname", classic_schemas_core.regexes.hostname, _params);
+}
+function schemas_hex(_params) {
+    return classic_schemas_core._stringFormat(ZodCustomStringFormat, "hex", classic_schemas_core.regexes.hex, _params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 function hash(alg, params) {
     const enc = params?.enc ?? "hex";
     const format = `${alg}_${enc}`;
+<<<<<<< HEAD
     const regex = regexes_namespaceObject[format];
     if (!regex)
         throw new Error(`Unrecognized hash format: ${format}`);
     return _stringFormat(ZodCustomStringFormat, format, regex, params);
+=======
+    const regex = classic_schemas_core.regexes[format];
+    if (!regex)
+        throw new Error(`Unrecognized hash format: ${format}`);
+    return classic_schemas_core._stringFormat(ZodCustomStringFormat, format, regex, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodNumber = /*@__PURE__*/ $constructor("ZodNumber", (inst, def) => {
     $ZodNumber.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => numberProcessor(inst, ctx, json, params);
+<<<<<<< HEAD
     inst.gt = (value, params) => inst.check(_gt(value, params));
     inst.gte = (value, params) => inst.check(_gte(value, params));
     inst.min = (value, params) => inst.check(_gte(value, params));
@@ -61242,6 +63947,55 @@ const ZodNumber = /*@__PURE__*/ $constructor("ZodNumber", (inst, def) => {
     inst.step = (value, params) => inst.check(_multipleOf(value, params));
     // inst.finite = (params) => inst.check(core.finite(params));
     inst.finite = () => inst;
+=======
+    _installLazyMethods(inst, "ZodNumber", {
+        gt(value, params) {
+            return this.check(_gt(value, params));
+        },
+        gte(value, params) {
+            return this.check(_gte(value, params));
+        },
+        min(value, params) {
+            return this.check(_gte(value, params));
+        },
+        lt(value, params) {
+            return this.check(_lt(value, params));
+        },
+        lte(value, params) {
+            return this.check(_lte(value, params));
+        },
+        max(value, params) {
+            return this.check(_lte(value, params));
+        },
+        int(params) {
+            return this.check(schemas_int(params));
+        },
+        safe(params) {
+            return this.check(schemas_int(params));
+        },
+        positive(params) {
+            return this.check(_gt(0, params));
+        },
+        nonnegative(params) {
+            return this.check(_gte(0, params));
+        },
+        negative(params) {
+            return this.check(_lt(0, params));
+        },
+        nonpositive(params) {
+            return this.check(_lte(0, params));
+        },
+        multipleOf(value, params) {
+            return this.check(_multipleOf(value, params));
+        },
+        step(value, params) {
+            return this.check(_multipleOf(value, params));
+        },
+        finite() {
+            return this;
+        },
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const bag = inst._zod.bag;
     inst.minValue =
         Math.max(bag.minimum ?? Number.NEGATIVE_INFINITY, bag.exclusiveMinimum ?? Number.NEGATIVE_INFINITY) ?? null;
@@ -61262,6 +64016,7 @@ function schemas_int(params) {
     return _int(ZodNumberFormat, params);
 }
 function float32(params) {
+<<<<<<< HEAD
     return _float32(ZodNumberFormat, params);
 }
 function float64(params) {
@@ -61272,6 +64027,18 @@ function int32(params) {
 }
 function uint32(params) {
     return _uint32(ZodNumberFormat, params);
+=======
+    return classic_schemas_core._float32(ZodNumberFormat, params);
+}
+function float64(params) {
+    return classic_schemas_core._float64(ZodNumberFormat, params);
+}
+function int32(params) {
+    return classic_schemas_core._int32(ZodNumberFormat, params);
+}
+function uint32(params) {
+    return classic_schemas_core._uint32(ZodNumberFormat, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
     $ZodBoolean.init(inst, def);
@@ -61281,6 +64048,7 @@ const ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
 function schemas_boolean(params) {
     return _boolean(ZodBoolean, params);
 }
+<<<<<<< HEAD
 const ZodBigInt = /*@__PURE__*/ $constructor("ZodBigInt", (inst, def) => {
     $ZodBigInt.init(inst, def);
     ZodType.init(inst, def);
@@ -61298,10 +64066,30 @@ const ZodBigInt = /*@__PURE__*/ $constructor("ZodBigInt", (inst, def) => {
     inst.nonpositive = (params) => inst.check(_lte(BigInt(0), params));
     inst.nonnegative = (params) => inst.check(_gte(BigInt(0), params));
     inst.multipleOf = (value, params) => inst.check(_multipleOf(value, params));
+=======
+const ZodBigInt = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodBigInt", (inst, def) => {
+    classic_schemas_core.$ZodBigInt.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.bigintProcessor(inst, ctx, json, params);
+    inst.gte = (value, params) => inst.check(schemas_checks.gte(value, params));
+    inst.min = (value, params) => inst.check(schemas_checks.gte(value, params));
+    inst.gt = (value, params) => inst.check(schemas_checks.gt(value, params));
+    inst.gte = (value, params) => inst.check(schemas_checks.gte(value, params));
+    inst.min = (value, params) => inst.check(schemas_checks.gte(value, params));
+    inst.lt = (value, params) => inst.check(schemas_checks.lt(value, params));
+    inst.lte = (value, params) => inst.check(schemas_checks.lte(value, params));
+    inst.max = (value, params) => inst.check(schemas_checks.lte(value, params));
+    inst.positive = (params) => inst.check(schemas_checks.gt(BigInt(0), params));
+    inst.negative = (params) => inst.check(schemas_checks.lt(BigInt(0), params));
+    inst.nonpositive = (params) => inst.check(schemas_checks.lte(BigInt(0), params));
+    inst.nonnegative = (params) => inst.check(schemas_checks.gte(BigInt(0), params));
+    inst.multipleOf = (value, params) => inst.check(schemas_checks.multipleOf(value, params));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const bag = inst._zod.bag;
     inst.minValue = bag.minimum ?? null;
     inst.maxValue = bag.maximum ?? null;
     inst.format = bag.format ?? null;
+<<<<<<< HEAD
 });
 function schemas_bigint(params) {
     return _bigint(ZodBigInt, params);
@@ -61333,6 +64121,39 @@ const ZodUndefined = /*@__PURE__*/ $constructor("ZodUndefined", (inst, def) => {
 });
 function schemas_undefined(params) {
     return api_undefined(ZodUndefined, params);
+=======
+})));
+function schemas_bigint(params) {
+    return classic_schemas_core._bigint(ZodBigInt, params);
+}
+const ZodBigIntFormat = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodBigIntFormat", (inst, def) => {
+    classic_schemas_core.$ZodBigIntFormat.init(inst, def);
+    ZodBigInt.init(inst, def);
+})));
+// int64
+function int64(params) {
+    return classic_schemas_core._int64(ZodBigIntFormat, params);
+}
+// uint64
+function uint64(params) {
+    return classic_schemas_core._uint64(ZodBigIntFormat, params);
+}
+const ZodSymbol = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodSymbol", (inst, def) => {
+    classic_schemas_core.$ZodSymbol.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.symbolProcessor(inst, ctx, json, params);
+})));
+function symbol(params) {
+    return classic_schemas_core._symbol(ZodSymbol, params);
+}
+const ZodUndefined = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodUndefined", (inst, def) => {
+    classic_schemas_core.$ZodUndefined.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.undefinedProcessor(inst, ctx, json, params);
+})));
+function schemas_undefined(params) {
+    return classic_schemas_core._undefined(ZodUndefined, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 
 const ZodNull = /*@__PURE__*/ $constructor("ZodNull", (inst, def) => {
@@ -61377,6 +64198,7 @@ function schemas_void(params) {
     return _void(ZodVoid, params);
 }
 
+<<<<<<< HEAD
 const ZodDate = /*@__PURE__*/ $constructor("ZodDate", (inst, def) => {
     $ZodDate.init(inst, def);
     ZodType.init(inst, def);
@@ -61389,17 +64211,51 @@ const ZodDate = /*@__PURE__*/ $constructor("ZodDate", (inst, def) => {
 });
 function schemas_date(params) {
     return _date(ZodDate, params);
+=======
+const ZodDate = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodDate", (inst, def) => {
+    classic_schemas_core.$ZodDate.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.dateProcessor(inst, ctx, json, params);
+    inst.min = (value, params) => inst.check(schemas_checks.gte(value, params));
+    inst.max = (value, params) => inst.check(schemas_checks.lte(value, params));
+    const c = inst._zod.bag;
+    inst.minDate = c.minimum ? new Date(c.minimum) : null;
+    inst.maxDate = c.maximum ? new Date(c.maximum) : null;
+})));
+function schemas_date(params) {
+    return classic_schemas_core._date(ZodDate, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodArray = /*@__PURE__*/ $constructor("ZodArray", (inst, def) => {
     $ZodArray.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => arrayProcessor(inst, ctx, json, params);
     inst.element = def.element;
+<<<<<<< HEAD
     inst.min = (minLength, params) => inst.check(_minLength(minLength, params));
     inst.nonempty = (params) => inst.check(_minLength(1, params));
     inst.max = (maxLength, params) => inst.check(_maxLength(maxLength, params));
     inst.length = (len, params) => inst.check(_length(len, params));
     inst.unwrap = () => inst.element;
+=======
+    _installLazyMethods(inst, "ZodArray", {
+        min(n, params) {
+            return this.check(_minLength(n, params));
+        },
+        nonempty(params) {
+            return this.check(_minLength(1, params));
+        },
+        max(n, params) {
+            return this.check(_maxLength(n, params));
+        },
+        length(n, params) {
+            return this.check(_length(n, params));
+        },
+        unwrap() {
+            return this.element;
+        },
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 });
 function array(element, params) {
     return _array(ZodArray, element, params);
@@ -61416,6 +64272,7 @@ const ZodObject = /*@__PURE__*/ $constructor("ZodObject", (inst, def) => {
     defineLazy(inst, "shape", () => {
         return def.shape;
     });
+<<<<<<< HEAD
     inst.keyof = () => schemas_enum(Object.keys(inst._zod.def.shape));
     inst.catchall = (catchall) => inst.clone({ ...inst._zod.def, catchall: catchall });
     inst.passthrough = () => inst.clone({ ...inst._zod.def, catchall: unknown() });
@@ -61433,6 +64290,49 @@ const ZodObject = /*@__PURE__*/ $constructor("ZodObject", (inst, def) => {
     inst.omit = (mask) => omit(inst, mask);
     inst.partial = (...args) => partial(ZodOptional, inst, args[0]);
     inst.required = (...args) => required(ZodNonOptional, inst, args[0]);
+=======
+    _installLazyMethods(inst, "ZodObject", {
+        keyof() {
+            return schemas_enum(Object.keys(this._zod.def.shape));
+        },
+        catchall(catchall) {
+            return this.clone({ ...this._zod.def, catchall: catchall });
+        },
+        passthrough() {
+            return this.clone({ ...this._zod.def, catchall: unknown() });
+        },
+        loose() {
+            return this.clone({ ...this._zod.def, catchall: unknown() });
+        },
+        strict() {
+            return this.clone({ ...this._zod.def, catchall: never() });
+        },
+        strip() {
+            return this.clone({ ...this._zod.def, catchall: undefined });
+        },
+        extend(incoming) {
+            return extend(this, incoming);
+        },
+        safeExtend(incoming) {
+            return safeExtend(this, incoming);
+        },
+        merge(other) {
+            return merge(this, other);
+        },
+        pick(mask) {
+            return pick(this, mask);
+        },
+        omit(mask) {
+            return omit(this, mask);
+        },
+        partial(...args) {
+            return partial(ZodOptional, this, args[0]);
+        },
+        required(...args) {
+            return required(ZodNonOptional, this, args[0]);
+        },
+    });
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 });
 function object(shape, params) {
     const def = {
@@ -61473,12 +64373,21 @@ function union(options, params) {
         ...normalizeParams(params),
     });
 }
+<<<<<<< HEAD
 const ZodXor = /*@__PURE__*/ $constructor("ZodXor", (inst, def) => {
     ZodUnion.init(inst, def);
     $ZodXor.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => unionProcessor(inst, ctx, json, params);
     inst.options = def.options;
 });
+=======
+const ZodXor = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodXor", (inst, def) => {
+    ZodUnion.init(inst, def);
+    classic_schemas_core.$ZodXor.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.unionProcessor(inst, ctx, json, params);
+    inst.options = def.options;
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 /** Creates an exclusive union (XOR) where exactly one option must match.
  * Unlike regular unions that succeed when any option matches, xor fails if
  * zero or more than one option matches the input. */
@@ -61487,7 +64396,11 @@ function xor(options, params) {
         type: "union",
         options: options,
         inclusive: false,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 const ZodDiscriminatedUnion = /*@__PURE__*/ $constructor("ZodDiscriminatedUnion", (inst, def) => {
@@ -61515,24 +64428,41 @@ function intersection(left, right) {
         right: right,
     });
 }
+<<<<<<< HEAD
 const ZodTuple = /*@__PURE__*/ $constructor("ZodTuple", (inst, def) => {
     $ZodTuple.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => tupleProcessor(inst, ctx, json, params);
+=======
+const ZodTuple = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodTuple", (inst, def) => {
+    classic_schemas_core.$ZodTuple.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.tupleProcessor(inst, ctx, json, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     inst.rest = (rest) => inst.clone({
         ...inst._zod.def,
         rest: rest,
     });
+<<<<<<< HEAD
 });
 function tuple(items, _paramsOrRest, _params) {
     const hasRest = _paramsOrRest instanceof $ZodType;
+=======
+})));
+function tuple(items, _paramsOrRest, _params) {
+    const hasRest = _paramsOrRest instanceof classic_schemas_core.$ZodType;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     const params = hasRest ? _params : _paramsOrRest;
     const rest = hasRest ? _paramsOrRest : null;
     return new ZodTuple({
         type: "tuple",
         items: items,
         rest,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 const ZodRecord = /*@__PURE__*/ $constructor("ZodRecord", (inst, def) => {
@@ -61543,6 +64473,18 @@ const ZodRecord = /*@__PURE__*/ $constructor("ZodRecord", (inst, def) => {
     inst.valueType = def.valueType;
 });
 function record(keyType, valueType, params) {
+<<<<<<< HEAD
+=======
+    // v3-compat: z.record(valueType, params?) — defaults keyType to z.string()
+    if (!valueType || !valueType._zod) {
+        return new ZodRecord({
+            type: "record",
+            keyType: schemas_string(),
+            valueType: keyType,
+            ...normalizeParams(valueType),
+        });
+    }
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     return new ZodRecord({
         type: "record",
         keyType,
@@ -61552,13 +64494,21 @@ function record(keyType, valueType, params) {
 }
 // type alksjf = core.output<core.$ZodRecordKey>;
 function partialRecord(keyType, valueType, params) {
+<<<<<<< HEAD
     const k = clone(keyType);
+=======
+    const k = classic_schemas_core.clone(keyType);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     k._zod.values = undefined;
     return new ZodRecord({
         type: "record",
         keyType: k,
         valueType: valueType,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 function looseRecord(keyType, valueType, params) {
@@ -61567,6 +64517,7 @@ function looseRecord(keyType, valueType, params) {
         keyType,
         valueType: valueType,
         mode: "loose",
+<<<<<<< HEAD
         ...normalizeParams(params),
     });
 }
@@ -61581,11 +64532,28 @@ const ZodMap = /*@__PURE__*/ $constructor("ZodMap", (inst, def) => {
     inst.max = (...args) => inst.check(_maxSize(...args));
     inst.size = (...args) => inst.check(_size(...args));
 });
+=======
+        ...classic_schemas_util.normalizeParams(params),
+    });
+}
+const ZodMap = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodMap", (inst, def) => {
+    classic_schemas_core.$ZodMap.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.mapProcessor(inst, ctx, json, params);
+    inst.keyType = def.keyType;
+    inst.valueType = def.valueType;
+    inst.min = (...args) => inst.check(classic_schemas_core._minSize(...args));
+    inst.nonempty = (params) => inst.check(classic_schemas_core._minSize(1, params));
+    inst.max = (...args) => inst.check(classic_schemas_core._maxSize(...args));
+    inst.size = (...args) => inst.check(classic_schemas_core._size(...args));
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function map(keyType, valueType, params) {
     return new ZodMap({
         type: "map",
         keyType: keyType,
         valueType: valueType,
+<<<<<<< HEAD
         ...normalizeParams(params),
     });
 }
@@ -61598,11 +64566,29 @@ const ZodSet = /*@__PURE__*/ $constructor("ZodSet", (inst, def) => {
     inst.max = (...args) => inst.check(_maxSize(...args));
     inst.size = (...args) => inst.check(_size(...args));
 });
+=======
+        ...classic_schemas_util.normalizeParams(params),
+    });
+}
+const ZodSet = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodSet", (inst, def) => {
+    classic_schemas_core.$ZodSet.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.setProcessor(inst, ctx, json, params);
+    inst.min = (...args) => inst.check(classic_schemas_core._minSize(...args));
+    inst.nonempty = (params) => inst.check(classic_schemas_core._minSize(1, params));
+    inst.max = (...args) => inst.check(classic_schemas_core._maxSize(...args));
+    inst.size = (...args) => inst.check(classic_schemas_core._size(...args));
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function set(valueType, params) {
     return new ZodSet({
         type: "set",
         valueType: valueType,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 const ZodEnum = /*@__PURE__*/ $constructor("ZodEnum", (inst, def) => {
@@ -61665,7 +64651,11 @@ function nativeEnum(entries, params) {
     return new ZodEnum({
         type: "enum",
         entries,
+<<<<<<< HEAD
         ...normalizeParams(params),
+=======
+        ...classic_schemas_util.normalizeParams(params),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     });
 }
 const ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
@@ -61689,6 +64679,7 @@ function literal(value, params) {
         ...normalizeParams(params),
     });
 }
+<<<<<<< HEAD
 const ZodFile = /*@__PURE__*/ $constructor("ZodFile", (inst, def) => {
     $ZodFile.init(inst, def);
     ZodType.init(inst, def);
@@ -61699,6 +64690,18 @@ const ZodFile = /*@__PURE__*/ $constructor("ZodFile", (inst, def) => {
 });
 function file(params) {
     return _file(ZodFile, params);
+=======
+const ZodFile = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodFile", (inst, def) => {
+    classic_schemas_core.$ZodFile.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.fileProcessor(inst, ctx, json, params);
+    inst.min = (size, params) => inst.check(classic_schemas_core._minSize(size, params));
+    inst.max = (size, params) => inst.check(classic_schemas_core._maxSize(size, params));
+    inst.mime = (types, params) => inst.check(classic_schemas_core._mime(Array.isArray(types) ? types : [types], params));
+})));
+function file(params) {
+    return classic_schemas_core._file(ZodFile, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodTransform = /*@__PURE__*/ $constructor("ZodTransform", (inst, def) => {
     $ZodTransform.init(inst, def);
@@ -61728,10 +64731,18 @@ const ZodTransform = /*@__PURE__*/ $constructor("ZodTransform", (inst, def) => {
         if (output instanceof Promise) {
             return output.then((output) => {
                 payload.value = output;
+<<<<<<< HEAD
+=======
+                payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
                 return payload;
             });
         }
         payload.value = output;
+<<<<<<< HEAD
+=======
+        payload.fallback = true;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         return payload;
     };
 });
@@ -61825,12 +64836,21 @@ function nonoptional(innerType, params) {
         ...normalizeParams(params),
     });
 }
+<<<<<<< HEAD
 const ZodSuccess = /*@__PURE__*/ $constructor("ZodSuccess", (inst, def) => {
     $ZodSuccess.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => successProcessor(inst, ctx, json, params);
     inst.unwrap = () => inst._zod.def.innerType;
 });
+=======
+const ZodSuccess = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodSuccess", (inst, def) => {
+    classic_schemas_core.$ZodSuccess.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.successProcessor(inst, ctx, json, params);
+    inst.unwrap = () => inst._zod.def.innerType;
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function success(innerType) {
     return new ZodSuccess({
         type: "success",
@@ -61852,6 +64872,7 @@ function schemas_catch(innerType, catchValue) {
     });
 }
 
+<<<<<<< HEAD
 const ZodNaN = /*@__PURE__*/ $constructor("ZodNaN", (inst, def) => {
     $ZodNaN.init(inst, def);
     ZodType.init(inst, def);
@@ -61859,6 +64880,15 @@ const ZodNaN = /*@__PURE__*/ $constructor("ZodNaN", (inst, def) => {
 });
 function nan(params) {
     return _nan(ZodNaN, params);
+=======
+const ZodNaN = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodNaN", (inst, def) => {
+    classic_schemas_core.$ZodNaN.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.nanProcessor(inst, ctx, json, params);
+})));
+function nan(params) {
+    return classic_schemas_core._nan(ZodNaN, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 const ZodPipe = /*@__PURE__*/ $constructor("ZodPipe", (inst, def) => {
     $ZodPipe.init(inst, def);
@@ -61875,10 +64905,17 @@ function pipe(in_, out) {
         // ...util.normalizeParams(params),
     });
 }
+<<<<<<< HEAD
 const ZodCodec = /*@__PURE__*/ $constructor("ZodCodec", (inst, def) => {
     ZodPipe.init(inst, def);
     $ZodCodec.init(inst, def);
 });
+=======
+const ZodCodec = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodCodec", (inst, def) => {
+    ZodPipe.init(inst, def);
+    classic_schemas_core.$ZodCodec.init(inst, def);
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function codec(in_, out, params) {
     return new ZodCodec({
         type: "pipe",
@@ -61888,6 +64925,23 @@ function codec(in_, out, params) {
         reverseTransform: params.encode,
     });
 }
+<<<<<<< HEAD
+=======
+function invertCodec(codec) {
+    const def = codec._zod.def;
+    return new ZodCodec({
+        type: "pipe",
+        in: def.out,
+        out: def.in,
+        transform: def.reverseTransform,
+        reverseTransform: def.transform,
+    });
+}
+const ZodPreprocess = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodPreprocess", (inst, def) => {
+    ZodPipe.init(inst, def);
+    classic_schemas_core.$ZodPreprocess.init(inst, def);
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const ZodReadonly = /*@__PURE__*/ $constructor("ZodReadonly", (inst, def) => {
     $ZodReadonly.init(inst, def);
     ZodType.init(inst, def);
@@ -61900,15 +64954,24 @@ function readonly(innerType) {
         innerType: innerType,
     });
 }
+<<<<<<< HEAD
 const ZodTemplateLiteral = /*@__PURE__*/ $constructor("ZodTemplateLiteral", (inst, def) => {
     $ZodTemplateLiteral.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => templateLiteralProcessor(inst, ctx, json, params);
 });
+=======
+const ZodTemplateLiteral = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodTemplateLiteral", (inst, def) => {
+    classic_schemas_core.$ZodTemplateLiteral.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.templateLiteralProcessor(inst, ctx, json, params);
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function templateLiteral(parts, params) {
     return new ZodTemplateLiteral({
         type: "template_literal",
         parts,
+<<<<<<< HEAD
         ...normalizeParams(params),
     });
 }
@@ -61918,29 +64981,57 @@ const ZodLazy = /*@__PURE__*/ $constructor("ZodLazy", (inst, def) => {
     inst._zod.processJSONSchema = (ctx, json, params) => lazyProcessor(inst, ctx, json, params);
     inst.unwrap = () => inst._zod.def.getter();
 });
+=======
+        ...classic_schemas_util.normalizeParams(params),
+    });
+}
+const ZodLazy = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodLazy", (inst, def) => {
+    classic_schemas_core.$ZodLazy.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.lazyProcessor(inst, ctx, json, params);
+    inst.unwrap = () => inst._zod.def.getter();
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function lazy(getter) {
     return new ZodLazy({
         type: "lazy",
         getter: getter,
     });
 }
+<<<<<<< HEAD
 const ZodPromise = /*@__PURE__*/ $constructor("ZodPromise", (inst, def) => {
     $ZodPromise.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => promiseProcessor(inst, ctx, json, params);
     inst.unwrap = () => inst._zod.def.innerType;
 });
+=======
+const ZodPromise = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodPromise", (inst, def) => {
+    classic_schemas_core.$ZodPromise.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.promiseProcessor(inst, ctx, json, params);
+    inst.unwrap = () => inst._zod.def.innerType;
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function promise(innerType) {
     return new ZodPromise({
         type: "promise",
         innerType: innerType,
     });
 }
+<<<<<<< HEAD
 const ZodFunction = /*@__PURE__*/ $constructor("ZodFunction", (inst, def) => {
     $ZodFunction.init(inst, def);
     ZodType.init(inst, def);
     inst._zod.processJSONSchema = (ctx, json, params) => functionProcessor(inst, ctx, json, params);
 });
+=======
+const ZodFunction = /*@__PURE__*/ (/* unused pure expression or super */ null && (classic_schemas_core.$constructor("ZodFunction", (inst, def) => {
+    classic_schemas_core.$ZodFunction.init(inst, def);
+    ZodType.init(inst, def);
+    inst._zod.processJSONSchema = (ctx, json, params) => processors.functionProcessor(inst, ctx, json, params);
+})));
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 function _function(params) {
     return new ZodFunction({
         type: "function",
@@ -61956,7 +65047,11 @@ const ZodCustom = /*@__PURE__*/ $constructor("ZodCustom", (inst, def) => {
 });
 // custom checks
 function check(fn) {
+<<<<<<< HEAD
     const ch = new $ZodCheck({
+=======
+    const ch = new classic_schemas_core.$ZodCheck({
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
         check: "custom",
         // ...util.normalizeParams(params),
     });
@@ -61964,14 +65059,23 @@ function check(fn) {
     return ch;
 }
 function custom(fn, _params) {
+<<<<<<< HEAD
     return _custom(ZodCustom, fn ?? (() => true), _params);
+=======
+    return classic_schemas_core._custom(ZodCustom, fn ?? (() => true), _params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 function refine(fn, _params = {}) {
     return _refine(ZodCustom, fn, _params);
 }
 // superRefine
+<<<<<<< HEAD
 function superRefine(fn) {
     return _superRefine(fn);
+=======
+function superRefine(fn, params) {
+    return _superRefine(fn, params);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 }
 // Re-export describe and meta from core
 const schemas_describe = describe;
@@ -62001,7 +65105,11 @@ function _instanceof(cls, params = {}) {
 }
 
 // stringbool
+<<<<<<< HEAD
 const stringbool = (...args) => _stringbool({
+=======
+const stringbool = (...args) => classic_schemas_core._stringbool({
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     Codec: ZodCodec,
     Boolean: ZodBoolean,
     String: ZodString,
@@ -62013,6 +65121,7 @@ function json(params) {
     return jsonSchema;
 }
 // preprocess
+<<<<<<< HEAD
 // /** @deprecated Use `z.pipe()` and `z.transform()` instead. */
 function preprocess(fn, schema) {
     return pipe(transform(fn), schema);
@@ -62640,12 +65749,26 @@ function fromJSONSchema(schema, params) {
 }
 
 ;// ./node_modules/.pnpm/zod@4.3.6/node_modules/zod/v4/classic/coerce.js
+=======
+function preprocess(fn, schema) {
+    return new ZodPreprocess({
+        type: "pipe",
+        in: transform(fn),
+        out: schema,
+    });
+}
+
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/coerce.js
+/* unused harmony import specifier */ var coerce_core;
+/* unused harmony import specifier */ var coerce_schemas;
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 
 
 function coerce_string(params) {
     return _coercedString(ZodString, params);
 }
 function coerce_number(params) {
+<<<<<<< HEAD
     return _coercedNumber(ZodNumber, params);
 }
 function coerce_boolean(params) {
@@ -62680,6 +65803,20 @@ config(en());
 
 
 
+=======
+    return coerce_core._coercedNumber(coerce_schemas.ZodNumber, params);
+}
+function coerce_boolean(params) {
+    return coerce_core._coercedBoolean(coerce_schemas.ZodBoolean, params);
+}
+function coerce_bigint(params) {
+    return coerce_core._coercedBigint(coerce_schemas.ZodBigInt, params);
+}
+function coerce_date(params) {
+    return coerce_core._coercedDate(coerce_schemas.ZodDate, params);
+}
+
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 ;// ./src/type/settings.en.ts
 
 
@@ -62789,8 +65926,13 @@ const settings_zh_Settings = strictObject({
 
 ;// external "node:process"
 
+<<<<<<< HEAD
 // EXTERNAL MODULE: ./node_modules/.pnpm/yaml@2.8.3/node_modules/yaml/dist/index.js
 var dist = __webpack_require__(8638);
+=======
+// EXTERNAL MODULE: ./node_modules/.pnpm/yaml@2.9.0/node_modules/yaml/dist/index.js
+var dist = __webpack_require__(2976);
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 ;// ./src/server/settings.ts
 
 
@@ -64042,11 +67184,19 @@ const STR_END = 'end';
 const STR_CLOSE = 'close';
 const EMPTY_FN = () => { };
 const IDENTITY_FN = (val) => val;
+<<<<<<< HEAD
 const handler_pl = process.platform;
 const isWindows = handler_pl === 'win32';
 const isMacos = handler_pl === 'darwin';
 const isLinux = handler_pl === 'linux';
 const isFreeBSD = handler_pl === 'freebsd';
+=======
+const pl = process.platform;
+const isWindows = pl === 'win32';
+const isMacos = pl === 'darwin';
+const isLinux = pl === 'linux';
+const isFreeBSD = pl === 'freebsd';
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 const isIBMi = __WEBPACK_EXTERNAL_MODULE_os_type__() === 'OS400';
 const EVENTS = {
     ALL: 'all',
@@ -65769,6 +68919,14 @@ const Script = strictObject({
     })
         .prefault({}),
     data: record(schemas_string(), any()).prefault({}),
+<<<<<<< HEAD
+=======
+    export_with: object({
+        data: schemas_boolean().prefault(true),
+        button: schemas_boolean().prefault(true),
+    })
+        .prefault({}),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 })
     .superRefine((data, context) => {
     if (data.content === undefined && data.file === undefined) {
@@ -66444,6 +69602,10 @@ const extensions_zh_zh_to_en_map = {
     按钮: 'button',
     按钮列表: 'buttons',
     数据: 'data',
+<<<<<<< HEAD
+=======
+    导出时携带: 'export_with',
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
     可见: 'visible',
     图标: 'icon',
     颜色: 'color',
@@ -66466,6 +69628,14 @@ const extensions_zh_Script = strictObject({
     })
         .prefault({}),
     数据: record(schemas_string(), any()).prefault({}),
+<<<<<<< HEAD
+=======
+    导出时携带: object({
+        数据: schemas_boolean().prefault(true),
+        按钮: schemas_boolean().prefault(true),
+    })
+        .prefault({}),
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 })
     .superRefine((data, context) => {
     if (data.内容 === undefined && data.文件 === undefined) {
@@ -68839,6 +72009,121 @@ function add_watch_command() {
     return command;
 }
 
+<<<<<<< HEAD
+=======
+;// ./node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/locales/zh-CN.js
+Object.defineProperty(zh_CN, "name", { value: "default", configurable: true });
+
+const error = () => {
+    const Sizable = {
+        string: { unit: "字符", verb: "包含" },
+        file: { unit: "字节", verb: "包含" },
+        array: { unit: "项", verb: "包含" },
+        set: { unit: "项", verb: "包含" },
+    };
+    function getSizing(origin) {
+        return Sizable[origin] ?? null;
+    }
+    const FormatDictionary = {
+        regex: "输入",
+        email: "电子邮件",
+        url: "URL",
+        emoji: "表情符号",
+        uuid: "UUID",
+        uuidv4: "UUIDv4",
+        uuidv6: "UUIDv6",
+        nanoid: "nanoid",
+        guid: "GUID",
+        cuid: "cuid",
+        cuid2: "cuid2",
+        ulid: "ULID",
+        xid: "XID",
+        ksuid: "KSUID",
+        datetime: "ISO日期时间",
+        date: "ISO日期",
+        time: "ISO时间",
+        duration: "ISO时长",
+        ipv4: "IPv4地址",
+        ipv6: "IPv6地址",
+        cidrv4: "IPv4网段",
+        cidrv6: "IPv6网段",
+        base64: "base64编码字符串",
+        base64url: "base64url编码字符串",
+        json_string: "JSON字符串",
+        e164: "E.164号码",
+        jwt: "JWT",
+        template_literal: "输入",
+    };
+    const TypeDictionary = {
+        nan: "NaN",
+        number: "数字",
+        array: "数组",
+        null: "空值(null)",
+    };
+    return (issue) => {
+        switch (issue.code) {
+            case "invalid_type": {
+                const expected = TypeDictionary[issue.expected] ?? issue.expected;
+                const receivedType = parsedType(issue.input);
+                const received = TypeDictionary[receivedType] ?? receivedType;
+                if (/^[A-Z]/.test(issue.expected)) {
+                    return `无效输入：期望 instanceof ${issue.expected}，实际接收 ${received}`;
+                }
+                return `无效输入：期望 ${expected}，实际接收 ${received}`;
+            }
+            case "invalid_value":
+                if (issue.values.length === 1)
+                    return `无效输入：期望 ${stringifyPrimitive(issue.values[0])}`;
+                return `无效选项：期望以下之一 ${joinValues(issue.values, "|")}`;
+            case "too_big": {
+                const adj = issue.inclusive ? "<=" : "<";
+                const sizing = getSizing(issue.origin);
+                if (sizing)
+                    return `数值过大：期望 ${issue.origin ?? "值"} ${adj}${issue.maximum.toString()} ${sizing.unit ?? "个元素"}`;
+                return `数值过大：期望 ${issue.origin ?? "值"} ${adj}${issue.maximum.toString()}`;
+            }
+            case "too_small": {
+                const adj = issue.inclusive ? ">=" : ">";
+                const sizing = getSizing(issue.origin);
+                if (sizing) {
+                    return `数值过小：期望 ${issue.origin} ${adj}${issue.minimum.toString()} ${sizing.unit}`;
+                }
+                return `数值过小：期望 ${issue.origin} ${adj}${issue.minimum.toString()}`;
+            }
+            case "invalid_format": {
+                const _issue = issue;
+                if (_issue.format === "starts_with")
+                    return `无效字符串：必须以 "${_issue.prefix}" 开头`;
+                if (_issue.format === "ends_with")
+                    return `无效字符串：必须以 "${_issue.suffix}" 结尾`;
+                if (_issue.format === "includes")
+                    return `无效字符串：必须包含 "${_issue.includes}"`;
+                if (_issue.format === "regex")
+                    return `无效字符串：必须满足正则表达式 ${_issue.pattern}`;
+                return `无效${FormatDictionary[_issue.format] ?? issue.format}`;
+            }
+            case "not_multiple_of":
+                return `无效数字：必须是 ${issue.divisor} 的倍数`;
+            case "unrecognized_keys":
+                return `出现未知的键(key): ${joinValues(issue.keys, ", ")}`;
+            case "invalid_key":
+                return `${issue.origin} 中的键(key)无效`;
+            case "invalid_union":
+                return "无效输入";
+            case "invalid_element":
+                return `${issue.origin} 中包含无效值(value)`;
+            default:
+                return `无效输入`;
+        }
+    };
+};
+/* harmony default export */ function zh_CN() {
+    return {
+        localeError: error(),
+    };
+}
+
+>>>>>>> 7bdcf6686f559c588cd3e4b41cdfc5e6dd270e6f
 ;// ./src/server/index.ts
 
 
