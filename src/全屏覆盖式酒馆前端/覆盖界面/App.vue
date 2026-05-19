@@ -17,59 +17,151 @@
 
       <section class="page-stage">
         <header class="panel-head">
-          <div class="title-group">
-            <h1>全屏覆盖式酒馆前端</h1>
-            <div class="title-meta">
-              <p class="page-hint">当前页面：{{ currentPageLabel }}</p>
-              <button type="button" class="date-trigger" :aria-expanded="calendarOpen" @click="toggleCalendarOpen">
-                <span class="date-trigger-label">剧情日期</span>
-                <strong>{{ storyDate.display_text }}</strong>
-                <span class="date-trigger-time">{{ liveClockTimeText }}</span>
-              </button>
-            </div>
-            <section v-if="calendarOpen" class="calendar-popover">
-              <div class="calendar-summary">
-                <div class="calendar-story">
-                  <p class="calendar-kicker">剧情日期</p>
-                  <h2>{{ storyDate.display_text }}</h2>
-                  <p class="calendar-meta">{{ storyDate.iso_date }} · {{ storyTimePeriodText }}</p>
-                </div>
-                <div class="calendar-clock">
-                  <p class="calendar-kicker">当前时间</p>
-                  <strong>{{ liveClockTimeText }}</strong>
-                  <span>{{ liveClockDateText }}</span>
-                </div>
-              </div>
+          <div class="toolbar-strip">
+            <p class="toolbar-story-label">剧情日期 · {{ storyTimePeriodText }}</p>
+            <button type="button" class="date-trigger" :aria-expanded="calendarOpen" @click="toggleCalendarOpen">
+              <strong>{{ storyDate.display_text }}</strong>
+            </button>
+            <span class="toolbar-clock" :title="liveClockDateText">{{ liveClockTimeText }}</span>
+            <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
+          </div>
 
-              <div class="calendar-panel">
+          <section v-if="calendarOpen" class="calendar-popover">
+            <div class="calendar-summary">
+              <div class="calendar-story">
+                <p class="calendar-kicker">当前剧情日期</p>
+                <h2>{{ storyDate.display_text }}</h2>
+                <p class="calendar-meta">{{ storyDate.iso_date }} · {{ storyTimePeriodText }}</p>
+              </div>
+              <div class="calendar-clock">
+                <p class="calendar-kicker">现实时间</p>
+                <strong>{{ liveClockTimeText }}</strong>
+                <span>{{ liveClockDateText }}</span>
+              </div>
+            </div>
+
+            <div class="calendar-layout">
+              <section class="calendar-panel">
                 <div class="calendar-panel-head">
-                  <strong>{{ storyDate.year }} 年 {{ storyDate.month }} 月</strong>
+                  <div>
+                    <strong>{{ calendarViewLabel }}</strong>
+                    <p class="calendar-status">当前查看：{{ calendarSelectedDisplayText }}</p>
+                  </div>
                   <span class="calendar-status">{{ dateSyncStatusText }}</span>
                 </div>
+
+                <div class="calendar-controls">
+                  <div class="calendar-control-group">
+                    <button type="button" class="calendar-nav-btn" @click="shiftCalendarViewYear(-1)">上一年</button>
+                    <button type="button" class="calendar-nav-btn" @click="shiftCalendarViewMonth(-1)">上月</button>
+                  </div>
+
+                  <label class="calendar-picker">
+                    <span>年份</span>
+                    <input
+                      v-model.number="calendarViewYear"
+                      type="number"
+                      min="1"
+                      max="9999"
+                      class="calendar-picker-input"
+                      @change="commitCalendarView"
+                    />
+                  </label>
+
+                  <label class="calendar-picker">
+                    <span>月份</span>
+                    <select v-model.number="calendarViewMonth" class="calendar-picker-input" @change="commitCalendarView">
+                      <option v-for="month in calendarMonthOptions" :key="month" :value="month">{{ month }}月</option>
+                    </select>
+                  </label>
+
+                  <div class="calendar-control-group">
+                    <button type="button" class="calendar-nav-btn" @click="shiftCalendarViewMonth(1)">下月</button>
+                    <button type="button" class="calendar-nav-btn" @click="shiftCalendarViewYear(1)">下一年</button>
+                  </div>
+
+                  <button type="button" class="calendar-jump-btn" @click="jumpCalendarToStoryDate">回到今日</button>
+                </div>
+
                 <div class="calendar-weekdays">
                   <span v-for="weekday in calendarWeekdays" :key="weekday">{{ weekday }}</span>
                 </div>
                 <div class="calendar-days">
-                  <div
+                  <button
                     v-for="cell in calendarCells"
                     :key="cell.key"
+                    type="button"
                     class="calendar-day"
-                    :class="{ empty: cell.day == null, active: cell.isCurrentStoryDay }"
+                    :class="{
+                      empty: cell.day == null,
+                      active: cell.isCurrentStoryDay,
+                      selected: cell.isSelectedDay,
+                      scheduled: cell.scheduleCount > 0,
+                    }"
+                    :disabled="cell.day == null"
+                    @click="selectCalendarDay(cell)"
                   >
                     <span class="calendar-day-number">{{ cell.day ?? '' }}</span>
-                  </div>
+                    <span v-if="cell.scheduleCount > 0" class="calendar-day-badge">{{ cell.scheduleCount }}</span>
+                    <span v-if="cell.isCurrentStoryDay" class="calendar-day-mark">今</span>
+                  </button>
                 </div>
-              </div>
+              </section>
 
-              <p class="calendar-foot">最近同步：{{ storyDateLastSyncedText }}</p>
-            </section>
-          </div>
-          <div class="head-actions">
-            <button type="button" class="native-ui-btn" @click="toggleNativeMessageVisibility">
-              {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
-            </button>
-            <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
-          </div>
+              <aside class="schedule-panel">
+                <div class="schedule-panel-head">
+                  <div>
+                    <p class="calendar-kicker">查看日期</p>
+                    <h3>{{ calendarSelectedDisplayText }}</h3>
+                    <p class="calendar-meta">{{ calendarSelectedIsoDate }} · {{ selectedDateRelationText }}</p>
+                  </div>
+                  <button v-if="canCreateSchedule" type="button" class="action-btn" @click="openScheduleEditor">
+                    标记行程
+                  </button>
+                </div>
+
+                <p class="schedule-note">{{ scheduleActionHintText }}</p>
+
+                <section v-if="scheduleEditorOpen" class="schedule-editor">
+                  <input
+                    v-model="scheduleDraft.title"
+                    type="text"
+                    maxlength="5"
+                    class="rule-input"
+                    placeholder="标题，最多 5 个字"
+                  />
+                  <textarea
+                    v-model="scheduleDraft.content"
+                    class="rule-input schedule-textarea"
+                    rows="5"
+                    placeholder="到达这一天时，会把这里的内容自动填入输入框，但不会自动发送。"
+                  ></textarea>
+                  <div class="schedule-editor-actions">
+                    <button type="button" class="action-btn" @click="saveSchedule">保存行程</button>
+                    <button type="button" class="action-btn" @click="cancelScheduleEditor">取消</button>
+                  </div>
+                </section>
+
+                <div class="schedule-list">
+                  <article v-for="schedule in selectedDateSchedules" :key="schedule.id" class="schedule-item">
+                    <div class="schedule-item-head">
+                      <strong>{{ schedule.title || '未命名行程' }}</strong>
+                      <span class="schedule-state" :data-delivered="schedule.delivered">
+                        {{ schedule.delivered ? '已到达' : '未到达' }}
+                      </span>
+                    </div>
+                    <p class="schedule-item-content">{{ schedule.content }}</p>
+                    <button type="button" class="action-btn danger schedule-remove-btn" @click="removeSchedule(schedule.id)">
+                      删除
+                    </button>
+                  </article>
+                  <p v-if="selectedDateSchedules.length === 0" class="schedule-empty">这一天还没有已标记的行程。</p>
+                </div>
+              </aside>
+            </div>
+
+            <p class="calendar-foot">最近同步：{{ storyDateLastSyncedText }}</p>
+          </section>
         </header>
 
         <section v-if="activePage === 'info'" class="page-view info-view">
@@ -152,16 +244,15 @@
             <p v-if="chatMessages.length === 0" class="placeholder">当前聊天暂无可显示消息。</p>
           </section>
 
-          <div class="input-shell">
-            <textarea
-              v-model="draft"
-              class="input-box"
-              rows="4"
-              placeholder="输入发送前原始文本。发送会走酒馆原生按钮链路。"
-            ></textarea>
-          </div>
-
-          <div class="action-row">
+          <div class="composer-row">
+            <div class="input-shell">
+              <textarea
+                v-model="draft"
+                class="input-box"
+                rows="3"
+                placeholder="输入发送前原始文本。发送会走酒馆原生按钮链路。"
+              ></textarea>
+            </div>
             <button type="button" class="send-btn" @click="requestNativeSend">发送</button>
           </div>
         </section>
@@ -197,6 +288,20 @@
                 @click="setTheme('cyber_pink')"
               >
                 银底粉光
+              </button>
+            </div>
+          </article>
+
+          <article class="settings-card">
+            <div class="settings-heading">
+              <div>
+                <h2>显示选项</h2>
+                <p class="settings-note">原生消息的显示切换移动到设置页里，方便在覆盖层和酒馆原生楼层之间来回调试。</p>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button type="button" class="action-btn" @click="toggleNativeMessageVisibility">
+                {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
               </button>
             </div>
           </article>
@@ -313,6 +418,20 @@ type OverlayStoredSettings = {
   regexRules: OverlayRegexRule[];
 };
 
+type OverlayScheduleItem = {
+  id: string;
+  dateIso: string;
+  title: string;
+  content: string;
+  delivered: boolean;
+  deliveredAt: string;
+};
+
+type OverlayChatStoredState = {
+  version: number;
+  schedules: OverlayScheduleItem[];
+};
+
 type CompiledRegexRule = {
   id: string;
   regex: RegExp;
@@ -347,7 +466,10 @@ type ModelOption = {
 type CalendarCell = {
   key: string;
   day: number | null;
+  isoDate: string | null;
   isCurrentStoryDay: boolean;
+  isSelectedDay: boolean;
+  scheduleCount: number;
 };
 
 type ScriptButtonMap = Record<string, Array<{ button_id: string; button_name: string }>>;
@@ -371,6 +493,8 @@ type TavernHelperScriptApi = Window['TavernHelper'] & {
 
 const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
 const OVERLAY_SETTINGS_VERSION = 1;
+const OVERLAY_CHAT_STATE_KEY = 'th_fullscreen_overlay_chat_state_v1';
+const OVERLAY_CHAT_STATE_VERSION = 1;
 const DATE_SYNC_BUTTON_NAME = '重算日期';
 const DATE_SYNC_SCRIPT_NAME = '日期变量同步脚本';
 const DATE_SYNC_SETTINGS_KEY = 'story_date_settings';
@@ -378,6 +502,9 @@ const STORY_DATE_KEY = 'story_date';
 const STORY_DATE_DEFAULT = { year: 3197, month: 5, day: 29 } as const;
 const DATE_SYNC_TIMEOUT_DEFAULT_MS = 30_000;
 const CALENDAR_WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'] as const;
+const CALENDAR_MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+const MIN_CALENDAR_YEAR = 1;
+const MAX_CALENDAR_YEAR = 9999;
 const DATE_SYNC_SCRIPT_TREE_TYPES: ScriptTreeKind[] = ['global', 'preset', 'character'];
 const TIME_PERIOD_LABELS: Record<string, string> = {
   unknown: '时段未定',
@@ -400,12 +527,6 @@ const FALLBACK_TAVERN_EVENTS = {
   MORE_MESSAGES_LOADED: 'more_messages_loaded',
   CHAT_CHANGED: 'chat_id_changed',
 } as const;
-const PAGE_LABELS: Record<OverlayPage, string> = {
-  info: '信息',
-  battle: '战斗场',
-  training: '训练场',
-  settings: '设置',
-};
 
 type OverlayTavernEventKey = keyof typeof FALLBACK_TAVERN_EVENTS;
 type HostRuntime = Window &
@@ -530,6 +651,15 @@ const dateSyncStatusMessage = ref('');
 const modelOptions = ref<ModelOption[]>([]);
 const fetchingModels = ref(false);
 const savingDateSyncSettings = ref(false);
+const overlaySchedules = ref<OverlayScheduleItem[]>([]);
+const calendarViewYear = ref(STORY_DATE_DEFAULT.year);
+const calendarViewMonth = ref(STORY_DATE_DEFAULT.month);
+const selectedCalendarDay = ref(STORY_DATE_DEFAULT.day);
+const scheduleEditorOpen = ref(false);
+const scheduleDraft = ref({
+  title: '',
+  content: '',
+});
 const draftRegex = ref({
   name: '',
   find: '',
@@ -540,13 +670,55 @@ let liveClockTimer: number | null = null;
 let storyDateTimer: number | null = null;
 
 const selectedRegexFileName = computed(() => selectedRegexFile.value?.name ?? '');
-const currentPageLabel = computed(() => PAGE_LABELS[activePage.value]);
 const liveClockTimeText = computed(() => formatClockTime(liveNow.value));
 const liveClockDateText = computed(() => formatClockDate(liveNow.value));
 const storyTimePeriodText = computed(() => TIME_PERIOD_LABELS[storyDate.value.time_period] ?? '时段未定');
 const storyDateLastSyncedText = computed(() => formatSyncTimestamp(storyDate.value.last_synced_at));
 const calendarWeekdays = CALENDAR_WEEKDAYS;
-const calendarCells = computed(() => buildCalendarCells(storyDate.value.year, storyDate.value.month, storyDate.value.day));
+const calendarMonthOptions = CALENDAR_MONTH_OPTIONS;
+const calendarViewParts = computed(() => {
+  const year = clampCalendarYear(calendarViewYear.value);
+  const month = _.clamp(coerceInteger(calendarViewMonth.value, STORY_DATE_DEFAULT.month), 1, 12);
+  const day = _.clamp(coerceInteger(selectedCalendarDay.value, STORY_DATE_DEFAULT.day), 1, getDaysInMonth(year, month));
+  return { year, month, day };
+});
+const calendarViewLabel = computed(() => `${calendarViewParts.value.year}年 ${calendarViewParts.value.month}月`);
+const calendarSelectedIsoDate = computed(() => formatIsoDate(calendarViewParts.value));
+const calendarSelectedDisplayText = computed(() => formatDisplayDate(calendarViewParts.value));
+const selectedDateSchedules = computed(() =>
+  overlaySchedules.value
+    .filter(schedule => schedule.dateIso === calendarSelectedIsoDate.value)
+    .sort((left, right) => Number(left.delivered) - Number(right.delivered)),
+);
+const canCreateSchedule = computed(() => compareIsoDates(calendarSelectedIsoDate.value, storyDate.value.iso_date) > 0);
+const selectedDateRelationText = computed(() => {
+  const compared = compareIsoDates(calendarSelectedIsoDate.value, storyDate.value.iso_date);
+  if (compared > 0) {
+    return '未来日期';
+  }
+  if (compared < 0) {
+    return '已过去';
+  }
+  return '当前剧情日期';
+});
+const scheduleActionHintText = computed(() => {
+  if (canCreateSchedule.value) {
+    return '只有日期变量真正推进到这一天时，行程内容才会自动写入输入框，标题不会被填入。';
+  }
+  if (calendarSelectedIsoDate.value === storyDate.value.iso_date) {
+    return '今天的剧情日期只能由变量控制，这里可以查看行程，但不能手动把今天改成别的日期。';
+  }
+  return '只能给未来日期标记行程；查看过去日期时不会改动当前剧情日期。';
+});
+const calendarCells = computed(() =>
+  buildCalendarCells(
+    calendarViewParts.value.year,
+    calendarViewParts.value.month,
+    storyDate.value,
+    calendarViewParts.value.day,
+    overlaySchedules.value,
+  ),
+);
 const dateSyncReady = computed(() => Boolean(dateSyncScriptId.value));
 const dateSyncStatusText = computed(() => {
   if (!dateSyncScriptId.value) {
@@ -583,6 +755,13 @@ function createDefaultStoredSettings(): OverlayStoredSettings {
     version: OVERLAY_SETTINGS_VERSION,
     nativeMessagesHidden: true,
     regexRules: [],
+  };
+}
+
+function createDefaultChatStoredState(): OverlayChatStoredState {
+  return {
+    version: OVERLAY_CHAT_STATE_VERSION,
+    schedules: [],
   };
 }
 
@@ -641,6 +820,39 @@ function formatIsoDate(parts: { year: number; month: number; day: number }): str
 
 function formatDisplayDate(parts: { year: number; month: number; day: number }): string {
   return `${parts.year}年${parts.month}月${parts.day}日`;
+}
+
+function clampCalendarYear(value: unknown): number {
+  return _.clamp(coerceInteger(value, STORY_DATE_DEFAULT.year), MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR);
+}
+
+function compareDateParts(
+  left: { year: number; month: number; day: number },
+  right: { year: number; month: number; day: number },
+): number {
+  const leftTime = Date.UTC(left.year, left.month - 1, left.day);
+  const rightTime = Date.UTC(right.year, right.month - 1, right.day);
+  if (leftTime === rightTime) {
+    return 0;
+  }
+  return leftTime > rightTime ? 1 : -1;
+}
+
+function compareIsoDates(leftIso: string, rightIso: string): number {
+  const [leftYear, leftMonth, leftDay] = leftIso.split('-').map(part => Number(part));
+  const [rightYear, rightMonth, rightDay] = rightIso.split('-').map(part => Number(part));
+  return compareDateParts(
+    {
+      year: coerceInteger(leftYear, STORY_DATE_DEFAULT.year),
+      month: _.clamp(coerceInteger(leftMonth, STORY_DATE_DEFAULT.month), 1, 12),
+      day: _.clamp(coerceInteger(leftDay, STORY_DATE_DEFAULT.day), 1, 31),
+    },
+    {
+      year: coerceInteger(rightYear, STORY_DATE_DEFAULT.year),
+      month: _.clamp(coerceInteger(rightMonth, STORY_DATE_DEFAULT.month), 1, 12),
+      day: _.clamp(coerceInteger(rightDay, STORY_DATE_DEFAULT.day), 1, 31),
+    },
+  );
 }
 
 function createDefaultStoryDate(): StoryDateState {
@@ -705,6 +917,50 @@ function normalizeDateSyncSettings(raw: unknown): DateSyncSettings {
   };
 }
 
+function normalizeScheduleItem(raw: unknown, index: number): OverlayScheduleItem | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const title = normalizeString(record.title).trim().slice(0, 5);
+  const content = normalizeString(record.content).trim();
+  const dateIso = normalizeString(record.dateIso, normalizeString(record.date_iso)).trim();
+  if (!dateIso || !content) {
+    return null;
+  }
+
+  return {
+    id: normalizeString(record.id) || `schedule_${index}_${Date.now().toString(36)}`,
+    dateIso,
+    title,
+    content,
+    delivered: coerceBoolean(record.delivered, false),
+    deliveredAt: normalizeString(record.deliveredAt, normalizeString(record.delivered_at)).trim(),
+  };
+}
+
+function parseStoredChatState(raw: unknown): OverlayChatStoredState {
+  const defaults = createDefaultChatStoredState();
+  if (!raw || typeof raw !== 'object') {
+    return defaults;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const storedSchedules = Array.isArray(record.schedules) ? record.schedules : [];
+  const schedules = storedSchedules
+    .map((item, index) => normalizeScheduleItem(item, index))
+    .filter(Boolean) as OverlayScheduleItem[];
+
+  return {
+    version:
+      typeof record.version === 'number' && Number.isFinite(record.version)
+        ? Math.floor(record.version)
+        : defaults.version,
+    schedules,
+  };
+}
+
 function formatClockTime(date: Date): string {
   return new Intl.DateTimeFormat('zh-CN', {
     hour: '2-digit',
@@ -744,24 +1000,42 @@ function formatSyncTimestamp(value: string): string {
   }).format(parsed);
 }
 
-function buildCalendarCells(year: number, month: number, currentDay: number): CalendarCell[] {
+function buildCalendarCells(
+  year: number,
+  month: number,
+  currentStoryDate: Pick<StoryDateState, 'year' | 'month' | 'day'>,
+  selectedDay: number,
+  schedules: OverlayScheduleItem[],
+): CalendarCell[] {
   const daysInMonth = getDaysInMonth(year, month);
   const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
   const cells: CalendarCell[] = [];
+  const scheduleCountByIso = schedules.reduce<Record<string, number>>((counts, schedule) => {
+    counts[schedule.dateIso] = (counts[schedule.dateIso] ?? 0) + 1;
+    return counts;
+  }, {});
 
   for (let index = 0; index < firstWeekday; index += 1) {
     cells.push({
       key: `empty-start-${index}`,
       day: null,
+      isoDate: null,
       isCurrentStoryDay: false,
+      isSelectedDay: false,
+      scheduleCount: 0,
     });
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
+    const isoDate = formatIsoDate({ year, month, day });
     cells.push({
       key: `day-${day}`,
       day,
-      isCurrentStoryDay: day === currentDay,
+      isoDate,
+      isCurrentStoryDay:
+        year === currentStoryDate.year && month === currentStoryDate.month && day === currentStoryDate.day,
+      isSelectedDay: day === selectedDay,
+      scheduleCount: scheduleCountByIso[isoDate] ?? 0,
     });
   }
 
@@ -769,7 +1043,10 @@ function buildCalendarCells(year: number, month: number, currentDay: number): Ca
     cells.push({
       key: `empty-end-${cells.length}`,
       day: null,
+      isoDate: null,
       isCurrentStoryDay: false,
+      isSelectedDay: false,
+      scheduleCount: 0,
     });
   }
 
@@ -906,12 +1183,23 @@ function readScriptVariables(): Record<string, any> {
   return withTavernHelper('读取脚本变量', {}, helper => helper.getVariables({ type: 'script', script_id: scriptId }));
 }
 
+function readChatVariables(): Record<string, any> {
+  return withTavernHelper('读取聊天变量', {}, helper => helper.getVariables({ type: 'chat' }));
+}
+
 function loadSettingsFromVariables() {
   const variables = readScriptVariables();
   const stored = _.get(variables, OVERLAY_SETTINGS_KEY);
   const parsed = parseStoredSettings(stored);
   nativeMessagesHidden.value = parsed.nativeMessagesHidden;
   regexRules.value = parsed.regexRules;
+}
+
+function loadChatStateFromVariables() {
+  const variables = readChatVariables();
+  const stored = _.get(variables, OVERLAY_CHAT_STATE_KEY);
+  const parsed = parseStoredChatState(stored);
+  overlaySchedules.value = parsed.schedules;
 }
 
 function persistSettingsToVariables() {
@@ -941,6 +1229,27 @@ function persistSettingsToVariables() {
   });
 }
 
+function persistChatStateToVariables() {
+  const variables = readChatVariables();
+  const payload: OverlayChatStoredState = {
+    version: OVERLAY_CHAT_STATE_VERSION,
+    schedules: overlaySchedules.value.map(schedule => ({
+      id: schedule.id,
+      dateIso: schedule.dateIso,
+      title: schedule.title,
+      content: schedule.content,
+      delivered: schedule.delivered,
+      deliveredAt: schedule.deliveredAt,
+    })),
+  };
+
+  _.set(variables, OVERLAY_CHAT_STATE_KEY, payload);
+  void withTavernHelper('写入聊天变量', false, helper => {
+    helper.replaceVariables(variables, { type: 'chat' });
+    return true;
+  });
+}
+
 function setTheme(next: OverlayTheme) {
   theme.value = next;
 }
@@ -958,6 +1267,144 @@ function switchPage(next: OverlayPage) {
 
 function toggleCalendarOpen() {
   calendarOpen.value = !calendarOpen.value;
+  if (calendarOpen.value) {
+    jumpCalendarToStoryDate();
+    return;
+  }
+  cancelScheduleEditor();
+}
+
+function syncSelectedCalendarDay(preferredDay = selectedCalendarDay.value) {
+  selectedCalendarDay.value = _.clamp(
+    coerceInteger(preferredDay, STORY_DATE_DEFAULT.day),
+    1,
+    getDaysInMonth(calendarViewYear.value, calendarViewMonth.value),
+  );
+}
+
+function setCalendarView(year: number, month: number, preferredDay = selectedCalendarDay.value) {
+  calendarViewYear.value = clampCalendarYear(year);
+  calendarViewMonth.value = _.clamp(coerceInteger(month, STORY_DATE_DEFAULT.month), 1, 12);
+  syncSelectedCalendarDay(preferredDay);
+  cancelScheduleEditor();
+}
+
+function commitCalendarView() {
+  setCalendarView(calendarViewYear.value, calendarViewMonth.value, selectedCalendarDay.value);
+}
+
+function shiftCalendarViewMonth(delta: number) {
+  const next = new Date(Date.UTC(calendarViewYear.value, calendarViewMonth.value - 1 + delta, 1));
+  setCalendarView(next.getUTCFullYear(), next.getUTCMonth() + 1);
+}
+
+function shiftCalendarViewYear(delta: number) {
+  setCalendarView(calendarViewYear.value + delta, calendarViewMonth.value);
+}
+
+function jumpCalendarToStoryDate() {
+  setCalendarView(storyDate.value.year, storyDate.value.month, storyDate.value.day);
+}
+
+function selectCalendarDay(cell: CalendarCell) {
+  if (cell.day == null) {
+    return;
+  }
+  selectedCalendarDay.value = cell.day;
+  cancelScheduleEditor();
+}
+
+function openScheduleEditor() {
+  if (!canCreateSchedule.value) {
+    return;
+  }
+
+  scheduleDraft.value = {
+    title: '',
+    content: '',
+  };
+  scheduleEditorOpen.value = true;
+}
+
+function cancelScheduleEditor() {
+  scheduleEditorOpen.value = false;
+  scheduleDraft.value = {
+    title: '',
+    content: '',
+  };
+}
+
+function saveSchedule() {
+  if (!canCreateSchedule.value) {
+    toastr.warning('只能给未来日期标记行程。', '行程');
+    return;
+  }
+
+  const title = scheduleDraft.value.title.trim().slice(0, 5);
+  const content = scheduleDraft.value.content.trim();
+  if (!content) {
+    toastr.warning('请填写行程内容。', '行程');
+    return;
+  }
+
+  overlaySchedules.value = [
+    ...overlaySchedules.value,
+    {
+      id: createRuleId(),
+      dateIso: calendarSelectedIsoDate.value,
+      title,
+      content,
+      delivered: false,
+      deliveredAt: '',
+    },
+  ];
+  persistChatStateToVariables();
+  cancelScheduleEditor();
+  toastr.success(`已为 ${calendarSelectedDisplayText.value} 标记行程。`, '行程');
+}
+
+function removeSchedule(id: string) {
+  overlaySchedules.value = overlaySchedules.value.filter(schedule => schedule.id !== id);
+  persistChatStateToVariables();
+}
+
+function maybeApplyArrivedSchedules() {
+  const currentIsoDate = storyDate.value.iso_date.trim();
+  if (!currentIsoDate) {
+    return;
+  }
+
+  const dueSchedules = overlaySchedules.value.filter(
+    schedule => !schedule.delivered && schedule.dateIso === currentIsoDate && schedule.content.trim(),
+  );
+  if (dueSchedules.length === 0) {
+    return;
+  }
+
+  const mergedContent = Array.from(new Set(dueSchedules.map(schedule => schedule.content.trim()).filter(Boolean))).join('\n\n');
+  if (!mergedContent) {
+    return;
+  }
+
+  if (!draft.value.trim()) {
+    draft.value = mergedContent;
+  } else if (!draft.value.includes(mergedContent)) {
+    draft.value = `${draft.value.trimEnd()}\n\n${mergedContent}`;
+  }
+
+  const deliveredAt = new Date().toISOString();
+  const dueIds = new Set(dueSchedules.map(schedule => schedule.id));
+  overlaySchedules.value = overlaySchedules.value.map(schedule =>
+    dueIds.has(schedule.id)
+      ? {
+          ...schedule,
+          delivered: true,
+          deliveredAt,
+        }
+      : schedule,
+  );
+  persistChatStateToVariables();
+  toastr.info(`已把 ${dueSchedules.length} 条行程内容填入输入框。`, '行程提醒');
 }
 
 function flattenScriptTrees(nodes: ScriptTreeNode[]): ScriptTreeScriptNode[] {
@@ -1496,9 +1943,12 @@ async function importFileIntoTavernRegex() {
 
 onMounted(() => {
   loadSettingsFromVariables();
+  loadChatStateFromVariables();
   locateDateSyncScriptId(true);
   loadDateSyncSettings(true);
   refreshStoryDateState();
+  jumpCalendarToStoryDate();
+  maybeApplyArrivedSchedules();
   requestNativeMessageVisibility(nativeMessagesHidden.value, 'script');
 
   liveClockTimer = window.setInterval(() => {
@@ -1534,8 +1984,13 @@ onMounted(() => {
   stops.push(
     onOverlayEvent(getTavernEventName('CHAT_CHANGED'), () => {
       draft.value = '';
+      loadChatStateFromVariables();
       loadDateSyncSettings(true);
-      refreshAndStickBottom();
+      refreshChatMessages();
+      refreshStoryDateState();
+      jumpCalendarToStoryDate();
+      maybeApplyArrivedSchedules();
+      void nextTick(() => scrollChatToBottom('smooth'));
     }),
   );
   stops.push(
@@ -1567,6 +2022,13 @@ watch(
     }
     await nextTick();
     scrollChatToBottom('smooth');
+  },
+);
+
+watch(
+  () => storyDate.value.iso_date,
+  () => {
+    maybeApplyArrivedSchedules();
   },
 );
 
@@ -1708,41 +2170,45 @@ onBeforeUnmount(() => {
 }
 
 .panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: relative;
+  display: grid;
   gap: 12px;
 }
 
-.title-group {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  position: relative;
-}
-
-.title-meta {
+.toolbar-strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+
+.toolbar-story-label {
+  margin: 0;
+  color: var(--sub-color);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.toolbar-clock {
+  color: var(--sub-color);
+  font-size: 13px;
+  letter-spacing: 0.04em;
 }
 
 .date-trigger {
-  min-width: 220px;
+  min-width: 180px;
   border: 1px solid var(--line-color);
-  border-radius: 14px;
-  padding: 10px 14px;
+  border-radius: 999px;
+  padding: 10px 18px;
   color: var(--text-color);
   background: var(--btn-bg);
-  display: grid;
-  justify-items: start;
-  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   box-shadow: 0 0 0 1px var(--accent-soft) inset;
 }
 
-.date-trigger-label,
 .calendar-kicker {
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -1750,41 +2216,45 @@ onBeforeUnmount(() => {
 }
 
 .date-trigger strong {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-}
-
-.date-trigger-time {
-  font-size: 12px;
-  color: var(--sub-color);
+  line-height: 1.1;
 }
 
 .calendar-popover {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 4px);
   left: 0;
   z-index: 5;
-  width: min(520px, calc(100vw - 88px));
+  width: min(1040px, calc(100vw - 80px));
+  max-height: min(78dvh, 820px);
+  overflow: auto;
   border: 1px solid var(--line-color);
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 22px;
+  padding: 18px;
   background: var(--calendar-bg);
   box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .calendar-summary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 14px;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.85fr);
+  gap: 14px;
 }
 
 .calendar-story,
 .calendar-clock {
   border: 1px solid var(--line-color);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 14px;
   background: rgba(255, 255, 255, 0.04);
   display: grid;
   gap: 6px;
@@ -1806,25 +2276,75 @@ onBeforeUnmount(() => {
 
 .calendar-panel {
   border: 1px solid var(--line-color);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 14px;
   background: rgba(255, 255, 255, 0.03);
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .calendar-panel-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.calendar-panel-head strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 18px;
+}
+
+.calendar-controls {
+  display: grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 10px;
+  align-items: end;
+}
+
+.calendar-control-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendar-picker {
+  display: grid;
+  gap: 6px;
+}
+
+.calendar-picker span {
+  font-size: 12px;
+  color: var(--sub-color);
+}
+
+.calendar-picker-input,
+.calendar-nav-btn,
+.calendar-jump-btn {
+  border: 1px solid var(--line-color);
+  border-radius: 12px;
+  color: var(--text-color);
+  background: var(--input-bg);
+}
+
+.calendar-picker-input {
+  min-width: 104px;
+  padding: 9px 10px;
+  outline: none;
+}
+
+.calendar-nav-btn,
+.calendar-jump-btn {
+  padding: 9px 12px;
+  cursor: pointer;
 }
 
 .calendar-weekdays,
 .calendar-days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .calendar-weekdays span {
@@ -1834,12 +2354,26 @@ onBeforeUnmount(() => {
 }
 
 .calendar-day {
-  min-height: 42px;
+  position: relative;
+  min-height: 76px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  border-radius: 14px;
   display: grid;
-  place-items: center;
+  align-content: start;
+  justify-items: start;
+  padding: 12px 10px;
+  color: var(--text-color);
   background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.calendar-day:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.calendar-day:disabled {
+  cursor: default;
 }
 
 .calendar-day.empty {
@@ -1848,12 +2382,42 @@ onBeforeUnmount(() => {
 
 .calendar-day.active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-soft) inset;
+}
+
+.calendar-day.selected {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 0 18px rgba(0, 0, 0, 0.16);
+}
+
+.calendar-day.scheduled {
+  border-color: rgba(255, 195, 94, 0.5);
+}
+
+.calendar-day-badge,
+.calendar-day-mark {
+  position: absolute;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+.calendar-day-badge {
+  right: 8px;
+  bottom: 8px;
+  color: var(--btn-fg);
+  background: rgba(255, 195, 94, 0.22);
+}
+
+.calendar-day-mark {
+  top: 8px;
+  right: 8px;
+  color: var(--btn-fg);
   background: linear-gradient(160deg, var(--accent-soft), rgba(255, 255, 255, 0.02));
 }
 
 .calendar-day-number {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -1861,23 +2425,90 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-.head-actions {
+.schedule-panel {
+  border: 1px solid var(--line-color);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.schedule-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.schedule-panel-head h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.schedule-note,
+.schedule-empty {
+  margin: 0;
+  color: var(--sub-color);
+  line-height: 1.6;
+}
+
+.schedule-editor,
+.schedule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.schedule-textarea {
+  min-height: 128px;
+  resize: vertical;
+}
+
+.schedule-item {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-item-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.page-hint {
-  margin: 0;
+.schedule-state {
+  border-radius: 999px;
+  padding: 3px 9px;
   font-size: 12px;
   color: var(--sub-color);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-h1 {
+.schedule-state[data-delivered='true'] {
+  color: var(--btn-fg);
+  background: rgba(69, 243, 255, 0.18);
+}
+
+.schedule-item-content {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.schedule-remove-btn {
+  justify-self: flex-start;
 }
 
 .close-btn,
@@ -1909,7 +2540,7 @@ h1 {
 .info-view {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
   gap: 12px;
 }
 
@@ -2242,6 +2873,7 @@ h1 {
 
 .input-shell {
   position: relative;
+  min-width: 0;
   border-radius: 14px;
   padding: 1px;
   background: linear-gradient(120deg, transparent 0%, var(--accent) 45%, transparent 100%);
@@ -2264,10 +2896,10 @@ h1 {
   z-index: 1;
   width: 100%;
   resize: none;
-  min-height: 96px;
+  min-height: 72px;
   border: none;
   border-radius: 13px;
-  padding: 14px;
+  padding: 12px 14px;
   color: var(--text-color);
   background: var(--input-bg);
   outline: none;
@@ -2279,13 +2911,16 @@ h1 {
   color: var(--sub-color);
 }
 
-.action-row {
-  display: flex;
-  justify-content: flex-end;
+.composer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
 }
 
 .send-btn {
-  padding: 9px 18px;
+  align-self: stretch;
+  padding: 9px 20px;
   box-shadow: 0 0 14px var(--accent-soft);
 }
 
@@ -2311,6 +2946,12 @@ h1 {
 @media (max-width: 900px) {
   .panel {
     grid-template-columns: 122px minmax(0, 1fr);
+  }
+
+  .calendar-layout,
+  .calendar-summary,
+  .calendar-controls {
+    grid-template-columns: 1fr;
   }
 
   .regex-creator,
@@ -2345,21 +2986,21 @@ h1 {
     font-size: 19px;
   }
 
-  .panel-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .head-actions {
+  .toolbar-strip {
     width: 100%;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .title-meta {
-    width: 100%;
-    flex-direction: column;
     align-items: stretch;
+  }
+
+  .toolbar-story-label,
+  .toolbar-clock {
+    width: 100%;
+  }
+
+  .composer-row,
+  .schedule-panel-head,
+  .calendar-control-group,
+  .calendar-picker {
+    width: 100%;
   }
 
   .date-trigger {
@@ -2370,11 +3011,12 @@ h1 {
   .calendar-popover {
     position: static;
     width: 100%;
+    max-height: none;
   }
 
-  .calendar-summary,
   .settings-heading,
-  .calendar-panel-head {
+  .calendar-panel-head,
+  .schedule-panel-head {
     grid-template-columns: 1fr;
     display: grid;
   }

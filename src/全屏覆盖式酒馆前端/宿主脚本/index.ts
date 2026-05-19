@@ -14,6 +14,10 @@ const OVERLAY_FRAME_ID = 'th-fullscreen-overlay-frame';
 const OVERLAY_ROOT_ID = 'th-fullscreen-overlay-root';
 const OVERLAY_LAUNCHER_ID = 'th-fullscreen-overlay-launcher';
 const DEFAULT_HIDE_NATIVE_UI = true;
+const OVERLAY_FRAME_Z_INDEX = 2147483001;
+const OVERLAY_LAUNCHER_FRONT_Z_INDEX = 2147483002;
+const OVERLAY_LAUNCHER_BACK_Z_INDEX = 2147483000;
+const OVERLAY_LAUNCHER_MARGIN = 18;
 
 function normalizeVisibilityPayload(payload: unknown): OverlayVisibilityPayload {
   if (!payload || typeof payload !== 'object') {
@@ -53,6 +57,16 @@ function mountFullscreenOverlayHost() {
   let destroyStyleTeleport: (() => void) | null = null;
   let overlayVisible = true;
   let nativeUiHidden = DEFAULT_HIDE_NATIVE_UI;
+  let suppressLauncherClick = false;
+  let launcherDragState:
+    | {
+        startX: number;
+        startY: number;
+        originLeft: number;
+        originTop: number;
+        moved: boolean;
+      }
+    | null = null;
 
   const $frame = createScriptIdIframe()
     .attr({
@@ -65,7 +79,7 @@ function mountFullscreenOverlayHost() {
       width: '100vw',
       height: '100vh',
       border: '0',
-      zIndex: '2147483001',
+      zIndex: String(OVERLAY_FRAME_Z_INDEX),
       display: 'block',
       background: 'transparent',
     })
@@ -80,9 +94,9 @@ function mountFullscreenOverlayHost() {
     })
     .css({
       position: 'fixed',
-      right: '18px',
-      bottom: '18px',
-      zIndex: '2147483002',
+      right: `${OVERLAY_LAUNCHER_MARGIN}px`,
+      bottom: `${OVERLAY_LAUNCHER_MARGIN}px`,
+      zIndex: String(OVERLAY_LAUNCHER_BACK_Z_INDEX),
       border: '1px solid rgba(115, 210, 255, 0.7)',
       borderRadius: '999px',
       padding: '8px 14px',
@@ -91,7 +105,9 @@ function mountFullscreenOverlayHost() {
       color: '#e6f6ff',
       background: 'linear-gradient(145deg, rgba(11, 27, 45, 0.94), rgba(20, 65, 103, 0.9))',
       boxShadow: '0 10px 20px rgba(0, 0, 0, 0.28)',
-      cursor: 'pointer',
+      cursor: 'grab',
+      touchAction: 'none',
+      userSelect: 'none',
     })
     .appendTo('body');
 
@@ -127,10 +143,44 @@ function mountFullscreenOverlayHost() {
     $launcher.text(overlayVisible ? '关闭覆盖页' : '打开覆盖页');
   };
 
+  const updateLauncherLayer = () => {
+    $launcher.css('zIndex', String(overlayVisible ? OVERLAY_LAUNCHER_BACK_Z_INDEX : OVERLAY_LAUNCHER_FRONT_Z_INDEX));
+  };
+
+  const clampLauncherPosition = (left: number, top: number) => {
+    const launcherWidth = $launcher.outerWidth() ?? 0;
+    const launcherHeight = $launcher.outerHeight() ?? 0;
+
+    return {
+      left: _.clamp(left, 8, Math.max(8, window.innerWidth - launcherWidth - 8)),
+      top: _.clamp(top, 8, Math.max(8, window.innerHeight - launcherHeight - 8)),
+    };
+  };
+
+  const setLauncherPosition = (left: number, top: number) => {
+    const next = clampLauncherPosition(left, top);
+    $launcher.css({
+      left: `${next.left}px`,
+      top: `${next.top}px`,
+      right: 'auto',
+      bottom: 'auto',
+    });
+  };
+
+  const stopLauncherDrag = () => {
+    launcherDragState = null;
+    $launcher.css('cursor', 'grab');
+    $('body').css('userSelect', '');
+    $(document).off(`pointermove${PAGE_SCOPE}`);
+    $(document).off(`pointerup${PAGE_SCOPE}`);
+    $(document).off(`pointercancel${PAGE_SCOPE}`);
+  };
+
   const setOverlayVisible = (visible: boolean, source: OverlayVisibilityPayload['source']) => {
     overlayVisible = visible;
     $frame.toggle(visible);
     updateLauncherText();
+    updateLauncherLayer();
     void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, { visible, source } satisfies OverlayVisibilityPayload);
   };
 
@@ -189,8 +239,70 @@ function mountFullscreenOverlayHost() {
     }).stop,
   );
 
-  $launcher.on(`click${PAGE_SCOPE}`, () => {
+  $launcher.on(`pointerdown${PAGE_SCOPE}`, event => {
+    const pointer = event.originalEvent as PointerEvent | undefined;
+    if (!pointer || pointer.button !== 0) {
+      return;
+    }
+
+    const rect = $launcher[0].getBoundingClientRect();
+    launcherDragState = {
+      startX: pointer.clientX,
+      startY: pointer.clientY,
+      originLeft: rect.left,
+      originTop: rect.top,
+      moved: false,
+    };
+    setLauncherPosition(rect.left, rect.top);
+    $launcher.css('cursor', 'grabbing');
+    $('body').css('userSelect', 'none');
+    $launcher[0].setPointerCapture?.(pointer.pointerId);
+
+    $(document).on(`pointermove${PAGE_SCOPE}`, moveEvent => {
+      const movePointer = moveEvent.originalEvent as PointerEvent | undefined;
+      if (!movePointer || !launcherDragState) {
+        return;
+      }
+
+      const deltaX = movePointer.clientX - launcherDragState.startX;
+      const deltaY = movePointer.clientY - launcherDragState.startY;
+      if (!launcherDragState.moved && (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4)) {
+        launcherDragState.moved = true;
+      }
+
+      setLauncherPosition(launcherDragState.originLeft + deltaX, launcherDragState.originTop + deltaY);
+    });
+
+    $(document).on(`pointerup${PAGE_SCOPE}`, upEvent => {
+      const upPointer = upEvent.originalEvent as PointerEvent | undefined;
+      if (launcherDragState?.moved) {
+        suppressLauncherClick = true;
+      }
+      if (upPointer) {
+        $launcher[0].releasePointerCapture?.(upPointer.pointerId);
+      }
+      stopLauncherDrag();
+    });
+
+    $(document).on(`pointercancel${PAGE_SCOPE}`, () => {
+      stopLauncherDrag();
+    });
+  });
+
+  $launcher.on(`click${PAGE_SCOPE}`, event => {
+    if (suppressLauncherClick) {
+      suppressLauncherClick = false;
+      event.preventDefault();
+      return;
+    }
     setOverlayVisible(!overlayVisible, 'launcher');
+  });
+
+  $(window).on(`resize${PAGE_SCOPE}`, () => {
+    const rect = $launcher[0].getBoundingClientRect();
+    if ($launcher.css('left') !== 'auto') {
+      setLauncherPosition(rect.left, rect.top);
+    }
   });
 
   $frame.on(`load${PAGE_SCOPE}`, mountVueOnFrame);
@@ -205,6 +317,7 @@ function mountFullscreenOverlayHost() {
     source: 'script',
   } satisfies NativeMessageVisibilityPayload);
   updateLauncherText();
+  updateLauncherLayer();
 
   console.info('[全屏覆盖式酒馆前端] 已挂载到顶层 body 的全屏 iframe。');
   console.info('[全屏覆盖式酒馆前端] 原生聊天 UI 默认隐藏（保留开场白可见）。');
@@ -217,6 +330,8 @@ function mountFullscreenOverlayHost() {
     stopHandles.forEach(stop => stop());
     syncBridge.stop();
     nativeSendBridge.stop();
+    stopLauncherDrag();
+    $(document).off(PAGE_SCOPE);
     $launcher.off(PAGE_SCOPE);
     $launcher.remove();
     $frame.off(PAGE_SCOPE);
