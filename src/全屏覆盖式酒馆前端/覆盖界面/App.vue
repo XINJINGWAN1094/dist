@@ -19,7 +19,50 @@
         <header class="panel-head">
           <div class="title-group">
             <h1>全屏覆盖式酒馆前端</h1>
-            <p class="page-hint">当前页面：{{ currentPageLabel }}</p>
+            <div class="title-meta">
+              <p class="page-hint">当前页面：{{ currentPageLabel }}</p>
+              <button type="button" class="date-trigger" :aria-expanded="calendarOpen" @click="toggleCalendarOpen">
+                <span class="date-trigger-label">剧情日期</span>
+                <strong>{{ storyDate.display_text }}</strong>
+                <span class="date-trigger-time">{{ liveClockTimeText }}</span>
+              </button>
+            </div>
+            <section v-if="calendarOpen" class="calendar-popover">
+              <div class="calendar-summary">
+                <div class="calendar-story">
+                  <p class="calendar-kicker">剧情日期</p>
+                  <h2>{{ storyDate.display_text }}</h2>
+                  <p class="calendar-meta">{{ storyDate.iso_date }} · {{ storyTimePeriodText }}</p>
+                </div>
+                <div class="calendar-clock">
+                  <p class="calendar-kicker">当前时间</p>
+                  <strong>{{ liveClockTimeText }}</strong>
+                  <span>{{ liveClockDateText }}</span>
+                </div>
+              </div>
+
+              <div class="calendar-panel">
+                <div class="calendar-panel-head">
+                  <strong>{{ storyDate.year }} 年 {{ storyDate.month }} 月</strong>
+                  <span class="calendar-status">{{ dateSyncStatusText }}</span>
+                </div>
+                <div class="calendar-weekdays">
+                  <span v-for="weekday in calendarWeekdays" :key="weekday">{{ weekday }}</span>
+                </div>
+                <div class="calendar-days">
+                  <div
+                    v-for="cell in calendarCells"
+                    :key="cell.key"
+                    class="calendar-day"
+                    :class="{ empty: cell.day == null, active: cell.isCurrentStoryDay }"
+                  >
+                    <span class="calendar-day-number">{{ cell.day ?? '' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p class="calendar-foot">最近同步：{{ storyDateLastSyncedText }}</p>
+            </section>
           </div>
           <div class="head-actions">
             <button type="button" class="native-ui-btn" @click="toggleNativeMessageVisibility">
@@ -157,6 +200,78 @@
               </button>
             </div>
           </article>
+
+          <article class="settings-card">
+            <div class="settings-heading">
+              <div>
+                <h2>日期同步模型</h2>
+                <p class="settings-note">直接改“日期变量同步脚本”的兼容 URL、API Key 和模型，不改它现有变量键结构。</p>
+              </div>
+              <span class="status-chip" :data-state="dateSyncReady ? 'ready' : 'missing'">{{ dateSyncStatusText }}</span>
+            </div>
+
+            <label class="settings-toggle">
+              <span>启用日期同步</span>
+              <input v-model="dateSyncSettings.enabled" type="checkbox" />
+            </label>
+
+            <div class="settings-grid">
+              <label class="settings-field">
+                <span>兼容 URL</span>
+                <input
+                  v-model="dateSyncSettings.base_url"
+                  type="text"
+                  class="rule-input"
+                  placeholder="https://example.com/v1 或 .../chat/completions"
+                />
+              </label>
+
+              <label class="settings-field">
+                <span>API Key</span>
+                <input v-model="dateSyncSettings.api_key" type="password" class="rule-input" placeholder="sk-..." />
+              </label>
+
+              <label class="settings-field">
+                <span>模型 ID</span>
+                <input
+                  v-model="dateSyncSettings.model"
+                  type="text"
+                  class="rule-input"
+                  list="story-date-model-list"
+                  placeholder="拉取后选择，或手动填写模型名"
+                />
+                <datalist id="story-date-model-list">
+                  <option v-for="option in modelOptions" :key="option.id" :value="option.id">{{ option.label }}</option>
+                </datalist>
+              </label>
+
+              <label class="settings-field small">
+                <span>超时（ms）</span>
+                <input v-model.number="dateSyncSettings.timeout_ms" type="number" min="3000" step="1000" class="rule-input" />
+              </label>
+            </div>
+
+            <label class="settings-toggle">
+              <span>调试日志</span>
+              <input v-model="dateSyncSettings.debug" type="checkbox" />
+            </label>
+
+            <div class="settings-actions">
+              <button type="button" class="action-btn" :disabled="fetchingModels" @click="fetchCompatibleModels">
+                {{ fetchingModels ? '拉取中…' : '拉取模型' }}
+              </button>
+              <button type="button" class="action-btn" @click="loadDateSyncSettings()">重新读取</button>
+              <button type="button" class="action-btn" :disabled="savingDateSyncSettings || !dateSyncReady" @click="saveDateSyncSettings">
+                {{ savingDateSyncSettings ? '保存中…' : '保存设置' }}
+              </button>
+            </div>
+
+            <div v-if="modelOptions.length > 0" class="model-pill-list">
+              <span v-for="option in modelOptions" :key="option.id" class="model-pill">{{ option.label }}</span>
+            </div>
+
+            <p class="file-hint">{{ dateSyncHintText }}</p>
+          </article>
         </section>
       </section>
     </section>
@@ -204,8 +319,74 @@ type CompiledRegexRule = {
   replace: string;
 };
 
+type StoryDateState = {
+  calendar: 'gregorian';
+  year: number;
+  month: number;
+  day: number;
+  iso_date: string;
+  display_text: string;
+  time_period: string;
+  last_synced_at: string;
+};
+
+type DateSyncSettings = {
+  enabled: boolean;
+  base_url: string;
+  api_key: string;
+  model: string;
+  timeout_ms: number;
+  debug: boolean;
+};
+
+type ModelOption = {
+  id: string;
+  label: string;
+};
+
+type CalendarCell = {
+  key: string;
+  day: number | null;
+  isCurrentStoryDay: boolean;
+};
+
+type ScriptButtonMap = Record<string, Array<{ button_id: string; button_name: string }>>;
+type ScriptTreeKind = 'global' | 'preset' | 'character';
+type ScriptTreeScriptNode = {
+  type: 'script';
+  id: string;
+  name: string;
+  content?: string;
+  enabled?: boolean;
+};
+type ScriptTreeFolderNode = {
+  type: 'folder';
+  scripts?: ScriptTreeNode[];
+};
+type ScriptTreeNode = ScriptTreeScriptNode | ScriptTreeFolderNode;
+type TavernHelperScriptApi = Window['TavernHelper'] & {
+  getAllEnabledScriptButtons?: () => ScriptButtonMap;
+  getScriptTrees?: (option: { type: ScriptTreeKind }) => ScriptTreeNode[];
+};
+
 const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
 const OVERLAY_SETTINGS_VERSION = 1;
+const DATE_SYNC_BUTTON_NAME = '重算日期';
+const DATE_SYNC_SCRIPT_NAME = '日期变量同步脚本';
+const DATE_SYNC_SETTINGS_KEY = 'story_date_settings';
+const STORY_DATE_KEY = 'story_date';
+const STORY_DATE_DEFAULT = { year: 3197, month: 5, day: 29 } as const;
+const DATE_SYNC_TIMEOUT_DEFAULT_MS = 30_000;
+const CALENDAR_WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'] as const;
+const DATE_SYNC_SCRIPT_TREE_TYPES: ScriptTreeKind[] = ['global', 'preset', 'character'];
+const TIME_PERIOD_LABELS: Record<string, string> = {
+  unknown: '时段未定',
+  morning: '上午',
+  noon: '中午',
+  afternoon: '下午',
+  evening: '傍晚',
+  night: '夜晚',
+};
 const NOOP_EVENT_ON_RETURN: EventOnReturn = {
   stop: () => {},
 };
@@ -233,6 +414,7 @@ type HostRuntime = Window &
     eventEmit?: (eventType: string, ...data: any[]) => Promise<void>;
     tavern_events?: Partial<Record<OverlayTavernEventKey, string>>;
     getScriptId?: () => string;
+    getAllEnabledScriptButtons?: () => ScriptButtonMap;
   };
 
 function resolveHostRuntime(): HostRuntime | null {
@@ -339,15 +521,54 @@ const regexCompileError = ref('');
 const selectedRegexFile = ref<File | null>(null);
 const nativeMessagesHidden = ref(true);
 const stops: EventOnReturn[] = [];
+const calendarOpen = ref(false);
+const liveNow = ref(new Date());
+const storyDate = ref<StoryDateState>(createDefaultStoryDate());
+const dateSyncSettings = ref<DateSyncSettings>(createDefaultDateSyncSettings());
+const dateSyncScriptId = ref<string | null>(null);
+const dateSyncStatusMessage = ref('');
+const modelOptions = ref<ModelOption[]>([]);
+const fetchingModels = ref(false);
+const savingDateSyncSettings = ref(false);
 const draftRegex = ref({
   name: '',
   find: '',
   flags: 'g',
   replace: '',
 });
+let liveClockTimer: number | null = null;
+let storyDateTimer: number | null = null;
 
 const selectedRegexFileName = computed(() => selectedRegexFile.value?.name ?? '');
 const currentPageLabel = computed(() => PAGE_LABELS[activePage.value]);
+const liveClockTimeText = computed(() => formatClockTime(liveNow.value));
+const liveClockDateText = computed(() => formatClockDate(liveNow.value));
+const storyTimePeriodText = computed(() => TIME_PERIOD_LABELS[storyDate.value.time_period] ?? '时段未定');
+const storyDateLastSyncedText = computed(() => formatSyncTimestamp(storyDate.value.last_synced_at));
+const calendarWeekdays = CALENDAR_WEEKDAYS;
+const calendarCells = computed(() => buildCalendarCells(storyDate.value.year, storyDate.value.month, storyDate.value.day));
+const dateSyncReady = computed(() => Boolean(dateSyncScriptId.value));
+const dateSyncStatusText = computed(() => {
+  if (!dateSyncScriptId.value) {
+    return '未找到脚本';
+  }
+  if (!dateSyncSettings.value.enabled) {
+    return '已关闭';
+  }
+  if (!hasDateSyncModelConfig(dateSyncSettings.value)) {
+    return '待配置';
+  }
+  return '已就绪';
+});
+const dateSyncHintText = computed(() => {
+  if (dateSyncStatusMessage.value.trim()) {
+    return dateSyncStatusMessage.value;
+  }
+  if (!dateSyncScriptId.value) {
+    return '未找到启用中的“日期变量同步脚本”，请先启用该脚本后再保存。';
+  }
+  return '设置会写回日期同步脚本自己的 script 变量；story_date 与 story_date_settings 的键结构保持不变。';
+});
 
 const persistSettingsDebounced = _.debounce(() => {
   persistSettingsToVariables();
@@ -367,6 +588,242 @@ function createDefaultStoredSettings(): OverlayStoredSettings {
 
 function normalizeString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+function coerceBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['0', 'false', 'no', 'off', ''].includes(normalized)) {
+      return false;
+    }
+  }
+  return fallback;
+}
+
+function coerceInteger(value: unknown, fallback: number): number {
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+  return Math.trunc(numberValue);
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0);
+}
+
+function getDaysInMonth(year: number, month: number): number {
+  switch (month) {
+    case 2:
+      return isLeapYear(year) ? 29 : 28;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+      return 30;
+    default:
+      return 31;
+  }
+}
+
+function formatIsoDate(parts: { year: number; month: number; day: number }): string {
+  return `${String(parts.year).padStart(4, '0')}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
+}
+
+function formatDisplayDate(parts: { year: number; month: number; day: number }): string {
+  return `${parts.year}年${parts.month}月${parts.day}日`;
+}
+
+function createDefaultStoryDate(): StoryDateState {
+  return {
+    calendar: 'gregorian',
+    year: STORY_DATE_DEFAULT.year,
+    month: STORY_DATE_DEFAULT.month,
+    day: STORY_DATE_DEFAULT.day,
+    iso_date: formatIsoDate(STORY_DATE_DEFAULT),
+    display_text: formatDisplayDate(STORY_DATE_DEFAULT),
+    time_period: 'unknown',
+    last_synced_at: '',
+  };
+}
+
+function normalizeStoryDate(raw: unknown): StoryDateState {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultStoryDate();
+  }
+
+  const record = raw as Record<string, unknown>;
+  const year = coerceInteger(record.year, STORY_DATE_DEFAULT.year);
+  const month = _.clamp(coerceInteger(record.month, STORY_DATE_DEFAULT.month), 1, 12);
+  const day = _.clamp(coerceInteger(record.day, STORY_DATE_DEFAULT.day), 1, getDaysInMonth(year, month));
+
+  return {
+    calendar: 'gregorian',
+    year,
+    month,
+    day,
+    iso_date: normalizeString(record.iso_date).trim() || formatIsoDate({ year, month, day }),
+    display_text: normalizeString(record.display_text).trim() || formatDisplayDate({ year, month, day }),
+    time_period: normalizeString(record.time_period, 'unknown').trim() || 'unknown',
+    last_synced_at: normalizeString(record.last_synced_at).trim(),
+  };
+}
+
+function createDefaultDateSyncSettings(): DateSyncSettings {
+  return {
+    enabled: true,
+    base_url: '',
+    api_key: '',
+    model: '',
+    timeout_ms: DATE_SYNC_TIMEOUT_DEFAULT_MS,
+    debug: false,
+  };
+}
+
+function normalizeDateSyncSettings(raw: unknown): DateSyncSettings {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultDateSyncSettings();
+  }
+
+  const record = raw as Record<string, unknown>;
+  return {
+    enabled: coerceBoolean(record.enabled, true),
+    base_url: normalizeString(record.base_url).trim(),
+    api_key: normalizeString(record.api_key).trim(),
+    model: normalizeString(record.model).trim(),
+    timeout_ms: _.clamp(coerceInteger(record.timeout_ms, DATE_SYNC_TIMEOUT_DEFAULT_MS), 3_000, 120_000),
+    debug: coerceBoolean(record.debug, false),
+  };
+}
+
+function formatClockTime(date: Date): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function formatClockDate(date: Date): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date);
+}
+
+function formatSyncTimestamp(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '未记录';
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.valueOf())) {
+    return trimmed;
+  }
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(parsed);
+}
+
+function buildCalendarCells(year: number, month: number, currentDay: number): CalendarCell[] {
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstWeekday = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+  const cells: CalendarCell[] = [];
+
+  for (let index = 0; index < firstWeekday; index += 1) {
+    cells.push({
+      key: `empty-start-${index}`,
+      day: null,
+      isCurrentStoryDay: false,
+    });
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push({
+      key: `day-${day}`,
+      day,
+      isCurrentStoryDay: day === currentDay,
+    });
+  }
+
+  while (cells.length % 7 !== 0) {
+    cells.push({
+      key: `empty-end-${cells.length}`,
+      day: null,
+      isCurrentStoryDay: false,
+    });
+  }
+
+  return cells;
+}
+
+function hasDateSyncModelConfig(settings: DateSyncSettings): boolean {
+  return Boolean(settings.base_url && settings.api_key && settings.model);
+}
+
+function resolveCompatibleModelsEndpoint(baseUrl: string): string {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (/\/models(?:\?.*)?$/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (/(?:\/chat)?\/completions(?:\?.*)?$/i.test(trimmed)) {
+    return trimmed.replace(/(?:\/chat)?\/completions(?:\?.*)?$/i, '/models');
+  }
+  return `${trimmed.replace(/\/+$/, '')}/models`;
+}
+
+function collectModelOptions(payload: unknown): ModelOption[] {
+  const candidates = Array.isArray(payload)
+    ? payload
+    : Array.isArray(_.get(payload, 'data'))
+      ? (_.get(payload, 'data') as unknown[])
+      : Array.isArray(_.get(payload, 'models'))
+        ? (_.get(payload, 'models') as unknown[])
+        : [];
+  const seen = new Set<string>();
+
+  return candidates
+    .map(item => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const id = normalizeString(record.id, normalizeString(record.name)).trim();
+      if (!id || seen.has(id)) {
+        return null;
+      }
+      seen.add(id);
+
+      const provider = normalizeString(record.owned_by, normalizeString(record.provider)).trim();
+      return {
+        id,
+        label: provider ? `${id} · ${provider}` : id,
+      } satisfies ModelOption;
+    })
+    .filter(Boolean) as ModelOption[];
 }
 
 function splitRegexSource(rawPattern: string, rawFlags: string) {
@@ -490,10 +947,206 @@ function setTheme(next: OverlayTheme) {
 
 function switchPage(next: OverlayPage) {
   activePage.value = next;
+  if (next === 'settings') {
+    loadDateSyncSettings(true);
+  }
   if (next !== 'info') {
     return;
   }
   void nextTick(() => scrollChatToBottom());
+}
+
+function toggleCalendarOpen() {
+  calendarOpen.value = !calendarOpen.value;
+}
+
+function flattenScriptTrees(nodes: ScriptTreeNode[]): ScriptTreeScriptNode[] {
+  const scripts: ScriptTreeScriptNode[] = [];
+
+  const visit = (node: ScriptTreeNode) => {
+    if (node.type === 'script') {
+      scripts.push(node);
+      return;
+    }
+
+    (node.scripts ?? []).forEach(visit);
+  };
+
+  nodes.forEach(visit);
+  return scripts;
+}
+
+function readEnabledScriptButtons(): ScriptButtonMap {
+  const runtime = resolveHostRuntime();
+  if (runtime?.getAllEnabledScriptButtons) {
+    try {
+      return runtime.getAllEnabledScriptButtons();
+    } catch (error) {
+      console.warn('[全屏覆盖式酒馆前端] 读取启用脚本按钮失败，尝试 TavernHelper 回退。', error);
+    }
+  }
+
+  return withTavernHelper('读取启用脚本按钮', {}, helper => {
+    const api = helper as TavernHelperScriptApi;
+    return api.getAllEnabledScriptButtons?.() ?? {};
+  });
+}
+
+function readAllScriptNodes(): ScriptTreeScriptNode[] {
+  return withTavernHelper('读取脚本树', [] as ScriptTreeScriptNode[], helper => {
+    const api = helper as TavernHelperScriptApi;
+    if (!api.getScriptTrees) {
+      return [];
+    }
+
+    return DATE_SYNC_SCRIPT_TREE_TYPES.flatMap(type => flattenScriptTrees(api.getScriptTrees?.({ type }) ?? []));
+  });
+}
+
+function locateDateSyncScriptId(force = false): string | null {
+  if (dateSyncScriptId.value && !force) {
+    return dateSyncScriptId.value;
+  }
+
+  const buttonMap = readEnabledScriptButtons();
+  const matchedByButton = Object.entries(buttonMap).find(([, buttons]) =>
+    buttons.some(button => button.button_name === DATE_SYNC_BUTTON_NAME),
+  );
+  if (matchedByButton) {
+    dateSyncScriptId.value = matchedByButton[0];
+    return dateSyncScriptId.value;
+  }
+
+  const matchedScript = readAllScriptNodes().find(script => {
+    if (script.name?.includes(DATE_SYNC_SCRIPT_NAME)) {
+      return true;
+    }
+    const content = script.content ?? '';
+    return content.includes(DATE_SYNC_BUTTON_NAME) || content.includes(DATE_SYNC_SETTINGS_KEY);
+  });
+
+  dateSyncScriptId.value = matchedScript?.id ?? null;
+  return dateSyncScriptId.value;
+}
+
+function refreshStoryDateState() {
+  const variables = withTavernHelper('读取剧情日期变量', {}, helper => helper.getVariables({ type: 'chat' }));
+  const nextStoryDate = normalizeStoryDate(_.get(variables, STORY_DATE_KEY, {}));
+  if (!_.isEqual(storyDate.value, nextStoryDate)) {
+    storyDate.value = nextStoryDate;
+  }
+}
+
+function loadDateSyncSettings(silent = false): boolean {
+  const scriptId = locateDateSyncScriptId();
+  if (!scriptId) {
+    const defaults = createDefaultDateSyncSettings();
+    if (!_.isEqual(dateSyncSettings.value, defaults)) {
+      dateSyncSettings.value = defaults;
+    }
+    if (!silent) {
+      dateSyncStatusMessage.value = '未找到启用中的“日期变量同步脚本”，请先启用该脚本。';
+    }
+    return false;
+  }
+
+  const variables = withTavernHelper('读取日期同步脚本变量', {}, helper =>
+    helper.getVariables({ type: 'script', script_id: scriptId }),
+  );
+  const nextSettings = normalizeDateSyncSettings(_.get(variables, DATE_SYNC_SETTINGS_KEY, {}));
+  if (!_.isEqual(dateSyncSettings.value, nextSettings)) {
+    dateSyncSettings.value = nextSettings;
+  }
+  if (!silent) {
+    dateSyncStatusMessage.value = `已从日期同步脚本读取配置：${scriptId}`;
+  }
+  return true;
+}
+
+async function fetchCompatibleModels() {
+  const normalized = normalizeDateSyncSettings(dateSyncSettings.value);
+  dateSyncSettings.value = normalized;
+
+  if (!normalized.base_url) {
+    toastr.warning('请先填写兼容 URL。', '日期同步');
+    return;
+  }
+
+  fetchingModels.value = true;
+  dateSyncStatusMessage.value = '正在拉取模型列表…';
+
+  try {
+    const response = await fetch(resolveCompatibleModelsEndpoint(normalized.base_url), {
+      headers: {
+        Accept: 'application/json',
+        ...(normalized.api_key ? { Authorization: `Bearer ${normalized.api_key}` } : {}),
+      },
+    });
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`模型接口请求失败 (${response.status})：${responseText.slice(0, 280)}`);
+    }
+
+    const payload = responseText ? (JSON.parse(responseText) as unknown) : [];
+    const nextModelOptions = collectModelOptions(payload);
+    if (nextModelOptions.length === 0) {
+      throw new Error('接口返回中未找到可用模型。');
+    }
+
+    modelOptions.value = nextModelOptions;
+    if (!normalized.model) {
+      dateSyncSettings.value.model = nextModelOptions[0].id;
+    }
+    dateSyncStatusMessage.value = `已拉取 ${nextModelOptions.length} 个模型。`;
+    toastr.success(`已拉取 ${nextModelOptions.length} 个模型。`, '日期同步');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    dateSyncStatusMessage.value = `拉取模型失败：${detail}`;
+    toastr.error(detail, '日期同步');
+  } finally {
+    fetchingModels.value = false;
+  }
+}
+
+function saveDateSyncSettings() {
+  const scriptId = locateDateSyncScriptId(true);
+  if (!scriptId) {
+    dateSyncStatusMessage.value = '未找到启用中的“日期变量同步脚本”，无法保存。';
+    toastr.error('未找到启用中的“日期变量同步脚本”，无法保存。', '日期同步');
+    return;
+  }
+
+  savingDateSyncSettings.value = true;
+
+  try {
+    const normalized = normalizeDateSyncSettings(dateSyncSettings.value);
+    const variables = withTavernHelper('读取日期同步脚本变量', {}, helper =>
+      helper.getVariables({ type: 'script', script_id: scriptId }),
+    );
+
+    _.set(variables, DATE_SYNC_SETTINGS_KEY, normalized);
+    const saved = withTavernHelper('写入日期同步脚本变量', false, helper => {
+      helper.replaceVariables(variables, { type: 'script', script_id: scriptId });
+      return true;
+    });
+
+    if (!saved) {
+      throw new Error('写入日期同步脚本变量失败。');
+    }
+
+    dateSyncSettings.value = normalized;
+    dateSyncStatusMessage.value = normalized.model
+      ? `已保存日期同步配置：${normalized.model}`
+      : '已保存日期同步配置。';
+    toastr.success('日期同步配置已保存。', '日期同步');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    dateSyncStatusMessage.value = `保存失败：${detail}`;
+    toastr.error(detail, '日期同步');
+  } finally {
+    savingDateSyncSettings.value = false;
+  }
 }
 
 function closeOverlay() {
@@ -843,11 +1496,31 @@ async function importFileIntoTavernRegex() {
 
 onMounted(() => {
   loadSettingsFromVariables();
+  locateDateSyncScriptId(true);
+  loadDateSyncSettings(true);
+  refreshStoryDateState();
   requestNativeMessageVisibility(nativeMessagesHidden.value, 'script');
 
-  const refreshDebounced = _.debounce(refreshChatMessages, 30);
+  liveClockTimer = window.setInterval(() => {
+    liveNow.value = new Date();
+  }, 1_000);
+
+  storyDateTimer = window.setInterval(() => {
+    const previousScriptId = dateSyncScriptId.value;
+    const nextScriptId = locateDateSyncScriptId(true);
+    if (!previousScriptId && nextScriptId) {
+      loadDateSyncSettings(true);
+    }
+    refreshStoryDateState();
+  }, 1_500);
+
+  const refreshDebounced = _.debounce(() => {
+    refreshChatMessages();
+    refreshStoryDateState();
+  }, 30);
   const refreshAndStickBottom = _.debounce(() => {
     refreshChatMessages();
+    refreshStoryDateState();
     void nextTick(() => scrollChatToBottom('smooth'));
   }, 30);
 
@@ -861,6 +1534,7 @@ onMounted(() => {
   stops.push(
     onOverlayEvent(getTavernEventName('CHAT_CHANGED'), () => {
       draft.value = '';
+      loadDateSyncSettings(true);
       refreshAndStickBottom();
     }),
   );
@@ -881,6 +1555,7 @@ onMounted(() => {
   );
 
   refreshChatMessages();
+  refreshStoryDateState();
   void nextTick(() => scrollChatToBottom());
 });
 
@@ -907,6 +1582,14 @@ watch(
 onBeforeUnmount(() => {
   persistSettingsDebounced.flush();
   persistSettingsDebounced.cancel();
+  if (liveClockTimer !== null) {
+    window.clearInterval(liveClockTimer);
+    liveClockTimer = null;
+  }
+  if (storyDateTimer !== null) {
+    window.clearInterval(storyDateTimer);
+    storyDateTimer = null;
+  }
   stops.forEach(handle => handle.stop());
 });
 </script>
@@ -925,6 +1608,7 @@ onBeforeUnmount(() => {
 .overlay-root[data-theme='cyber_blue'] {
   --page-bg: radial-gradient(circle at 18% 10%, #14263f 0%, #070b13 52%, #03050a 100%);
   --panel-bg: linear-gradient(155deg, rgba(10, 13, 21, 0.94), rgba(18, 29, 48, 0.92));
+  --calendar-bg: linear-gradient(160deg, rgba(5, 10, 18, 0.98), rgba(17, 28, 45, 0.98));
   --shell-bg: rgba(0, 0, 0, 0.1);
   --nav-bg: rgba(3, 9, 18, 0.4);
   --line-color: rgba(78, 230, 255, 0.55);
@@ -943,6 +1627,7 @@ onBeforeUnmount(() => {
 .overlay-root[data-theme='cyber_pink'] {
   --page-bg: radial-gradient(circle at 20% 8%, #f3f4f8 0%, #d0d3dd 55%, #b6b9c3 100%);
   --panel-bg: linear-gradient(150deg, rgba(236, 239, 246, 0.97), rgba(202, 206, 216, 0.95));
+  --calendar-bg: linear-gradient(160deg, rgba(242, 245, 250, 0.98), rgba(219, 224, 233, 0.98));
   --shell-bg: rgba(255, 255, 255, 0.22);
   --nav-bg: rgba(255, 255, 255, 0.32);
   --line-color: rgba(255, 64, 176, 0.55);
@@ -1031,7 +1716,149 @@ onBeforeUnmount(() => {
 
 .title-group {
   display: grid;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
+  position: relative;
+}
+
+.title-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-trigger {
+  min-width: 220px;
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 10px 14px;
+  color: var(--text-color);
+  background: var(--btn-bg);
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--accent-soft) inset;
+}
+
+.date-trigger-label,
+.calendar-kicker {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--sub-color);
+}
+
+.date-trigger strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.date-trigger-time {
+  font-size: 12px;
+  color: var(--sub-color);
+}
+
+.calendar-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 5;
+  width: min(520px, calc(100vw - 88px));
+  border: 1px solid var(--line-color);
+  border-radius: 18px;
+  padding: 14px;
+  background: var(--calendar-bg);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+  display: grid;
+  gap: 12px;
+}
+
+.calendar-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.calendar-story,
+.calendar-clock {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 6px;
+}
+
+.calendar-story h2,
+.calendar-clock strong {
+  margin: 0;
+  font-size: 20px;
+}
+
+.calendar-clock span,
+.calendar-meta,
+.calendar-status,
+.calendar-foot {
+  color: var(--sub-color);
+  font-size: 12px;
+}
+
+.calendar-panel {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.calendar-weekdays,
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  font-size: 12px;
+  color: var(--sub-color);
+}
+
+.calendar-day {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.calendar-day.empty {
+  opacity: 0.3;
+}
+
+.calendar-day.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+  background: linear-gradient(160deg, var(--accent-soft), rgba(255, 255, 255, 0.02));
+}
+
+.calendar-day-number {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.calendar-foot {
+  margin: 0;
 }
 
 .head-actions {
@@ -1136,6 +1963,73 @@ h1 {
   background: rgba(0, 0, 0, 0.08);
   display: grid;
   gap: 10px;
+}
+
+.settings-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-chip {
+  border: 1px solid var(--line-color);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--sub-color);
+  white-space: nowrap;
+}
+
+.status-chip[data-state='ready'] {
+  color: var(--text-color);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-field {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-field.small {
+  align-content: start;
+}
+
+.settings-field > span {
+  font-size: 12px;
+  color: var(--sub-color);
+}
+
+.settings-toggle {
+  border: 1px dashed var(--line-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-actions,
+.model-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.model-pill {
+  border: 1px solid var(--line-color);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--sub-color);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .theme-switch {
@@ -1424,6 +2318,10 @@ h1 {
   .regex-rule-fields {
     grid-template-columns: 1fr;
   }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1456,6 +2354,29 @@ h1 {
     width: 100%;
     justify-content: flex-end;
     flex-wrap: wrap;
+  }
+
+  .title-meta {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .date-trigger {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .calendar-popover {
+    position: static;
+    width: 100%;
+  }
+
+  .calendar-summary,
+  .settings-heading,
+  .calendar-panel-head {
+    grid-template-columns: 1fr;
+    display: grid;
   }
 
   .nav-btn {
