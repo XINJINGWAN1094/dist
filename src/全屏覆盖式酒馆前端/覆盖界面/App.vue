@@ -4,6 +4,7 @@
       <aside class="page-nav">
         <p class="nav-title">页面导航</p>
         <button type="button" class="nav-btn" :aria-pressed="activePage === 'info'" @click="switchPage('info')">信息</button>
+        <button type="button" class="nav-btn" :aria-pressed="activePage === 'squad'" @click="switchPage('squad')">战队</button>
         <button type="button" class="nav-btn" :aria-pressed="activePage === 'battle'" @click="switchPage('battle')">
           战斗场
         </button>
@@ -257,6 +258,10 @@
           </div>
         </section>
 
+        <section v-else-if="activePage === 'squad'" class="page-view simple-view battle-view">
+          <SquadRoster />
+        </section>
+
         <section v-else-if="activePage === 'battle'" class="page-view simple-view battle-view">
           <BattleArena />
         </section>
@@ -386,6 +391,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import BattleArena from './页面预留/BattleArena.vue';
+import SquadRoster from './页面预留/SquadRoster.vue';
 import {
   OVERLAY_EVENTS,
   type NativeMessageVisibilityPayload,
@@ -394,7 +400,7 @@ import {
 } from '../共享/协议';
 
 type OverlayTheme = 'cyber_blue' | 'cyber_pink';
-type OverlayPage = 'info' | 'battle' | 'training' | 'settings';
+type OverlayPage = 'info' | 'squad' | 'battle' | 'training' | 'settings';
 type RenderableMessage = {
   message_id: number;
   name: string;

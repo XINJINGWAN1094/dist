@@ -6,14 +6,10 @@
         <span>{{ isCompetitionMode ? '比赛模式' : '非比赛模式' }}</span>
       </label>
 
-      <p class="battle-state">
-        {{ battleStatusText }}
-      </p>
+      <p class="battle-state">{{ battleStatusText }}</p>
 
       <div class="toolbar-actions">
-        <button type="button" class="toolbar-btn" :disabled="!isCompetitionMode || isRunning" @click="startBattle">
-          开始比赛
-        </button>
+        <button type="button" class="toolbar-btn" :disabled="!isCompetitionMode || isRunning" @click="startBattle">开始比赛</button>
         <button type="button" class="toolbar-btn" @click="resetBattleState">重置赛场</button>
       </div>
     </header>
@@ -63,14 +59,37 @@
       </div>
     </section>
 
+    <section class="roster-panel">
+      <header class="panel-headline">
+        <div>
+          <h3>我方属性面板</h3>
+          <p class="panel-note">{{ rosterSyncHint }}</p>
+        </div>
+      </header>
+
+      <div class="roster-grid">
+        <article v-for="member in allyRosterPreview" :key="member.id" class="roster-card">
+          <div class="roster-card-head">
+            <strong>{{ member.name }}</strong>
+            <span>{{ roleLabel(member.role) }}</span>
+          </div>
+          <p>物攻 {{ member.stats.physicalAttack }} · 法攻 {{ member.stats.magicAttack }}</p>
+          <p>生命 {{ member.stats.hp }} · 速度 {{ member.stats.speed }}</p>
+          <p>物抗 {{ member.stats.physicalResist }} · 法抗 {{ member.stats.magicResist }}</p>
+        </article>
+      </div>
+    </section>
+
     <section class="skill-panel">
-      <header class="skill-head">
-        <h3>{{ selectedAlly ? selectedAlly.name : '我方角色技能' }}</h3>
-        <p v-if="selectedAlly" class="attr-line">
-          法攻 {{ selectedAlly.stats.magicAttack }} · 物攻 {{ selectedAlly.stats.physicalAttack }} · 生命
-          {{ selectedAlly.currentHp }}/{{ selectedAlly.stats.hp }} · 物抗 {{ selectedAlly.stats.physicalResist }} · 法抗
-          {{ selectedAlly.stats.magicResist }} · 速度 {{ selectedAlly.stats.speed }}
-        </p>
+      <header class="panel-headline">
+        <div>
+          <h3>{{ selectedAlly ? selectedAlly.name : '我方角色技能' }}</h3>
+          <p v-if="selectedAlly" class="attr-line">
+            法攻 {{ selectedAlly.stats.magicAttack }} · 物攻 {{ selectedAlly.stats.physicalAttack }} · 生命
+            {{ selectedAlly.currentHp }}/{{ selectedAlly.stats.hp }} · 物抗 {{ selectedAlly.stats.physicalResist }} · 法抗
+            {{ selectedAlly.stats.magicResist }} · 速度 {{ selectedAlly.stats.speed }}
+          </p>
+        </div>
       </header>
 
       <div v-if="selectedAlly" class="skill-grid">
@@ -120,32 +139,29 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+  battleRosterMembers,
+  ensureBattleRosterLoaded,
+  getRoleLabel,
+  type SquadMember,
+  type SquadMemberRole,
+  type SquadMemberStats,
+} from '../battleRosterState';
 
 type FighterSide = 'ally' | 'enemy';
-type FighterRole = 'guard' | 'mage' | 'support' | 'assassin';
-type FighterId = `${FighterSide}_${FighterRole}`;
 type SkillKind = 'physical' | 'magic';
 type FormationSlot = 'top' | 'left' | 'right' | 'bottom';
 type BattleLogKind = 'info' | 'turn' | 'action' | 'result' | 'warn';
-
-type FighterStats = {
-  magicAttack: number;
-  physicalAttack: number;
-  hp: number;
-  physicalResist: number;
-  magicResist: number;
-  speed: number;
-};
 
 type SkillDefinition = {
   id: string;
   name: string;
   kind: SkillKind;
   ratio: number;
-  hitCount?: number;
   cooldown: number;
   description: string;
+  hitCount?: number;
   ignoreResistRate?: number;
   lowHpBonusRate?: number;
   selfHealRate?: number;
@@ -156,9 +172,9 @@ type SkillDefinition = {
 type BattleFighter = {
   id: string;
   side: FighterSide;
-  role: FighterRole;
+  role: SquadMemberRole;
   name: string;
-  stats: FighterStats;
+  stats: SquadMemberStats;
   currentHp: number;
   isDead: boolean;
   cooldowns: Record<string, number>;
@@ -181,109 +197,42 @@ type FormationCell = {
   fighter: BattleFighter;
 };
 
-const ROLE_BASE_STATS: Record<FighterRole, FighterStats> = {
+const ENEMY_STATS: Record<SquadMemberRole, SquadMemberStats> = {
   guard: {
-    magicAttack: 58,
     physicalAttack: 88,
-    hp: 430,
-    physicalResist: 44,
-    magicResist: 36,
-    speed: 82,
-  },
-  mage: {
-    magicAttack: 128,
-    physicalAttack: 42,
-    hp: 300,
-    physicalResist: 18,
-    magicResist: 29,
-    speed: 120,
-  },
-  support: {
-    magicAttack: 100,
-    physicalAttack: 54,
-    hp: 335,
-    physicalResist: 25,
-    magicResist: 36,
-    speed: 101,
-  },
-  assassin: {
-    magicAttack: 46,
-    physicalAttack: 121,
-    hp: 310,
-    physicalResist: 23,
-    magicResist: 24,
-    speed: 134,
-  },
-};
-
-const INITIAL_FIGHTER_STATS: Record<FighterId, FighterStats> = {
-  enemy_guard: {
     magicAttack: 70,
-    physicalAttack: 88,
     hp: 480,
     physicalResist: 32,
     magicResist: 26,
     speed: 88,
   },
-  enemy_mage: {
-    magicAttack: 132,
+  mage: {
     physicalAttack: 40,
+    magicAttack: 132,
     hp: 340,
     physicalResist: 18,
     magicResist: 24,
     speed: 128,
   },
-  enemy_support: {
-    magicAttack: 110,
+  support: {
     physicalAttack: 56,
+    magicAttack: 110,
     hp: 360,
     physicalResist: 22,
     magicResist: 28,
     speed: 104,
   },
-  enemy_assassin: {
-    magicAttack: 52,
+  assassin: {
     physicalAttack: 126,
+    magicAttack: 52,
     hp: 330,
     physicalResist: 20,
     magicResist: 20,
     speed: 142,
   },
-  ally_guard: {
-    magicAttack: 72,
-    physicalAttack: 92,
-    hp: 500,
-    physicalResist: 34,
-    magicResist: 28,
-    speed: 90,
-  },
-  ally_mage: {
-    magicAttack: 138,
-    physicalAttack: 38,
-    hp: 350,
-    physicalResist: 16,
-    magicResist: 26,
-    speed: 132,
-  },
-  ally_support: {
-    magicAttack: 114,
-    physicalAttack: 54,
-    hp: 370,
-    physicalResist: 24,
-    magicResist: 30,
-    speed: 108,
-  },
-  ally_assassin: {
-    magicAttack: 50,
-    physicalAttack: 130,
-    hp: 340,
-    physicalResist: 22,
-    magicResist: 18,
-    speed: 146,
-  },
 };
 
-const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
+const ROLE_SKILLS: Record<SquadMemberRole, SkillDefinition[]> = {
   guard: [
     {
       id: 'guard_shield_bash',
@@ -291,7 +240,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'guard_iron_crash',
@@ -299,7 +248,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'guard_counter_wall',
@@ -307,7 +256,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'guard_crushing_roar',
@@ -315,7 +264,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
   ],
   mage: [
@@ -325,7 +274,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'mage_arcane_burst',
@@ -333,7 +282,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'mage_frost_spike',
@@ -341,7 +290,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'mage_meteor_fall',
@@ -349,7 +298,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
   ],
   support: [
@@ -359,7 +308,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'support_judgment',
@@ -367,7 +316,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'support_holy_pulse',
@@ -375,7 +324,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
     {
       id: 'support_grace_mark',
@@ -383,7 +332,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'magic',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%法术伤害。',
+      description: '造成 200% 法术伤害。',
     },
   ],
   assassin: [
@@ -393,7 +342,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'assassin_shadow_combo',
@@ -401,7 +350,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'assassin_poison_edge',
@@ -409,7 +358,7 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
     {
       id: 'assassin_execute',
@@ -417,19 +366,19 @@ const ROLE_SKILLS: Record<FighterRole, SkillDefinition[]> = {
       kind: 'physical',
       ratio: 2,
       cooldown: 2,
-      description: '造成200%物理伤害。',
+      description: '造成 200% 物理伤害。',
     },
   ],
 };
 
-const ENEMY_POSITION: Record<FighterRole, FormationSlot> = {
+const ENEMY_POSITION: Record<SquadMemberRole, FormationSlot> = {
   mage: 'top',
   support: 'left',
   assassin: 'right',
   guard: 'bottom',
 };
 
-const ALLY_POSITION: Record<FighterRole, FormationSlot> = {
+const ALLY_POSITION: Record<SquadMemberRole, FormationSlot> = {
   guard: 'top',
   assassin: 'left',
   support: 'right',
@@ -438,12 +387,13 @@ const ALLY_POSITION: Record<FighterRole, FormationSlot> = {
 
 const maxRounds = 7;
 const battleDelayMs = 420;
+
 const battleLogs = ref<BattleLogEntry[]>([]);
 const fighters = ref<BattleFighter[]>(createInitialFighters());
 const isCompetitionMode = ref(false);
 const isRunning = ref(false);
 const currentRound = ref(1);
-const selectedAllyId = ref<string | null>(fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null);
+const selectedAllyId = ref<string | null>(battleRosterMembers.value[0]?.id ?? null);
 const selectedSkillId = ref<string | null>(null);
 const pendingActorId = ref<string | null>(null);
 const winnerText = ref('');
@@ -467,6 +417,9 @@ const allyTotalHp = computed(() =>
 const enemyTotalHp = computed(() =>
   fighters.value.filter(fighter => fighter.side === 'enemy').reduce((total, fighter) => total + fighter.currentHp, 0),
 );
+const enemySlots = computed(() => buildFormationCells('enemy', ENEMY_POSITION));
+const allySlots = computed(() => buildFormationCells('ally', ALLY_POSITION));
+const allyRosterPreview = computed(() => battleRosterMembers.value.map(member => cloneSquadMember(member)));
 const battleStatusText = computed(() => {
   if (!isCompetitionMode.value) {
     return '当前状态：非比赛模式';
@@ -488,47 +441,81 @@ const canChooseEnemyTarget = computed(() => {
   }
   return pendingActorId.value === selectedAlly.value.id;
 });
-const enemySlots = computed(() => buildFormationCells('enemy', ENEMY_POSITION));
-const allySlots = computed(() => buildFormationCells('ally', ALLY_POSITION));
+const rosterSyncHint = computed(() => {
+  if (isRunning.value) {
+    return '本场比赛已锁定开始时的我方属性；战队页后续修改会在下一次开始比赛时生效。';
+  }
+  return '战队页中的属性会实时同步到这里，开始比赛时按当前值创建我方战斗单位。';
+});
 
-function createInitialFighters() {
-  const enemyRoles: FighterRole[] = ['guard', 'mage', 'support', 'assassin'];
-  const allyRoles: FighterRole[] = ['guard', 'mage', 'support', 'assassin'];
-  const created = [...enemyRoles.map(role => createFighter('enemy', role)), ...allyRoles.map(role => createFighter('ally', role))];
-  return created;
+function cloneSquadStats(stats: SquadMemberStats): SquadMemberStats {
+  return {
+    physicalAttack: stats.physicalAttack,
+    magicAttack: stats.magicAttack,
+    hp: stats.hp,
+    physicalResist: stats.physicalResist,
+    magicResist: stats.magicResist,
+    speed: stats.speed,
+  };
 }
 
-function createFighter(side: FighterSide, role: FighterRole): BattleFighter {
-  const fighterId = `${side}_${role}` as FighterId;
-  const baseStats = INITIAL_FIGHTER_STATS[fighterId] ?? ROLE_BASE_STATS[role];
-  const namePrefix = side === 'enemy' ? '敌方' : '我方';
-  const roleNameMap: Record<FighterRole, string> = {
-    guard: '护卫',
-    mage: '法师',
-    support: '辅助',
-    assassin: '刺客',
+function cloneSquadMember(member: SquadMember): SquadMember {
+  return {
+    id: member.id,
+    name: member.name,
+    role: member.role,
+    stats: cloneSquadStats(member.stats),
   };
-  const name = `${namePrefix}${roleNameMap[role]}`;
+}
+
+function createInitialFighters() {
+  return [...createEnemyFighters(), ...createAllyFightersFromRoster()];
+}
+
+function createEnemyFighters() {
+  const enemyRoles: SquadMemberRole[] = ['guard', 'mage', 'support', 'assassin'];
+  return enemyRoles.map(role => {
+    const stats = cloneSquadStats(ENEMY_STATS[role]);
+    return {
+      id: `enemy_${role}`,
+      side: 'enemy',
+      role,
+      name: `敌方${getRoleLabel(role)}`,
+      stats,
+      currentHp: stats.hp,
+      isDead: false,
+      cooldowns: createCooldowns(role),
+    } satisfies BattleFighter;
+  });
+}
+
+function createAllyFightersFromRoster() {
+  return battleRosterMembers.value.map(member => {
+    const stats = cloneSquadStats(member.stats);
+    return {
+      id: member.id,
+      side: 'ally',
+      role: member.role,
+      name: member.name,
+      stats,
+      currentHp: stats.hp,
+      isDead: false,
+      cooldowns: createCooldowns(member.role),
+    } satisfies BattleFighter;
+  });
+}
+
+function createCooldowns(role: SquadMemberRole) {
   const cooldowns: Record<string, number> = {};
   ROLE_SKILLS[role].forEach(skill => {
     cooldowns[skill.id] = 0;
   });
-
-  return {
-    id: fighterId,
-    side,
-    role,
-    name,
-    stats: { ...baseStats },
-    currentHp: baseStats.hp,
-    isDead: false,
-    cooldowns,
-  };
+  return cooldowns;
 }
 
-function buildFormationCells(side: FighterSide, positionMap: Record<FighterRole, FormationSlot>) {
-  const sideActors = fighters.value.filter(fighter => fighter.side === side);
-  return sideActors
+function buildFormationCells(side: FighterSide, positionMap: Record<SquadMemberRole, FormationSlot>) {
+  return fighters.value
+    .filter(fighter => fighter.side === side)
     .map(fighter => ({
       slot: positionMap[fighter.role],
       fighter,
@@ -549,17 +536,8 @@ function formationOrder(slot: FormationSlot) {
   return 4;
 }
 
-function roleLabel(role: FighterRole) {
-  if (role === 'guard') {
-    return '护卫';
-  }
-  if (role === 'mage') {
-    return '法师';
-  }
-  if (role === 'support') {
-    return '辅助';
-  }
-  return '刺客';
+function roleLabel(role: SquadMemberRole) {
+  return getRoleLabel(role);
 }
 
 function cardClasses(fighter: BattleFighter) {
@@ -576,7 +554,7 @@ function cardClasses(fighter: BattleFighter) {
   };
 }
 
-function getSlotClass(side: FighterSide, role: FighterRole) {
+function getSlotClass(side: FighterSide, role: SquadMemberRole) {
   return side === 'enemy' ? ENEMY_POSITION[role] : ALLY_POSITION[role];
 }
 
@@ -588,6 +566,27 @@ function getSkillCooldown(fighter: BattleFighter, skillId: string) {
   return fighter.cooldowns[skillId] ?? 0;
 }
 
+function syncIdleBattlePreviewFromRoster() {
+  if (isRunning.value) {
+    return;
+  }
+
+  fighters.value = createInitialFighters();
+  currentRound.value = 1;
+  winnerText.value = '';
+  selectedSkillId.value = null;
+  pendingActorId.value = null;
+  roundQueueText.value = '';
+
+  if (!fighters.value.some(fighter => fighter.id === selectedAllyId.value && fighter.side === 'ally')) {
+    selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
+  }
+
+  turnHint.value = !isCompetitionMode.value
+    ? '非比赛模式：仅可查看并点击我方四个角色框。'
+    : '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
+}
+
 function onModeSwitchChanged() {
   if (!isCompetitionMode.value) {
     stopBattle('已切换为非比赛模式。');
@@ -597,7 +596,7 @@ function onModeSwitchChanged() {
 
   resetBattleState();
   appendLog('已切换到比赛模式。', 'info');
-  turnHint.value = '比赛模式：点击“开始比赛”后进入7回合战斗。';
+  turnHint.value = '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
 }
 
 function resetBattleState() {
@@ -611,6 +610,9 @@ function resetBattleState() {
   pendingActorId.value = null;
   roundQueueText.value = '';
   selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
+  turnHint.value = !isCompetitionMode.value
+    ? '非比赛模式：仅可查看并点击我方四个角色框。'
+    : '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
   appendLog('赛场已重置。', 'info');
 }
 
@@ -655,9 +657,11 @@ async function startBattle() {
 async function runBattleLoop(token: number) {
   while (isRunning.value && token === battleToken.value && currentRound.value <= maxRounds) {
     beginRound();
-    appendLog(roundQueueText.value, 'turn');
-
     const queue = buildRoundQueue();
+    if (roundQueueText.value) {
+      appendLog(roundQueueText.value, 'turn');
+    }
+
     for (const actorId of queue) {
       if (!isRunning.value || token !== battleToken.value) {
         return;
@@ -680,6 +684,7 @@ async function runBattleLoop(token: number) {
       if (!isRunning.value || token !== battleToken.value) {
         return;
       }
+
       const earlyWinner = determineWinnerByWipeOut();
       if (earlyWinner) {
         finishBattle(earlyWinner);
@@ -690,6 +695,7 @@ async function runBattleLoop(token: number) {
     if (currentRound.value >= maxRounds) {
       break;
     }
+
     currentRound.value += 1;
   }
 
@@ -697,8 +703,7 @@ async function runBattleLoop(token: number) {
     return;
   }
 
-  const finalWinner = determineWinnerAtRoundEnd();
-  finishBattle(finalWinner);
+  finishBattle(determineWinnerAtRoundEnd());
 }
 
 function beginRound() {
@@ -726,13 +731,9 @@ function buildRoundQueue() {
   const minSpeed = Math.min(...alive.map(fighter => fighter.stats.speed));
   const ordered = [...alive].sort((left, right) => right.stats.speed - left.stats.speed);
   const normalQueue = ordered.map(fighter => fighter.id);
-  const bonusQueue = ordered
-    .filter(fighter => fighter.stats.speed - minSpeed > 100)
-    .map(fighter => fighter.id);
+  const bonusQueue = ordered.filter(fighter => fighter.stats.speed - minSpeed > 100).map(fighter => fighter.id);
   const queue = [...normalQueue, ...bonusQueue];
-  roundQueueText.value = `出手顺序：${queue
-    .map(actorId => findFighterById(actorId)?.name ?? actorId)
-    .join(' → ')}`;
+  roundQueueText.value = `出手顺序：${queue.map(actorId => findFighterById(actorId)?.name ?? actorId).join(' → ')}`;
   return queue;
 }
 
@@ -774,7 +775,7 @@ async function handleEnemyTurn(actor: BattleFighter, token: number) {
 
   const target = [...targets].sort((left, right) => left.currentHp - right.currentHp)[0];
   const pickedSkill = pickEnemySkill(actor, available, target);
-  turnHint.value = `${actor.name} 正在释放技能...`;
+  turnHint.value = `${actor.name} 正在释放技能…`;
   await executeSkill(actor.id, pickedSkill.id, target.id, token);
 }
 
@@ -793,17 +794,20 @@ function pickEnemySkill(actor: BattleFighter, available: SkillDefinition[], targ
 
 function estimateSkillDamage(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
   const hitCount = skill.hitCount ?? 1;
-  let total = 0;
-  for (let hit = 0; hit < hitCount; hit += 1) {
-    total += calculateSingleHitDamage(attacker, target, skill);
+  let totalDamage = 0;
+
+  for (let index = 0; index < hitCount; index += 1) {
+    totalDamage += calculateSingleHitDamage(attacker, target, skill);
   }
-  return total;
+
+  return totalDamage;
 }
 
 async function executeSkill(actorId: string, skillId: string, targetId: string, token: number) {
   if (!isRunning.value || token !== battleToken.value) {
     return;
   }
+
   const attacker = findFighterById(actorId);
   const target = findFighterById(targetId);
   if (!attacker || !target || attacker.isDead || target.isDead) {
@@ -833,9 +837,11 @@ async function executeSkill(actorId: string, skillId: string, targetId: string, 
     if (target.isDead) {
       break;
     }
+
     const damage = calculateSingleHitDamage(attacker, target, skill);
     totalDamage += damage;
     target.currentHp = Math.max(0, target.currentHp - damage);
+
     if (target.currentHp <= 0) {
       target.currentHp = 0;
       target.isDead = true;
@@ -844,7 +850,7 @@ async function executeSkill(actorId: string, skillId: string, targetId: string, 
 
   attacker.cooldowns[skill.id] = skill.cooldown + 1;
   appendLog(
-    `${target.name} 受到 ${totalDamage} 点${skill.kind === 'magic' ? '法术' : '物理'}伤害（${beforeHp} -> ${target.currentHp}）。`,
+    `${target.name} 受到 ${totalDamage} 点${skill.kind === 'magic' ? '法术' : '物理'}伤害（${beforeHp} → ${target.currentHp}）。`,
     'action',
   );
 
@@ -884,15 +890,18 @@ function calculateSingleHitDamage(attacker: BattleFighter, target: BattleFighter
   const targetResist = skill.kind === 'magic' ? target.stats.magicResist : target.stats.physicalResist;
   const effectiveResist = Math.round(targetResist * (1 - (skill.ignoreResistRate ?? 0)));
   let damage = Math.round(attackValue * skill.ratio - effectiveResist);
+
   if (skill.lowHpBonusRate && target.currentHp / target.stats.hp <= 0.4) {
     damage = Math.round(damage * (1 + skill.lowHpBonusRate));
   }
+
   return Math.max(1, damage);
 }
 
 function determineWinnerByWipeOut() {
   const allyAliveCount = fighters.value.filter(fighter => fighter.side === 'ally' && !fighter.isDead).length;
   const enemyAliveCount = fighters.value.filter(fighter => fighter.side === 'enemy' && !fighter.isDead).length;
+
   if (allyAliveCount === 0 && enemyAliveCount === 0) {
     return '双方同归于尽，判定平局。';
   }
@@ -934,10 +943,7 @@ function finishBattle(text: string) {
 
 function onFighterCardClicked(fighter: BattleFighter) {
   if (fighter.side === 'enemy') {
-    if (!isCompetitionMode.value || !isRunning.value || fighter.isDead) {
-      return;
-    }
-    if (!canChooseEnemyTarget.value) {
+    if (!isCompetitionMode.value || !isRunning.value || fighter.isDead || !canChooseEnemyTarget.value) {
       return;
     }
     onEnemyTargetChosen(fighter.id);
@@ -968,12 +974,10 @@ function onSkillClicked(skillId: string) {
   if (!selectedAlly.value) {
     return;
   }
+
   selectedSkillId.value = skillId;
 
-  if (!isCompetitionMode.value) {
-    return;
-  }
-  if (!isRunning.value) {
+  if (!isCompetitionMode.value || !isRunning.value) {
     return;
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
@@ -987,7 +991,8 @@ function onSkillClicked(skillId: string) {
     toastr.warning('该技能仍在冷却中。', '战斗场');
     return;
   }
-  turnHint.value = `已选择技能，点击敌方目标释放。`;
+
+  turnHint.value = '已选择技能，点击敌方目标释放。';
 }
 
 function onEnemyTargetChosen(targetId: string) {
@@ -1000,6 +1005,7 @@ function onEnemyTargetChosen(targetId: string) {
   if (pendingActorId.value !== selectedAlly.value.id) {
     return;
   }
+
   const target = findFighterById(targetId);
   if (!target || target.side !== 'enemy' || target.isDead) {
     return;
@@ -1058,6 +1064,19 @@ function sleepStep(ms: number, token: number) {
   });
 }
 
+watch(
+  battleRosterMembers,
+  () => {
+    syncIdleBattlePreviewFromRoster();
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  ensureBattleRosterLoaded();
+  syncIdleBattlePreviewFromRoster();
+});
+
 onBeforeUnmount(() => {
   battleToken.value += 1;
   resolvePendingManualAction(null);
@@ -1068,15 +1087,22 @@ onBeforeUnmount(() => {
 .battle-shell {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto auto 1fr;
   gap: 10px;
 }
 
-.battle-toolbar {
+.battle-toolbar,
+.battle-stage,
+.roster-panel,
+.skill-panel,
+.log-panel {
   border: 1px solid var(--line-color);
   border-radius: 12px;
-  padding: 10px 12px;
   background: rgba(0, 0, 0, 0.08);
+}
+
+.battle-toolbar {
+  padding: 10px 12px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -1121,10 +1147,7 @@ onBeforeUnmount(() => {
 }
 
 .battle-stage {
-  border: 1px solid var(--line-color);
-  border-radius: 12px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.08);
   display: grid;
   grid-template-rows: auto auto auto;
   justify-items: center;
@@ -1251,7 +1274,11 @@ onBeforeUnmount(() => {
 }
 
 .fighter-role,
-.fighter-speed {
+.fighter-speed,
+.panel-note,
+.attr-line,
+.log-title,
+.target-title {
   color: var(--sub-color);
 }
 
@@ -1260,25 +1287,79 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.skill-panel {
-  border: 1px solid var(--line-color);
-  border-radius: 12px;
+.roster-panel,
+.skill-panel,
+.log-panel {
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.08);
-  display: grid;
-  gap: 8px;
 }
 
-.skill-head h3 {
+.panel-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-headline h3 {
   margin: 0;
   font-size: 16px;
 }
 
+.panel-note,
 .attr-line {
   margin: 4px 0 0;
-  color: var(--sub-color);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.roster-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.roster-card {
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.08);
+  display: grid;
+  gap: 4px;
+}
+
+.roster-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.roster-card-head strong {
+  font-size: 14px;
+}
+
+.roster-card-head span {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--btn-fg);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.roster-card p,
+.skill-name,
+.skill-desc,
+.skill-state,
+.log-item {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.skill-panel {
+  display: grid;
+  gap: 8px;
 }
 
 .skill-grid {
@@ -1308,20 +1389,8 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-.skill-name,
-.skill-desc,
-.skill-state {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .skill-name {
   font-weight: 700;
-}
-
-.skill-state {
-  color: var(--sub-color);
 }
 
 .target-zone {
@@ -1330,9 +1399,7 @@ onBeforeUnmount(() => {
 }
 
 .target-title {
-  margin: 0;
   font-size: 12px;
-  color: var(--sub-color);
 }
 
 .target-grid {
@@ -1358,19 +1425,9 @@ onBeforeUnmount(() => {
 
 .log-panel {
   min-height: 0;
-  border: 1px solid var(--line-color);
-  border-radius: 12px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.08);
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 6px;
-}
-
-.log-title {
-  margin: 0;
-  font-size: 12px;
-  color: var(--sub-color);
 }
 
 .log-list {
@@ -1382,12 +1439,9 @@ onBeforeUnmount(() => {
 }
 
 .log-item {
-  margin: 0;
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid var(--line-color);
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .log-info {
@@ -1408,6 +1462,12 @@ onBeforeUnmount(() => {
 
 .log-warn {
   background: rgba(255, 112, 145, 0.14);
+}
+
+@media (max-width: 980px) {
+  .roster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -1434,6 +1494,12 @@ onBeforeUnmount(() => {
 
   .arena-core {
     width: min(250px, 92%);
+  }
+}
+
+@media (max-width: 720px) {
+  .roster-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

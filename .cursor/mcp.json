@@ -1,11 +1,8 @@
 {
   "mcpServers": {
     "chrome-devtools": {
-      "command": "C:\\Users\\ZZZ\\AppData\\Roaming\\npm\\pnpx.cmd",
-      "args": [
-        "chrome-devtools-mcp@latest",
-        "--autoConnect"
-      ]
+      "command": ".\\node_modules\\.bin\\chrome-devtools-mcp.cmd",
+      "args": []
     }
   }
 }

@@ -1,0 +1,1137 @@
+<head>
+  <script>
+    let AdditiveBlending;
+    let AmbientLight;
+    let BackSide;
+    let BufferAttribute;
+    let BufferGeometry;
+    let CanvasTexture;
+    let ClampToEdgeWrapping;
+    let Clock;
+    let Color;
+    let DirectionalLight;
+    let Group;
+    let MathUtils;
+    let Mesh;
+    let MeshBasicMaterial;
+    let MeshStandardMaterial;
+    let PerspectiveCamera;
+    let PointLight;
+    let Points;
+    let PointsMaterial;
+    let Quaternion;
+    let RepeatWrapping;
+    let SRGBColorSpace;
+    let Scene;
+    let SphereGeometry;
+    let Sprite;
+    let SpriteMaterial;
+    let Vector3;
+    let WebGLRenderer;
+
+    const THREE_SCRIPT_URLS = [
+      'https://testingcf.jsdelivr.net/npm/three@0.149.0/build/three.min.js',
+      'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js',
+      'https://unpkg.com/three@0.149.0/build/three.min.js',
+    ];
+    const EARTH_AXIAL_TILT = (23.4 * Math.PI) / 180;
+    const CAMERA_DEFAULT_RADIUS = 4.3;
+    const CAMERA_MIN_RADIUS = 1.18;
+    const CAMERA_MAX_RADIUS = 8.4;
+
+    function setRuntimeMessage(message, isError = false) {
+      const stage = document.querySelector('#globe-stage');
+      if (!stage) {
+        return;
+      }
+
+      let messageElement = stage.querySelector('.runtime-message');
+      if (!messageElement) {
+        messageElement = document.createElement('div');
+        messageElement.className = 'runtime-message';
+        stage.append(messageElement);
+      }
+      messageElement.textContent = message;
+      messageElement.classList.toggle('is-error', isError);
+    }
+
+    function clearRuntimeMessage() {
+      document.querySelector('.runtime-message')?.remove();
+    }
+
+    function loadScript(url) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        script.onload = resolve;
+        script.onerror = () => {
+          script.remove();
+          reject(new Error('无法加载 ' + url));
+        };
+        document.head.append(script);
+      });
+    }
+
+    async function ensureThreeLoaded() {
+      if (!window.THREE) {
+        let lastError = null;
+        for (const url of THREE_SCRIPT_URLS) {
+          try {
+            setRuntimeMessage('正在加载 3D 引擎...');
+            await loadScript(url);
+            if (window.THREE) {
+              break;
+            }
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        if (!window.THREE) {
+          throw lastError ?? new Error('THREE 未能加载');
+        }
+      }
+
+      const three = window.THREE;
+      AdditiveBlending = three.AdditiveBlending;
+      AmbientLight = three.AmbientLight;
+      BackSide = three.BackSide;
+      BufferAttribute = three.BufferAttribute;
+      BufferGeometry = three.BufferGeometry;
+      CanvasTexture = three.CanvasTexture;
+      ClampToEdgeWrapping = three.ClampToEdgeWrapping;
+      Clock = three.Clock;
+      Color = three.Color;
+      DirectionalLight = three.DirectionalLight;
+      Group = three.Group;
+      MathUtils = three.MathUtils;
+      Mesh = three.Mesh;
+      MeshBasicMaterial = three.MeshBasicMaterial;
+      MeshStandardMaterial = three.MeshStandardMaterial;
+      PerspectiveCamera = three.PerspectiveCamera;
+      PointLight = three.PointLight;
+      Points = three.Points;
+      PointsMaterial = three.PointsMaterial;
+      Quaternion = three.Quaternion;
+      RepeatWrapping = three.RepeatWrapping;
+      SRGBColorSpace = three.SRGBColorSpace ?? three.sRGBEncoding;
+      Scene = three.Scene;
+      SphereGeometry = three.SphereGeometry;
+      Sprite = three.Sprite;
+      SpriteMaterial = three.SpriteMaterial;
+      Vector3 = three.Vector3;
+      WebGLRenderer = three.WebGLRenderer;
+    }
+
+    function applySrgbToTexture(texture) {
+      if (!SRGBColorSpace) {
+        return;
+      }
+      if ('colorSpace' in texture) {
+        texture.colorSpace = SRGBColorSpace;
+      } else {
+        texture.encoding = SRGBColorSpace;
+      }
+    }
+
+    function applySrgbToRenderer(renderer) {
+      if (!SRGBColorSpace) {
+        return;
+      }
+      if ('outputColorSpace' in renderer) {
+        renderer.outputColorSpace = SRGBColorSpace;
+      } else {
+        renderer.outputEncoding = SRGBColorSpace;
+      }
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function projectLonLat([lon, lat], width, height) {
+      return {
+        x: ((lon + 180) / 360) * width,
+        y: ((90 - lat) / 180) * height,
+      };
+    }
+
+    function drawClosedPolygon(ctx, points, width, height, fillStyle, strokeStyle, lineWidth) {
+      if (points.length < 3) {
+        return;
+      }
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const projected = projectLonLat(point, width, height);
+        if (index === 0) {
+          ctx.moveTo(projected.x, projected.y);
+        } else {
+          ctx.lineTo(projected.x, projected.y);
+        }
+      });
+      ctx.closePath();
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = strokeStyle;
+      ctx.stroke();
+    }
+
+    function toTrackballVector(clientX, clientY, element) {
+      const rect = element.getBoundingClientRect();
+      const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = 1 - ((clientY - rect.top) / rect.height) * 2;
+      const radiusSq = nx * nx + ny * ny;
+      const nz = radiusSq <= 1 ? Math.sqrt(1 - radiusSq) : 0;
+      const vector = new Vector3(nx, ny, nz);
+      return vector.normalize();
+    }
+
+    function createEarthTexture(size = 2048) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = Math.floor(size / 2);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法创建地球纹理上下文');
+      }
+
+      const { width, height } = canvas;
+
+      const oceanGradient = ctx.createLinearGradient(0, 0, 0, height);
+      oceanGradient.addColorStop(0, '#08203f');
+      oceanGradient.addColorStop(0.5, '#0d5283');
+      oceanGradient.addColorStop(1, '#072f50');
+      ctx.fillStyle = oceanGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      const auroraGlow = ctx.createRadialGradient(0.35 * width, 0.28 * height, 0.06 * width, 0.4 * width, 0.35 * height, 0.62 * width);
+      auroraGlow.addColorStop(0, 'rgba(160, 218, 255, 0.16)');
+      auroraGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = auroraGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = 'rgba(196, 228, 255, 0.08)';
+      ctx.lineWidth = 1;
+      for (let lat = -75; lat <= 75; lat += 15) {
+        const y = ((90 - lat) / 180) * height;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      const continentColors = ['#3f7345', '#4c7544', '#5d7f4b', '#4e7245', '#5a7f50'];
+      const continents = [
+        [[-168, 72], [-150, 72], [-128, 69], [-111, 61], [-95, 54], [-84, 50], [-82, 42], [-93, 30], [-107, 23], [-124, 18], [-141, 22], [-159, 38]],
+        [[-98, 24], [-90, 22], [-84, 17], [-86, 10], [-95, 14]],
+        [[-81, 12], [-74, 7], [-70, -6], [-64, -18], [-59, -33], [-62, -51], [-72, -55], [-80, -33]],
+        [[-55, 82], [-40, 81], [-20, 74], [-33, 60], [-50, 63]],
+        [[-11, 72], [12, 73], [42, 71], [78, 69], [110, 62], [135, 52], [160, 54], [159, 42], [134, 30], [106, 22], [90, 13], [74, 8], [60, 2], [48, 7], [34, 15], [22, 26], [10, 35], [-2, 44], [-8, 56]],
+        [[-18, 36], [-5, 35], [12, 31], [28, 23], [41, 9], [44, -7], [33, -22], [22, -34], [11, -36], [0, -29], [-8, -14], [-15, 4], [-17, 20]],
+        [[35, 33], [52, 30], [60, 23], [56, 16], [47, 16], [40, 23]],
+        [[112, -11], [129, -14], [151, -25], [146, -41], [126, -44], [113, -30]],
+        [[-180, -63], [-120, -66], [-40, -67], [40, -66], [120, -64], [180, -63], [180, -90], [-180, -90]],
+      ];
+
+      continents.forEach((polygon, index) => {
+        drawClosedPolygon(
+          ctx,
+          polygon,
+          width,
+          height,
+          continentColors[index % continentColors.length],
+          'rgba(176, 214, 178, 0.5)',
+          Math.max(1, width * 0.0012),
+        );
+      });
+
+      const countryPolygons = [
+        [[-160, 63], [-145, 70], [-123, 69], [-101, 62], [-91, 52], [-99, 45], [-123, 47], [-147, 53]],
+        [[-135, 45], [-121, 49], [-104, 45], [-101, 36], [-112, 30], [-127, 34]],
+        [[-103, 47], [-83, 46], [-68, 40], [-73, 30], [-91, 26], [-104, 34]],
+        [[-82, 49], [-64, 44], [-66, 34], [-79, 29], [-88, 38]],
+        [[-116, 30], [-101, 27], [-88, 19], [-87, 13], [-100, 12], [-111, 20]],
+        [[-56, 80], [-34, 80], [-20, 73], [-31, 62], [-50, 62], [-60, 70]],
+        [[-80, 8], [-66, 7], [-51, -4], [-55, -17], [-70, -12], [-79, 0]],
+        [[-58, -15], [-45, -24], [-47, -36], [-60, -42], [-68, -29]],
+        [[-75, -12], [-65, -19], [-63, -33], [-68, -53], [-76, -47], [-78, -28]],
+        [[-10, 60], [4, 58], [13, 51], [10, 43], [-2, 43], [-9, 50]],
+        [[5, 60], [28, 58], [39, 50], [30, 42], [15, 44], [10, 51]],
+        [[-7, 38], [13, 37], [31, 32], [29, 20], [11, 18], [-4, 26]],
+        [[-17, 33], [2, 36], [20, 31], [32, 22], [37, 7], [28, -7], [13, -5], [0, 2], [-11, 14]],
+        [[0, 1], [15, -5], [31, -14], [28, -30], [14, -35], [3, -22]],
+        [[31, 20], [43, 8], [47, -7], [38, -16], [29, -7]],
+        [[17, -10], [32, -17], [38, -28], [28, -35], [18, -32], [11, -22]],
+        [[34, 34], [49, 31], [58, 22], [53, 14], [43, 16], [36, 24]],
+        [[-2, 65], [28, 70], [62, 69], [98, 65], [134, 59], [151, 51], [135, 43], [100, 45], [65, 52], [25, 54], [3, 58]],
+        [[41, 45], [67, 49], [91, 46], [105, 38], [96, 27], [72, 29], [55, 36]],
+        [[102, 42], [122, 44], [143, 39], [139, 28], [119, 24], [105, 31]],
+        [[66, 29], [82, 30], [93, 23], [89, 9], [75, 9], [67, 18]],
+        [[95, 22], [111, 18], [122, 11], [115, 1], [101, 3], [94, 12]],
+        [[49, 32], [67, 30], [72, 20], [64, 12], [52, 17]],
+        [[112, -12], [131, -14], [151, -25], [146, -40], [127, -44], [113, -31]],
+        [[166, -34], [178, -40], [173, -47], [166, -45]],
+      ];
+
+      const borderPalette = [
+        'rgba(208, 236, 209, 0.58)',
+        'rgba(195, 224, 196, 0.52)',
+        'rgba(186, 214, 188, 0.5)',
+        'rgba(173, 205, 179, 0.48)',
+      ];
+
+      const countryStrokeWidth = Math.max(0.8, width * 0.0007);
+      countryPolygons.forEach((polygon, index) => {
+        const fillAlpha = 0.06 + (index % 5) * 0.012;
+        const fillStyle = 'rgba(92, 139, 83, ' + fillAlpha.toFixed(3) + ')';
+        drawClosedPolygon(
+          ctx,
+          polygon,
+          width,
+          height,
+          fillStyle,
+          borderPalette[index % borderPalette.length],
+          countryStrokeWidth,
+        );
+      });
+
+      const islandSeeds = [[138, 36], [122, 13], [48, -19], [173, -41], [146, -6], [-4, 54], [100, -1], [140, 20]];
+      islandSeeds.forEach(seed => {
+        const projected = projectLonLat(seed, width, height);
+        const radius = MathUtils.randFloat(3, 10);
+        ctx.fillStyle = 'rgba(96, 143, 82, 0.94)';
+        ctx.beginPath();
+        ctx.ellipse(projected.x, projected.y, radius, radius * MathUtils.randFloat(0.6, 1.2), MathUtils.randFloat(0, Math.PI), 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      for (let i = 0; i < 1200; i += 1) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const radius = Math.random() * 3 + 0.8;
+        const haze = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        haze.addColorStop(0, 'rgba(235, 250, 255, 0.08)');
+        haze.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = haze;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const polarGlow = ctx.createLinearGradient(0, 0, 0, height);
+      polarGlow.addColorStop(0, 'rgba(230, 245, 255, 0.26)');
+      polarGlow.addColorStop(0.14, 'rgba(230, 245, 255, 0.04)');
+      polarGlow.addColorStop(0.86, 'rgba(230, 245, 255, 0.04)');
+      polarGlow.addColorStop(1, 'rgba(230, 245, 255, 0.26)');
+      ctx.fillStyle = polarGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      const texture = new CanvasTexture(canvas);
+      applySrgbToTexture(texture);
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      texture.anisotropy = 8;
+      return texture;
+    }
+
+    function createStarField({
+      count = 4200,
+      radiusMin = 9,
+      radiusMax = 48,
+      size = 0.09,
+      opacity = 0.95,
+      hueRange = [0.52, 0.67],
+      saturationRange = [0.3, 0.85],
+      lightnessRange = [0.68, 1],
+    } = {}) {
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+
+      for (let index = 0; index < count; index += 1) {
+        const radius = MathUtils.lerp(radiusMin, radiusMax, Math.pow(Math.random(), 1.4));
+        const randomY = Math.random() * 2 - 1;
+        const theta = Math.random() * Math.PI * 2;
+        const ringRadius = Math.sqrt(1 - randomY * randomY);
+
+        const x = radius * ringRadius * Math.cos(theta);
+        const y = radius * randomY;
+        const z = radius * ringRadius * Math.sin(theta);
+
+        positions[index * 3] = x;
+        positions[index * 3 + 1] = y;
+        positions[index * 3 + 2] = z;
+
+        const color = new Color().setHSL(
+          MathUtils.randFloat(hueRange[0], hueRange[1]),
+          MathUtils.randFloat(saturationRange[0], saturationRange[1]),
+          MathUtils.randFloat(lightnessRange[0], lightnessRange[1]),
+        );
+
+        colors[index * 3] = color.r;
+        colors[index * 3 + 1] = color.g;
+        colors[index * 3 + 2] = color.b;
+      }
+
+      const geometry = new BufferGeometry();
+      geometry.setAttribute('position', new BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new BufferAttribute(colors, 3));
+
+      const material = new PointsMaterial({
+        size,
+        vertexColors: true,
+        transparent: true,
+        opacity,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        sizeAttenuation: true,
+      });
+
+      return new Points(geometry, material);
+    }
+
+    function createNebulaTexture(width = 2048, height = 1024) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法创建星云纹理上下文');
+      }
+
+      ctx.fillStyle = '#01040d';
+      ctx.fillRect(0, 0, width, height);
+
+      const glowColors = [
+        { r: 85, g: 146, b: 255 },
+        { r: 38, g: 186, b: 173 },
+        { r: 255, g: 154, b: 92 },
+        { r: 210, g: 99, b: 184 },
+      ];
+
+      const paintCloud = () => {
+        const color = glowColors[Math.floor(Math.random() * glowColors.length)];
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const sx = MathUtils.randFloat(140, 320);
+        const sy = MathUtils.randFloat(90, 250);
+        const alpha = MathUtils.randFloat(0.16, 0.36);
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.random() * Math.PI * 2);
+        ctx.scale(sx, sy);
+
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        gradient.addColorStop(0, 'rgba(' + color.r + ', ' + color.g + ', ' + color.b + ', ' + alpha.toFixed(3) + ')');
+        gradient.addColorStop(0.5, 'rgba(' + color.r + ', ' + color.g + ', ' + color.b + ', ' + (alpha * 0.45).toFixed(3) + ')');
+        gradient.addColorStop(1, 'rgba(' + color.r + ', ' + color.g + ', ' + color.b + ', 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      for (let index = 0; index < 34; index += 1) {
+        paintCloud();
+      }
+
+      for (let index = 0; index < 1800; index += 1) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const alpha = Math.random() * 0.5 + 0.15;
+        const size = Math.random() * 1.6 + 0.2;
+        ctx.fillStyle = 'rgba(220, 238, 255, ' + alpha.toFixed(3) + ')';
+        ctx.fillRect(x, y, size, size);
+      }
+
+      const texture = new CanvasTexture(canvas);
+      applySrgbToTexture(texture);
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      return texture;
+    }
+
+    function createSunHaloTexture(size = 768) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法创建太阳光晕纹理上下文');
+      }
+
+      const center = size / 2;
+      const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+      gradient.addColorStop(0, 'rgba(255, 246, 224, 1)');
+      gradient.addColorStop(0.16, 'rgba(255, 226, 164, 0.98)');
+      gradient.addColorStop(0.42, 'rgba(255, 190, 102, 0.64)');
+      gradient.addColorStop(0.7, 'rgba(255, 141, 62, 0.18)');
+      gradient.addColorStop(1, 'rgba(255, 96, 24, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      const texture = new CanvasTexture(canvas);
+      applySrgbToTexture(texture);
+      return texture;
+    }
+
+    function createCloudTexture(size = 2048) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = Math.floor(size / 2);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法创建云层纹理上下文');
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let index = 0; index < 2600; index += 1) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const radius = Math.random() * 4 + 1;
+        const alpha = Math.random() * 0.08 + 0.02;
+        ctx.fillStyle = 'rgba(236, 246, 255, ' + alpha.toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (let index = 0; index < 36; index += 1) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const radius = MathUtils.randFloat(45, 140);
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        gradient.addColorStop(0, 'rgba(245, 252, 255, 0.17)');
+        gradient.addColorStop(0.4, 'rgba(245, 252, 255, 0.08)');
+        gradient.addColorStop(1, 'rgba(245, 252, 255, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const texture = new CanvasTexture(canvas);
+      applySrgbToTexture(texture);
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
+      return texture;
+    }
+
+    function initPage() {
+      const globeStage = document.querySelector('#globe-stage');
+      const modeButton = document.querySelector('#drag-mode-btn');
+      const zoomRange = document.querySelector('#zoom-range');
+      const zoomValue = document.querySelector('#zoom-value');
+      if (!(globeStage && modeButton && zoomRange && zoomValue)) {
+        throw new Error('3D 地球页面初始化失败：缺少必要的 DOM 节点');
+      }
+
+      const scene = new Scene();
+      const camera = new PerspectiveCamera(44, 1, 0.03, 120);
+      const hasWebgl = (() => {
+        const probeCanvas = document.createElement('canvas');
+        return !!(probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl') || probeCanvas.getContext('experimental-webgl'));
+      })();
+      if (!hasWebgl) {
+        throw new Error('当前浏览器未开启 WebGL，无法渲染 3D 地球');
+      }
+
+      const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+      applySrgbToRenderer(renderer);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.domElement.classList.add('globe-canvas');
+      renderer.domElement.style.cursor = 'grab';
+      globeStage.append(renderer.domElement);
+
+      const worldRotationGroup = new Group();
+      scene.add(worldRotationGroup);
+
+      const universeGroup = new Group();
+      worldRotationGroup.add(universeGroup);
+
+      const nebulaTexture = createNebulaTexture();
+      const nebulaMaterial = new MeshBasicMaterial({
+        map: nebulaTexture,
+        side: BackSide,
+        transparent: true,
+        opacity: 0.96,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      });
+      const nebulaGeometry = new SphereGeometry(34, 64, 64);
+      const nebulaSphere = new Mesh(nebulaGeometry, nebulaMaterial);
+      universeGroup.add(nebulaSphere);
+
+      const farStars = createStarField({
+        count: 3600,
+        radiusMin: 18,
+        radiusMax: 62,
+        size: 0.08,
+        opacity: 0.82,
+        hueRange: [0.52, 0.7],
+        saturationRange: [0.2, 0.7],
+        lightnessRange: [0.62, 0.98],
+      });
+      const midStars = createStarField({
+        count: 2700,
+        radiusMin: 12,
+        radiusMax: 44,
+        size: 0.1,
+        opacity: 0.92,
+        hueRange: [0.5, 0.67],
+        saturationRange: [0.3, 0.82],
+        lightnessRange: [0.7, 1],
+      });
+      const nearStars = createStarField({
+        count: 1300,
+        radiusMin: 8,
+        radiusMax: 26,
+        size: 0.13,
+        opacity: 0.9,
+        hueRange: [0.47, 0.63],
+        saturationRange: [0.35, 0.9],
+        lightnessRange: [0.74, 1],
+      });
+      universeGroup.add(farStars, midStars, nearStars);
+
+      const sunHaloTexture = createSunHaloTexture();
+      const sunGroup = new Group();
+      sunGroup.position.set(-15.8, 9.4, -24.5);
+
+      const sunCoreGeometry = new SphereGeometry(1.86, 56, 56);
+      const sunCoreMaterial = new MeshBasicMaterial({ color: '#ffd48b' });
+      const sunCore = new Mesh(sunCoreGeometry, sunCoreMaterial);
+      sunGroup.add(sunCore);
+
+      const sunCoronaGeometry = new SphereGeometry(2.62, 44, 44);
+      const sunCoronaMaterial = new MeshBasicMaterial({
+        color: '#ffb761',
+        transparent: true,
+        opacity: 0.3,
+        side: BackSide,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      });
+      const sunCorona = new Mesh(sunCoronaGeometry, sunCoronaMaterial);
+      sunGroup.add(sunCorona);
+
+      const sunHaloMaterial = new SpriteMaterial({
+        map: sunHaloTexture,
+        color: '#ffd79e',
+        transparent: true,
+        opacity: 0.86,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      });
+      const sunHaloSprite = new Sprite(sunHaloMaterial);
+      sunHaloSprite.scale.set(13.2, 13.2, 1);
+      sunGroup.add(sunHaloSprite);
+
+      const sunPointLight = new PointLight('#ffd59f', 2.6, 84, 1.7);
+      sunGroup.add(sunPointLight);
+      universeGroup.add(sunGroup);
+
+      const earthTiltGroup = new Group();
+      earthTiltGroup.rotation.z = -EARTH_AXIAL_TILT;
+      worldRotationGroup.add(earthTiltGroup);
+
+      const earthSpinGroup = new Group();
+      earthTiltGroup.add(earthSpinGroup);
+
+      const earthTexture = createEarthTexture();
+      const earthMaterial = new MeshStandardMaterial({
+        map: earthTexture,
+        roughness: 0.96,
+        metalness: 0.04,
+      });
+      const earthGeometry = new SphereGeometry(1, 96, 96);
+      const earthMesh = new Mesh(earthGeometry, earthMaterial);
+      earthSpinGroup.add(earthMesh);
+
+      const cloudTexture = createCloudTexture();
+      const cloudMaterial = new MeshStandardMaterial({
+        map: cloudTexture,
+        transparent: true,
+        opacity: 0.36,
+        depthWrite: false,
+        blending: AdditiveBlending,
+      });
+      const cloudGeometry = new SphereGeometry(1.016, 72, 72);
+      const cloudMesh = new Mesh(cloudGeometry, cloudMaterial);
+      earthSpinGroup.add(cloudMesh);
+
+      const atmosphereMaterial = new MeshBasicMaterial({
+        color: '#5aacff',
+        transparent: true,
+        opacity: 0.15,
+        side: BackSide,
+        blending: AdditiveBlending,
+        depthWrite: false,
+      });
+      const atmosphereGeometry = new SphereGeometry(1.08, 48, 48);
+      const atmosphereMesh = new Mesh(atmosphereGeometry, atmosphereMaterial);
+      earthSpinGroup.add(atmosphereMesh);
+
+      scene.add(new AmbientLight('#9ec4e3', 0.58));
+
+      const mainLight = new DirectionalLight('#ffffff', 1.3);
+      mainLight.position.set(4.1, 1.8, 3.2);
+      scene.add(mainLight);
+
+      const fillLight = new DirectionalLight('#78b5ff', 0.38);
+      fillLight.position.set(-3.3, -1.4, -2.8);
+      scene.add(fillLight);
+
+      const rimLight = new DirectionalLight('#8de0ff', 0.26);
+      rimLight.position.set(0.6, 2.4, -4.2);
+      scene.add(rimLight);
+
+      const cameraState = {
+        radius: CAMERA_DEFAULT_RADIUS,
+        theta: 0.68 * Math.PI,
+        phi: 0.46 * Math.PI,
+      };
+
+      const updateCameraPosition = () => {
+        const sinPhi = Math.sin(cameraState.phi);
+        camera.position.set(
+          cameraState.radius * sinPhi * Math.cos(cameraState.theta),
+          cameraState.radius * Math.cos(cameraState.phi),
+          cameraState.radius * sinPhi * Math.sin(cameraState.theta),
+        );
+        camera.lookAt(0, 0, 0);
+        const radiusLabel = cameraState.radius.toFixed(2);
+        zoomValue.textContent = radiusLabel;
+        zoomRange.value = radiusLabel;
+      };
+
+      let dragMode = 'earth';
+      const pointerState = {
+        active: false,
+        pointerId: -1,
+        mode: 'earth',
+        lastVector: new Vector3(),
+      };
+      const deltaQuaternion = new Quaternion();
+
+      const setDragMode = nextMode => {
+        dragMode = nextMode;
+        modeButton.textContent = '拖拽旋转：' + (nextMode === 'earth' ? '地球' : '视角');
+        modeButton.classList.toggle('mode-camera', nextMode === 'camera');
+      };
+
+      const pickPointerMode = event => {
+        if (event.button === 2 || event.altKey || event.ctrlKey || event.metaKey) {
+          return 'camera';
+        }
+        return dragMode;
+      };
+
+      const onContextMenu = event => {
+        event.preventDefault();
+      };
+
+      const onPointerDown = event => {
+        event.preventDefault();
+        pointerState.active = true;
+        pointerState.pointerId = event.pointerId;
+        pointerState.mode = pickPointerMode(event);
+        pointerState.lastVector.copy(toTrackballVector(event.clientX, event.clientY, renderer.domElement));
+        renderer.domElement.setPointerCapture(event.pointerId);
+        renderer.domElement.style.cursor = 'grabbing';
+      };
+
+      const onPointerMove = event => {
+        if (!pointerState.active || event.pointerId !== pointerState.pointerId) {
+          return;
+        }
+
+        const currentVector = toTrackballVector(event.clientX, event.clientY, renderer.domElement);
+        const similarity = clamp(pointerState.lastVector.dot(currentVector), -1, 1);
+        if (similarity < 0.999999) {
+          deltaQuaternion.setFromUnitVectors(pointerState.lastVector, currentVector);
+          const target = pointerState.mode === 'earth' ? earthSpinGroup : worldRotationGroup;
+          target.quaternion.premultiply(deltaQuaternion);
+        }
+        pointerState.lastVector.copy(currentVector);
+      };
+
+      const onPointerUp = event => {
+        if (event.pointerId === pointerState.pointerId) {
+          renderer.domElement.releasePointerCapture(event.pointerId);
+        }
+        pointerState.active = false;
+        pointerState.pointerId = -1;
+        renderer.domElement.style.cursor = 'grab';
+      };
+
+      const onWheel = event => {
+        event.preventDefault();
+        cameraState.radius = clamp(cameraState.radius + event.deltaY * 0.0045, CAMERA_MIN_RADIUS, CAMERA_MAX_RADIUS);
+        updateCameraPosition();
+      };
+
+      modeButton.addEventListener('click', () => {
+        setDragMode(dragMode === 'earth' ? 'camera' : 'earth');
+      });
+
+      zoomRange.addEventListener('input', () => {
+        const value = Number.parseFloat(zoomRange.value);
+        cameraState.radius = clamp(Number.isFinite(value) ? value : CAMERA_DEFAULT_RADIUS, CAMERA_MIN_RADIUS, CAMERA_MAX_RADIUS);
+        updateCameraPosition();
+      });
+
+      renderer.domElement.addEventListener('contextmenu', onContextMenu);
+      renderer.domElement.addEventListener('pointerdown', onPointerDown);
+      renderer.domElement.addEventListener('pointermove', onPointerMove);
+      renderer.domElement.addEventListener('pointerup', onPointerUp);
+      renderer.domElement.addEventListener('pointercancel', onPointerUp);
+      renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+
+      const resizeRenderer = () => {
+        const width = Math.max(globeStage.clientWidth, 1);
+        const height = Math.max(globeStage.clientHeight, 1);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+      };
+
+      const resizeObserver = 'ResizeObserver' in window ? new ResizeObserver(resizeRenderer) : null;
+      if (resizeObserver) {
+        resizeObserver.observe(globeStage);
+      } else {
+        window.addEventListener('resize', resizeRenderer);
+      }
+
+      setDragMode('camera');
+      updateCameraPosition();
+      resizeRenderer();
+
+      const clock = new Clock();
+      let rafId = 0;
+
+      const renderFrame = () => {
+        const deltaTime = clock.getDelta();
+
+        if (dragMode !== 'earth') {
+          earthMesh.rotation.y += deltaTime * 0.18;
+          cloudMesh.rotation.y += deltaTime * 0.24;
+        }
+        nebulaSphere.rotation.y += deltaTime * 0.005;
+        farStars.rotation.y -= deltaTime * 0.0015;
+        midStars.rotation.y -= deltaTime * 0.0024;
+        nearStars.rotation.y -= deltaTime * 0.0031;
+        nearStars.rotation.x += deltaTime * 0.0009;
+        sunCore.rotation.y += deltaTime * 0.12;
+        sunCorona.rotation.y -= deltaTime * 0.18;
+        sunHaloSprite.rotation += deltaTime * 0.1;
+
+        renderer.render(scene, camera);
+        rafId = window.requestAnimationFrame(renderFrame);
+      };
+
+      renderFrame();
+      console.info('[3D地球星空页面] 页面已加载');
+
+      let destroyed = false;
+      let removePagehideListener = () => {};
+
+      const cleanup = () => {
+        if (destroyed) {
+          return;
+        }
+        destroyed = true;
+
+        cancelAnimationFrame(rafId);
+        resizeObserver?.disconnect();
+        if (!resizeObserver) {
+          window.removeEventListener('resize', resizeRenderer);
+        }
+
+        renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+        renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+        renderer.domElement.removeEventListener('pointermove', onPointerMove);
+        renderer.domElement.removeEventListener('pointerup', onPointerUp);
+        renderer.domElement.removeEventListener('pointercancel', onPointerUp);
+        renderer.domElement.removeEventListener('wheel', onWheel);
+
+        removePagehideListener();
+
+        [farStars, midStars, nearStars].forEach(stars => {
+          stars.geometry.dispose();
+          stars.material.dispose();
+        });
+
+        earthGeometry.dispose();
+        cloudGeometry.dispose();
+        atmosphereGeometry.dispose();
+        nebulaGeometry.dispose();
+        sunCoreGeometry.dispose();
+        sunCoronaGeometry.dispose();
+
+        earthMaterial.dispose();
+        cloudMaterial.dispose();
+        atmosphereMaterial.dispose();
+        nebulaMaterial.dispose();
+        sunCoreMaterial.dispose();
+        sunCoronaMaterial.dispose();
+        sunHaloMaterial.dispose();
+
+        earthTexture.dispose();
+        cloudTexture.dispose();
+        nebulaTexture.dispose();
+        sunHaloTexture.dispose();
+
+        renderer.dispose();
+        renderer.domElement.remove();
+
+        console.info('[3D地球星空页面] 页面已卸载');
+      };
+
+      if (typeof $ === 'function') {
+        $(window).on('pagehide', cleanup);
+        removePagehideListener = () => {
+          $(window).off('pagehide', cleanup);
+        };
+      } else {
+        window.addEventListener('pagehide', cleanup, { once: true });
+        removePagehideListener = () => {
+          window.removeEventListener('pagehide', cleanup);
+        };
+      }
+    }
+
+    (function bootstrap() {
+      const start = () => {
+        const run = async () => {
+          await ensureThreeLoaded();
+          clearRuntimeMessage();
+          initPage();
+        };
+
+        run().catch(error => {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error('[3D地球星空页面] 页面初始化失败', error);
+          setRuntimeMessage('3D 地球启动失败：' + message, true);
+        });
+      };
+
+      if (typeof $ !== 'function') {
+        if (document.readyState !== 'loading') {
+          start();
+        } else {
+          document.addEventListener('DOMContentLoaded', start, { once: true });
+        }
+        return;
+      }
+
+      $(start);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --space-bg: #020611;
+      --panel-edge: rgba(144, 202, 245, 0.28);
+      --panel-glow: rgba(103, 170, 235, 0.22);
+      --text-main: #d6eeff;
+      --text-sub: #96bad7;
+      --control-bg: rgba(8, 31, 53, 0.78);
+      --control-active: #225f90;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      min-height: 100dvh;
+      overflow: hidden;
+      font-family: 'Rajdhani', 'Noto Sans SC', 'Microsoft YaHei UI', sans-serif;
+      color: var(--text-main);
+      background: radial-gradient(160% 95% at 16% 5%, rgba(18, 56, 88, 0.85) 0%, rgba(7, 17, 37, 0.92) 44%, rgba(1, 5, 14, 0.98) 100%),
+        linear-gradient(175deg, #030611 0%, #030a1a 58%, #010409 100%);
+    }
+
+    .cosmos-panel {
+      width: 100%;
+      height: calc(100dvh - 24px);
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      border-radius: 14px;
+      border: 1px solid var(--panel-edge);
+      background: linear-gradient(150deg, rgba(5, 18, 36, 0.64), rgba(3, 10, 22, 0.9));
+      box-shadow: inset 0 0 0 1px rgba(178, 221, 255, 0.08), 0 0 34px var(--panel-glow);
+      padding: 10px;
+    }
+
+    .cosmos-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-btn {
+      border: 1px solid rgba(147, 213, 255, 0.46);
+      background: linear-gradient(120deg, var(--control-bg), rgba(17, 47, 76, 0.85));
+      color: var(--text-main);
+      border-radius: 999px;
+      padding: 5px 13px;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    .control-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .control-btn.mode-camera {
+      background: linear-gradient(120deg, var(--control-active), rgba(32, 84, 126, 0.9));
+    }
+
+    .zoom-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      max-width: 100%;
+      border-radius: 999px;
+      border: 1px solid rgba(147, 213, 255, 0.32);
+      padding: 4px 10px;
+      background: rgba(7, 29, 48, 0.62);
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    .zoom-control input[type='range'] {
+      width: 150px;
+      min-width: 0;
+      accent-color: #73c6ff;
+    }
+
+    .zoom-value {
+      min-width: 36px;
+      text-align: right;
+      color: #b9dfff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .globe-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      aspect-ratio: auto;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(154, 216, 255, 0.22);
+      background: radial-gradient(140% 100% at 50% 0%, rgba(8, 32, 52, 0.8), var(--space-bg));
+      box-shadow: inset 0 0 30px rgba(46, 138, 219, 0.12), 0 12px 24px rgba(0, 0, 0, 0.32);
+    }
+
+    .globe-canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      touch-action: none;
+    }
+
+    .runtime-message {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      max-width: min(560px, calc(100% - 32px));
+      transform: translate(-50%, -50%);
+      border: 1px solid rgba(134, 206, 255, 0.32);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #bfe6ff;
+      background: rgba(3, 14, 27, 0.82);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .runtime-message.is-error {
+      border-color: rgba(255, 128, 128, 0.45);
+      color: #ffd5d5;
+    }
+
+    .tip-text {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-sub);
+      line-height: 1.4;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 8px;
+      }
+
+      .cosmos-panel {
+        height: calc(100dvh - 16px);
+        border-radius: 10px;
+        padding: 8px;
+      }
+
+      .zoom-control {
+        flex: 1 1 100%;
+        width: 100%;
+        display: grid;
+        grid-template-columns: max-content minmax(80px, 1fr) 42px;
+        justify-content: space-between;
+      }
+
+      .zoom-control input[type='range'] {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .zoom-value {
+        width: 42px;
+        min-width: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="cosmos-panel">
+    <div class="cosmos-controls">
+      <button id="drag-mode-btn" type="button" class="control-btn mode-camera">拖拽旋转：视角</button>
+      <label class="zoom-control" for="zoom-range">
+        <span>视角远近</span>
+        <input id="zoom-range" type="range" min="1.18" max="8.4" step="0.02" value="4.3" />
+        <span id="zoom-value" class="zoom-value">4.30</span>
+      </label>
+    </div>
+    <div id="globe-stage" class="globe-stage"></div>
+    <p class="tip-text">默认是“视角模式”：拖拽会同步转动地球、星空和太阳；切到“地球模式”则只旋转地球。滚轮或滑条可调节远近。</p>
+  </section>
+</body>
