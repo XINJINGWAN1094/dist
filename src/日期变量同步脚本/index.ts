@@ -17,6 +17,15 @@ import {
   type BattleRosterStoredState,
   type StoryTrainingState,
 } from '../全屏覆盖式酒馆前端/共享/训练结算';
+import {
+  createDefaultStoryBattleState,
+  normalizeStoryBattleState,
+  STORY_BATTLE_ACTIVE,
+  STORY_BATTLE_INACTIVE,
+  STORY_BATTLE_STATE_KEY,
+  STORY_BATTLE_STATE_VERSION,
+  type StoryBattleState,
+} from '../全屏覆盖式酒馆前端/共享/比赛状态';
 
 const PAGE_SCOPE = '.thStoryDateSync';
 const SCRIPT_BUTTON_NAME = '重算日期';
@@ -30,6 +39,7 @@ const INITIAL_TIME_PERIOD = 'unknown' as const;
 
 const TimePeriodSchema = z.enum(['unknown', 'morning', 'noon', 'afternoon', 'evening', 'night']);
 const TrainingChoiceSchema = z.enum([TRAINING_YES, TRAINING_NO]);
+const BattleStatusSchema = z.enum([STORY_BATTLE_ACTIVE, STORY_BATTLE_INACTIVE]);
 const StoryDateSchema = z
   .object({
     calendar: z.literal('gregorian').prefault('gregorian'),
@@ -116,6 +126,21 @@ const ChatVariableSchema = z
   .object({
     [STORY_DATE_KEY]: StoryDateSchema.prefault({}),
     [STORY_TRAINING_STATE_KEY]: StoryTrainingStateSchema.prefault({}),
+    [STORY_BATTLE_STATE_KEY]: z
+      .object({
+        version: z.unknown().optional(),
+        status: z.unknown().optional(),
+        sessionId: z.unknown().optional(),
+        session_id: z.unknown().optional(),
+        lastProcessedMessageId: z.unknown().optional(),
+        last_processed_message_id: z.unknown().optional(),
+        reason: z.unknown().optional(),
+        confidence: z.unknown().optional(),
+        lastSyncedAt: z.unknown().optional(),
+        last_synced_at: z.unknown().optional(),
+      })
+      .prefault({})
+      .transform(data => normalizeStoryBattleState(data)),
   })
   .prefault({});
 const ModelTrainingSchema = z
@@ -141,6 +166,9 @@ const ModelActionSchema = z
     confidence: z.coerce.number().prefault(0).transform(value => _.clamp(value, 0, 1)),
     reason: z.string().prefault(''),
     training_today: ModelTrainingSchema.prefault({}),
+    battle_status: BattleStatusSchema.prefault(STORY_BATTLE_INACTIVE),
+    battle_reason: z.string().prefault(''),
+    battle_confidence: z.coerce.number().optional(),
   })
   .transform(data => ({
     action: data.action,
@@ -156,6 +184,9 @@ const ModelActionSchema = z
     confidence: data.confidence,
     reason: data.reason.trim(),
     training_today: normalizeStoryTrainingChoices(data.training_today),
+    battle_status: data.battle_status,
+    battle_reason: data.battle_reason.trim() || data.reason.trim(),
+    battle_confidence: _.clamp(data.battle_confidence ?? data.confidence, 0, 1),
   }));
 
 type TimePeriod = z.output<typeof TimePeriodSchema>;
@@ -166,6 +197,7 @@ type SyncSnapshot = {
   storyDate: StoryDate;
   trainingState: StoryTrainingState;
   battleRosterState: BattleRosterStoredState;
+  battleState: StoryBattleState;
 };
 type RuntimeStatus = 'synced' | 'syncing' | 'missing' | 'failed' | 'disabled';
 type PendingTask =
@@ -312,17 +344,20 @@ function buildSyncSnapshot(chatVariables: Record<string, any>): SyncSnapshot {
     storyDate: StoryDateSchema.parse(_.get(chatVariables, STORY_DATE_KEY, {})),
     trainingState: StoryTrainingStateSchema.parse(_.get(chatVariables, STORY_TRAINING_STATE_KEY, {})),
     battleRosterState: normalizeBattleRosterStoredState(_.get(chatVariables, BATTLE_ROSTER_STORAGE_KEY)),
+    battleState: normalizeStoryBattleState(_.get(chatVariables, STORY_BATTLE_STATE_KEY)),
   };
 }
 
 function writeSyncSnapshot(snapshot: SyncSnapshot) {
   const normalizedStoryDate = StoryDateSchema.parse(snapshot.storyDate);
   const normalizedTrainingState = StoryTrainingStateSchema.parse(snapshot.trainingState);
+  const normalizedBattleState = normalizeStoryBattleState(snapshot.battleState);
 
   updateVariablesWith(variables => {
     _.set(variables, STORY_DATE_KEY, normalizedStoryDate);
     _.set(variables, STORY_TRAINING_STATE_KEY, normalizedTrainingState);
     _.set(variables, BATTLE_ROSTER_STORAGE_KEY, snapshot.battleRosterState);
+    _.set(variables, STORY_BATTLE_STATE_KEY, normalizedBattleState);
   }, { type: 'chat' });
 }
 
@@ -334,7 +369,8 @@ function readSyncSnapshot(persist = false): SyncSnapshot {
     persist &&
     (!_.isEqual(_.get(chatVariables, STORY_DATE_KEY, {}), snapshot.storyDate) ||
       !_.isEqual(_.get(chatVariables, STORY_TRAINING_STATE_KEY, {}), snapshot.trainingState) ||
-      !_.isEqual(_.get(chatVariables, BATTLE_ROSTER_STORAGE_KEY), snapshot.battleRosterState))
+      !_.isEqual(_.get(chatVariables, BATTLE_ROSTER_STORAGE_KEY), snapshot.battleRosterState) ||
+      !_.isEqual(_.get(chatVariables, STORY_BATTLE_STATE_KEY), snapshot.battleState))
   ) {
     writeSyncSnapshot(snapshot);
   }
@@ -459,10 +495,10 @@ export function buildPrompt(message: ChatMessage, current: StoryDate): string {
   ].join('\n');
 }
 
-function buildTrainingAwarePrompt(message: ChatMessage, current: StoryDate): string {
+function buildTrainingAwarePrompt(message: ChatMessage, current: StoryDate, currentBattleState: StoryBattleState): string {
   return [
-    '你是一个只负责解析剧情日期变化和训练变量的助手。',
-    '你只能根据当前这一条 AI 回复正文判断日期变化，以及四名角色今天是否训练，不能参考用户意图，也不能脑补未来计划。',
+    '你是一个只负责解析剧情日期变化、训练变量和比赛状态的助手。',
+    '你只能根据当前这一条 AI 回复正文判断日期变化、四名角色今天是否训练，以及我方战队当前是否处于比赛战斗中；不能参考用户意图，也不能脑补未来计划。',
     '你必须只返回一个 JSON 对象，不能输出任何解释、Markdown、代码块标题或额外文本。',
     '允许的 action 只有 keep、advance_days、set_date、uncertain。',
     '规则：',
@@ -474,10 +510,17 @@ function buildTrainingAwarePrompt(message: ChatMessage, current: StoryDate): str
     '- 如果正文没有明确说明某人今天训练，返回“否”。',
     '- 如果同一条正文直接跨到下一天，training_today 按跨天前这一天是否训练来判断。',
     '- 如果正文一次跳过多天，你仍只返回离开当前日这一天的 training_today。',
+    '- battle_status 必须是“比赛中”或“非比赛”。',
+    '- 只有正文明确表示我方战队（沈汐汐、李叶楠、白稚、苏酥、我方战队或同义表达）和其他战队/敌方战队开始、进入或正在进行比赛战斗时，才能返回“比赛中”。',
+    '- 赛前准备、训练、观战、他队之间战斗、单人冲突、回忆、计划、假设、普通聊天，都必须返回“非比赛”。',
+    '- 如果当前比赛状态已经是“比赛中”，正文仍在描写这场比赛的战斗过程、出招、受伤、回合、战斗控制或赛场行动，则继续返回“比赛中”。',
+    '- 当正文明确表示战斗结束、比赛结束、胜负已分、裁判宣布结束、离开赛场或不再战斗时，battle_status 必须返回“非比赛”。',
+    '- 如果无法确定是否满足“我方战队和其他战队开始/正在战斗”，battle_status 返回“非比赛”。',
+    '- battle_reason 用一句短句说明比赛状态判断依据，battle_confidence 是 0 到 1 之间的小数。',
     '- confidence 是 0 到 1 之间的小数，reason 用一句短句说明依据。',
     '',
     '返回 JSON schema：',
-    '{"action":"keep|advance_days|set_date|uncertain","days":number|null,"target_date":{"year":number,"month":number,"day":number}|null,"time_period":"unknown|morning|noon|afternoon|evening|night"|null,"confidence":0.0,"reason":"...","training_today":{"沈汐汐":"是|否","李叶楠":"是|否","白稚":"是|否","苏酥":"是|否"}}',
+    '{"action":"keep|advance_days|set_date|uncertain","days":number|null,"target_date":{"year":number,"month":number,"day":number}|null,"time_period":"unknown|morning|noon|afternoon|evening|night"|null,"confidence":0.0,"reason":"...","training_today":{"沈汐汐":"是|否","李叶楠":"是|否","白稚":"是|否","苏酥":"是|否"},"battle_status":"比赛中|非比赛","battle_reason":"...","battle_confidence":0.0}',
     '',
     '当前日期状态：',
     JSON.stringify(
@@ -486,6 +529,17 @@ function buildTrainingAwarePrompt(message: ChatMessage, current: StoryDate): str
         iso_date: current.iso_date,
         display_text: current.display_text,
         time_period: current.time_period,
+      },
+      null,
+      2,
+    ),
+    '',
+    '当前比赛状态变量：',
+    JSON.stringify(
+      {
+        status: currentBattleState.status,
+        sessionId: currentBattleState.sessionId,
+        reason: currentBattleState.reason,
       },
       null,
       2,
@@ -507,6 +561,7 @@ function debugLog(message: string, payload?: unknown) {
 async function requestModelAction(
   message: ChatMessage,
   current: StoryDate,
+  currentBattleState: StoryBattleState,
   settings: StoryDateSettings,
   revision: number,
 ): Promise<ModelAction> {
@@ -523,6 +578,9 @@ async function requestModelAction(
         白稚: TRAINING_NO,
         苏酥: TRAINING_NO,
       },
+      battle_status: currentBattleState.status,
+      battle_reason: 'assistant message is empty',
+      battle_confidence: 1,
     });
   }
 
@@ -543,15 +601,15 @@ async function requestModelAction(
         model: settings.model,
         temperature: 0,
         stream: false,
-        max_tokens: 240,
+        max_tokens: 360,
         messages: [
           {
             role: 'system',
-            content: 'Return JSON only. You parse story date progression and training flags from one assistant reply.',
+            content: 'Return JSON only. You parse story date progression, training flags, and battle status from one assistant reply.',
           },
           {
             role: 'user',
-            content: buildTrainingAwarePrompt(message, current),
+            content: buildTrainingAwarePrompt(message, current, currentBattleState),
           },
         ],
       }),
@@ -623,10 +681,35 @@ function applyModelAction(current: StoryDate, action: ModelAction, message: Chat
   });
 }
 
+function createStoryBattleSessionId(message: ChatMessage): string {
+  return `story_battle_${message.message_id}_${hashMessage(message.message)}`;
+}
+
+function applyModelBattleStatus(current: StoryBattleState, action: ModelAction, message: ChatMessage, syncedAt: string): StoryBattleState {
+  const nextStatus = action.battle_status;
+  const sessionId =
+    nextStatus === STORY_BATTLE_ACTIVE
+      ? current.status === STORY_BATTLE_ACTIVE && current.sessionId
+        ? current.sessionId
+        : createStoryBattleSessionId(message)
+      : current.sessionId;
+
+  return normalizeStoryBattleState({
+    version: STORY_BATTLE_STATE_VERSION,
+    status: nextStatus,
+    sessionId,
+    lastProcessedMessageId: message.message_id,
+    reason: action.battle_reason,
+    confidence: action.battle_confidence,
+    lastSyncedAt: syncedAt,
+  });
+}
+
 function applyModelActionToSnapshot(currentSnapshot: SyncSnapshot, action: ModelAction, message: ChatMessage): SyncSnapshot {
   const syncedAt = new Date().toISOString();
   const nextStoryDate = applyModelAction(currentSnapshot.storyDate, action, message);
   const mergedTrainingState = mergeStoryTrainingState(currentSnapshot.trainingState, action.training_today, message.message_id, syncedAt);
+  const nextBattleState = applyModelBattleStatus(currentSnapshot.battleState, action, message, syncedAt);
   const settlementDays = countAdvancedStoryDays(currentSnapshot.storyDate, nextStoryDate);
   const nextBattleRosterState =
     settlementDays > 0
@@ -641,6 +724,7 @@ function applyModelActionToSnapshot(currentSnapshot: SyncSnapshot, action: Model
     storyDate: nextStoryDate,
     trainingState: settlementDays > 0 ? resetStoryTrainingState(message.message_id, syncedAt) : mergedTrainingState,
     battleRosterState: nextBattleRosterState,
+    battleState: nextBattleState,
   };
 }
 
@@ -649,6 +733,7 @@ function createRecalculationSeedSnapshot(currentBattleRosterState: BattleRosterS
     storyDate: StoryDateSchema.parse({}),
     trainingState: createDefaultStoryTrainingState(),
     battleRosterState: resetBattleRosterTrainingBonus(currentBattleRosterState),
+    battleState: createDefaultStoryBattleState(),
   };
 }
 
@@ -944,7 +1029,7 @@ async function runIncrementalSync(messageId: number, revision: number): Promise<
     return true;
   }
 
-  const action = await requestModelAction(message, currentSnapshot.storyDate, settings, revision);
+  const action = await requestModelAction(message, currentSnapshot.storyDate, currentSnapshot.battleState, settings, revision);
   throwIfStale(revision);
   const nextSnapshot = applyModelActionToSnapshot(currentSnapshot, action, message);
   writeSyncSnapshot(nextSnapshot);
@@ -969,7 +1054,7 @@ async function runFullRecalculation(revision: number): Promise<number> {
 
   for (const message of messages) {
     throwIfStale(revision);
-    const action = await requestModelAction(message, nextSnapshot.storyDate, settings, revision);
+    const action = await requestModelAction(message, nextSnapshot.storyDate, nextSnapshot.battleState, settings, revision);
     throwIfStale(revision);
     nextSnapshot = applyModelActionToSnapshot(nextSnapshot, action, message);
   }

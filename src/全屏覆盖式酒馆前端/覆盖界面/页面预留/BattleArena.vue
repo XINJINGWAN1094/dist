@@ -1,16 +1,10 @@
 <template>
   <section class="battle-shell">
     <header class="battle-toolbar">
-      <label class="mode-switch">
-        <input v-model="isCompetitionMode" type="checkbox" @change="onModeSwitchChanged" />
-        <span>{{ isCompetitionMode ? '比赛模式' : '非比赛模式' }}</span>
-      </label>
-
       <p class="battle-state">{{ battleStatusText }}</p>
 
       <div class="toolbar-actions">
-        <button type="button" class="toolbar-btn" :disabled="!isCompetitionMode || isRunning" @click="startBattle">开始比赛</button>
-        <button type="button" class="toolbar-btn" @click="resetBattleState">重置赛场</button>
+        <button type="button" class="toolbar-btn" :disabled="isRunning" @click="resetBattleState">刷新预览</button>
       </div>
     </header>
 
@@ -148,6 +142,17 @@ import {
   type SquadMemberRole,
   type SquadMemberStats,
 } from '../battleRosterState';
+import {
+  createDefaultStoryBattleState,
+  isStoryBattleActive,
+  normalizeStoryBattleState,
+  STORY_BATTLE_STATE_KEY,
+  type StoryBattleState,
+} from '../../共享/比赛状态';
+
+const props = defineProps<{
+  ignoredStoryBattleSessionId?: string | null;
+}>();
 
 type FighterSide = 'ally' | 'enemy';
 type SkillKind = 'physical' | 'magic';
@@ -196,6 +201,51 @@ type FormationCell = {
   slot: FormationSlot;
   fighter: BattleFighter;
 };
+
+type HostRuntime = Window & typeof globalThis;
+
+function resolveHostRuntime(): HostRuntime | null {
+  const candidates: Array<Window | null | undefined> = [window, window.parent, window.top];
+  const visited = new Set<Window>();
+
+  for (const candidate of candidates) {
+    if (!candidate || visited.has(candidate)) {
+      continue;
+    }
+    visited.add(candidate);
+
+    try {
+      const runtime = candidate as HostRuntime;
+      if (runtime.TavernHelper) {
+        return runtime;
+      }
+    } catch {
+      // ignore cross-origin access failures
+    }
+  }
+
+  return null;
+}
+
+function withTavernHelper<T>(context: string, fallback: T, runner: (helper: Window['TavernHelper']) => T): T {
+  const runtime = resolveHostRuntime();
+  const helper = runtime?.TavernHelper;
+  if (!helper) {
+    console.error(`[全屏覆盖式酒馆前端] ${context}失败：未找到 TavernHelper。`);
+    return fallback;
+  }
+
+  try {
+    return runner(helper);
+  } catch (error) {
+    console.error(`[全屏覆盖式酒馆前端] ${context}失败。`, error);
+    return fallback;
+  }
+}
+
+function readChatVariables(): Record<string, any> {
+  return withTavernHelper('读取比赛聊天变量', {}, helper => helper.getVariables({ type: 'chat' }));
+}
 
 const ENEMY_STATS: Record<SquadMemberRole, SquadMemberStats> = {
   guard: {
@@ -390,18 +440,20 @@ const battleDelayMs = 420;
 
 const battleLogs = ref<BattleLogEntry[]>([]);
 const fighters = ref<BattleFighter[]>(createInitialFighters());
-const isCompetitionMode = ref(false);
+const storyBattleState = ref<StoryBattleState>(createDefaultStoryBattleState());
 const isRunning = ref(false);
 const currentRound = ref(1);
 const selectedAllyId = ref<string | null>(battleRosterMembers.value[0]?.id ?? null);
 const selectedSkillId = ref<string | null>(null);
 const pendingActorId = ref<string | null>(null);
 const winnerText = ref('');
-const turnHint = ref('非比赛模式：仅可查看并点击我方四个角色框。');
+const turnHint = ref('等待剧情中的比赛开始。');
 const roundQueueText = ref('');
 const battleToken = ref(0);
+const lastAutoStartedStoryBattleSessionId = ref('');
 
 let pendingManualResolver: ((action: ManualAction | null) => void) | null = null;
+let storyBattlePollTimer: number | null = null;
 
 const selectedAlly = computed(() => fighters.value.find(fighter => fighter.id === selectedAllyId.value && fighter.side === 'ally') ?? null);
 const selectedAllySkills = computed(() => {
@@ -420,20 +472,27 @@ const enemyTotalHp = computed(() =>
 const enemySlots = computed(() => buildFormationCells('enemy', ENEMY_POSITION));
 const allySlots = computed(() => buildFormationCells('ally', ALLY_POSITION));
 const allyRosterPreview = computed(() => battleRosterMembers.value.map(member => cloneSquadMember(member)));
+const currentStoryBattleSessionId = computed(() => resolveStoryBattleSessionId(storyBattleState.value));
+const isCurrentStoryBattleIgnored = computed(
+  () => Boolean(currentStoryBattleSessionId.value) && props.ignoredStoryBattleSessionId === currentStoryBattleSessionId.value,
+);
 const battleStatusText = computed(() => {
-  if (!isCompetitionMode.value) {
-    return '当前状态：非比赛模式';
-  }
   if (isRunning.value) {
     return `当前状态：比赛进行中（第 ${currentRound.value} 回合）`;
+  }
+  if (isCurrentStoryBattleIgnored.value) {
+    return '当前状态：已无视本次比赛';
   }
   if (winnerText.value) {
     return `当前状态：比赛结束（${winnerText.value}）`;
   }
-  return '当前状态：比赛模式（待开始）';
+  if (isStoryBattleActive(storyBattleState.value)) {
+    return '当前状态：检测到剧情比赛，正在准备战斗场';
+  }
+  return '当前状态：等待剧情比赛触发';
 });
 const canChooseEnemyTarget = computed(() => {
-  if (!isCompetitionMode.value || !isRunning.value) {
+  if (!isRunning.value) {
     return false;
   }
   if (!pendingActorId.value || !selectedAlly.value || !selectedSkillId.value) {
@@ -443,9 +502,9 @@ const canChooseEnemyTarget = computed(() => {
 });
 const rosterSyncHint = computed(() => {
   if (isRunning.value) {
-    return '本场比赛已锁定开始时的我方属性；战队页后续修改会在下一次开始比赛时生效。';
+    return '本场比赛已锁定触发时的我方属性；战队页后续修改会在下一次剧情比赛触发时生效。';
   }
-  return '战队页中的属性会实时同步到这里，开始比赛时按当前值创建我方战斗单位。';
+  return '战队页中的属性会实时同步到这里，剧情变量触发比赛时会按当前值创建我方战斗单位。';
 });
 
 function cloneSquadStats(stats: SquadMemberStats): SquadMemberStats {
@@ -540,6 +599,32 @@ function roleLabel(role: SquadMemberRole) {
   return getRoleLabel(role);
 }
 
+function resolveStoryBattleSessionId(state: StoryBattleState): string {
+  if (state.sessionId.trim()) {
+    return state.sessionId.trim();
+  }
+  return state.lastProcessedMessageId == null ? '' : `story_battle_${state.lastProcessedMessageId}`;
+}
+
+function getIdleTurnHint() {
+  if (isCurrentStoryBattleIgnored.value) {
+    return '已无视本次比赛，战斗场不会自动开启。';
+  }
+  if (isStoryBattleActive(storyBattleState.value)) {
+    return '检测到比赛开始，战斗场正在准备。';
+  }
+  return '等待剧情中的比赛开始。';
+}
+
+function refreshStoryBattleState() {
+  const variables = readChatVariables();
+  const nextState = normalizeStoryBattleState(_.get(variables, STORY_BATTLE_STATE_KEY, {}));
+  if (!_.isEqual(storyBattleState.value, nextState)) {
+    storyBattleState.value = nextState;
+  }
+  syncStoryBattleState();
+}
+
 function cardClasses(fighter: BattleFighter) {
   return {
     dead: fighter.isDead,
@@ -582,21 +667,7 @@ function syncIdleBattlePreviewFromRoster() {
     selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
   }
 
-  turnHint.value = !isCompetitionMode.value
-    ? '非比赛模式：仅可查看并点击我方四个角色框。'
-    : '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
-}
-
-function onModeSwitchChanged() {
-  if (!isCompetitionMode.value) {
-    stopBattle('已切换为非比赛模式。');
-    turnHint.value = '非比赛模式：仅可查看并点击我方四个角色框。';
-    return;
-  }
-
-  resetBattleState();
-  appendLog('已切换到比赛模式。', 'info');
-  turnHint.value = '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
+  turnHint.value = getIdleTurnHint();
 }
 
 function resetBattleState() {
@@ -610,10 +681,35 @@ function resetBattleState() {
   pendingActorId.value = null;
   roundQueueText.value = '';
   selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
-  turnHint.value = !isCompetitionMode.value
-    ? '非比赛模式：仅可查看并点击我方四个角色框。'
-    : '比赛模式：点击“开始比赛”后进入 7 回合战斗。';
-  appendLog('赛场已重置。', 'info');
+  turnHint.value = getIdleTurnHint();
+  appendLog('赛场预览已刷新。', 'info');
+}
+
+function syncStoryBattleState() {
+  const sessionId = currentStoryBattleSessionId.value;
+  if (isCurrentStoryBattleIgnored.value) {
+    if (isRunning.value || pendingActorId.value) {
+      stopBattle('已无视本次比赛，战斗场已关闭。');
+    }
+    turnHint.value = '已无视本次比赛，战斗场不会自动开启。';
+    return;
+  }
+
+  if (isStoryBattleActive(storyBattleState.value)) {
+    if (!sessionId || isRunning.value || lastAutoStartedStoryBattleSessionId.value === sessionId) {
+      return;
+    }
+    void startBattle();
+    return;
+  }
+
+  if (isRunning.value || pendingActorId.value) {
+    stopBattle('AI 已判断比赛结束，战斗场已自动关闭。');
+  }
+  if (!winnerText.value) {
+    turnHint.value = '等待剧情中的比赛开始。';
+  }
+  lastAutoStartedStoryBattleSessionId.value = '';
 }
 
 function stopBattle(reason: string) {
@@ -628,8 +724,8 @@ function stopBattle(reason: string) {
 }
 
 async function startBattle() {
-  if (!isCompetitionMode.value) {
-    toastr.warning('请先切换到比赛模式。', '战斗场');
+  const sessionId = currentStoryBattleSessionId.value;
+  if (!isStoryBattleActive(storyBattleState.value) || isCurrentStoryBattleIgnored.value || !sessionId) {
     return;
   }
   if (isRunning.value) {
@@ -647,6 +743,7 @@ async function startBattle() {
   roundQueueText.value = '';
   battleLogs.value = [];
   isRunning.value = true;
+  lastAutoStartedStoryBattleSessionId.value = sessionId;
   turnHint.value = '比赛开始：按速度决定出手顺序。';
   appendLog('比赛开始。', 'info');
 
@@ -943,7 +1040,7 @@ function finishBattle(text: string) {
 
 function onFighterCardClicked(fighter: BattleFighter) {
   if (fighter.side === 'enemy') {
-    if (!isCompetitionMode.value || !isRunning.value || fighter.isDead || !canChooseEnemyTarget.value) {
+    if (!isRunning.value || fighter.isDead || !canChooseEnemyTarget.value) {
       return;
     }
     onEnemyTargetChosen(fighter.id);
@@ -952,13 +1049,8 @@ function onFighterCardClicked(fighter: BattleFighter) {
 
   selectedAllyId.value = fighter.id;
 
-  if (!isCompetitionMode.value) {
-    turnHint.value = `${fighter.name}：非比赛模式下仅查看技能信息。`;
-    return;
-  }
-
   if (!isRunning.value) {
-    turnHint.value = `${fighter.name}：比赛尚未开始，可预览技能。`;
+    turnHint.value = `${fighter.name}：等待剧情比赛触发，可预览技能。`;
     return;
   }
 
@@ -977,7 +1069,7 @@ function onSkillClicked(skillId: string) {
 
   selectedSkillId.value = skillId;
 
-  if (!isCompetitionMode.value || !isRunning.value) {
+  if (!isRunning.value) {
     return;
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
@@ -999,7 +1091,7 @@ function onEnemyTargetChosen(targetId: string) {
   if (!selectedAlly.value || !selectedSkillId.value || !pendingActorId.value) {
     return;
   }
-  if (!isCompetitionMode.value || !isRunning.value) {
+  if (!isRunning.value) {
     return;
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
@@ -1068,18 +1160,32 @@ watch(
   battleRosterMembers,
   () => {
     syncIdleBattlePreviewFromRoster();
+    syncStoryBattleState();
   },
   { deep: true },
+);
+
+watch(
+  () => [storyBattleState.value.status, storyBattleState.value.sessionId, props.ignoredStoryBattleSessionId],
+  () => {
+    syncStoryBattleState();
+  },
 );
 
 onMounted(() => {
   ensureBattleRosterLoaded();
   syncIdleBattlePreviewFromRoster();
+  refreshStoryBattleState();
+  storyBattlePollTimer = window.setInterval(refreshStoryBattleState, 1_000);
 });
 
 onBeforeUnmount(() => {
   battleToken.value += 1;
   resolvePendingManualAction(null);
+  if (storyBattlePollTimer !== null) {
+    window.clearInterval(storyBattlePollTimer);
+    storyBattlePollTimer = null;
+  }
 });
 </script>
 
@@ -1104,20 +1210,9 @@ onBeforeUnmount(() => {
 .battle-toolbar {
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-}
-
-.mode-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.mode-switch input {
-  accent-color: var(--accent);
 }
 
 .battle-state {

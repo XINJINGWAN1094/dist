@@ -263,7 +263,7 @@
         </section>
 
         <section v-else-if="activePage === 'battle'" class="page-view simple-view battle-view">
-          <BattleArena />
+          <BattleArena :ignored-story-battle-session-id="ignoredStoryBattleSessionId" />
         </section>
 
         <section v-else-if="activePage === 'training'" class="page-view simple-view">
@@ -385,6 +385,17 @@
         </section>
       </section>
     </section>
+
+    <section v-if="battlePromptOpen" class="battle-prompt-backdrop" role="dialog" aria-modal="true" aria-labelledby="battle-prompt-title">
+      <article class="battle-prompt">
+        <h2 id="battle-prompt-title">检测到比赛开始</h2>
+        <p>检测到比赛开始，你可以前往战斗场控制战斗，也可以选择无视本消息，继续聊天控制战斗走向</p>
+        <div class="battle-prompt-actions">
+          <button type="button" class="action-btn" @click="goToBattleArenaFromPrompt">前往战斗场</button>
+          <button type="button" class="action-btn" @click="ignoreBattlePrompt">无视</button>
+        </div>
+      </article>
+    </section>
   </main>
 </template>
 
@@ -398,6 +409,13 @@ import {
   type NativeSendResultPayload,
   type OverlayVisibilityPayload,
 } from '../共享/协议';
+import {
+  createDefaultStoryBattleState,
+  isStoryBattleActive,
+  normalizeStoryBattleState,
+  STORY_BATTLE_STATE_KEY,
+  type StoryBattleState,
+} from '../共享/比赛状态';
 
 type OverlayTheme = 'cyber_blue' | 'cyber_pink';
 type OverlayPage = 'info' | 'squad' | 'battle' | 'training' | 'settings';
@@ -651,6 +669,11 @@ const stops: EventOnReturn[] = [];
 const calendarOpen = ref(false);
 const liveNow = ref(new Date());
 const storyDate = ref<StoryDateState>(createDefaultStoryDate());
+const storyBattleState = ref<StoryBattleState>(createDefaultStoryBattleState());
+const battlePromptOpen = ref(false);
+const battlePromptSessionId = ref('');
+const ignoredStoryBattleSessionId = ref<string | null>(null);
+const lastPromptedStoryBattleSessionId = ref('');
 const dateSyncSettings = ref<DateSyncSettings>(createDefaultDateSyncSettings());
 const dateSyncScriptId = ref<string | null>(null);
 const dateSyncStatusMessage = ref('');
@@ -1482,11 +1505,66 @@ function locateDateSyncScriptId(force = false): string | null {
   return dateSyncScriptId.value;
 }
 
+function resolveStoryBattleSessionId(state: StoryBattleState): string {
+  if (state.sessionId.trim()) {
+    return state.sessionId.trim();
+  }
+  return state.lastProcessedMessageId == null ? '' : `story_battle_${state.lastProcessedMessageId}`;
+}
+
+function syncBattlePromptState() {
+  const sessionId = resolveStoryBattleSessionId(storyBattleState.value);
+  if (!isStoryBattleActive(storyBattleState.value) || !sessionId) {
+    battlePromptOpen.value = false;
+    battlePromptSessionId.value = '';
+    ignoredStoryBattleSessionId.value = null;
+    return;
+  }
+
+  if (ignoredStoryBattleSessionId.value === sessionId) {
+    battlePromptOpen.value = false;
+    battlePromptSessionId.value = '';
+    return;
+  }
+
+  if (lastPromptedStoryBattleSessionId.value === sessionId) {
+    return;
+  }
+
+  battlePromptSessionId.value = sessionId;
+  battlePromptOpen.value = true;
+  lastPromptedStoryBattleSessionId.value = sessionId;
+}
+
 function refreshStoryDateState() {
-  const variables = withTavernHelper('读取剧情日期变量', {}, helper => helper.getVariables({ type: 'chat' }));
+  const variables = readChatVariables();
   const nextStoryDate = normalizeStoryDate(_.get(variables, STORY_DATE_KEY, {}));
+  const nextStoryBattleState = normalizeStoryBattleState(_.get(variables, STORY_BATTLE_STATE_KEY, {}));
   if (!_.isEqual(storyDate.value, nextStoryDate)) {
     storyDate.value = nextStoryDate;
+  }
+  if (!_.isEqual(storyBattleState.value, nextStoryBattleState)) {
+    storyBattleState.value = nextStoryBattleState;
+  }
+  syncBattlePromptState();
+}
+
+function goToBattleArenaFromPrompt() {
+  battlePromptOpen.value = false;
+  battlePromptSessionId.value = '';
+  calendarOpen.value = false;
+  switchPage('battle');
+}
+
+function ignoreBattlePrompt() {
+  const sessionId = battlePromptSessionId.value || resolveStoryBattleSessionId(storyBattleState.value);
+  if (sessionId) {
+    ignoredStoryBattleSessionId.value = sessionId;
+  }
+  battlePromptOpen.value = false;
+  battlePromptSessionId.value = '';
+  if (activePage.value === 'battle') {
+    switchPage('info');
   }
 }
 
@@ -2122,6 +2200,49 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 148px minmax(0, 1fr);
   gap: 12px;
+}
+
+.battle-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.46);
+  display: grid;
+  place-items: center;
+}
+
+.battle-prompt {
+  width: min(480px, 100%);
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--text-color);
+  background: var(--panel-bg);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
+  display: grid;
+  gap: 12px;
+}
+
+.battle-prompt h2,
+.battle-prompt p {
+  margin: 0;
+}
+
+.battle-prompt h2 {
+  font-size: 18px;
+}
+
+.battle-prompt p {
+  color: var(--sub-color);
+  line-height: 1.6;
+}
+
+.battle-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .page-nav {
