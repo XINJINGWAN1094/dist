@@ -109,12 +109,13 @@ async function showCircle() {
   transitionDurationMs.value = BRIGHTEN_DURATION_MS;
   isVisible.value = true;
   await nextTick();
-  startRenderer();
 
   activateFrame = window.requestAnimationFrame(() => {
     activateFrame = null;
     isOpaque.value = true;
   });
+
+  startRenderer();
 }
 
 function hideCircle() {
@@ -142,10 +143,15 @@ function startRenderer() {
   if (!canvasRef.value) {
     return;
   }
-  if (!renderer) {
-    renderer = createMagicCircleRenderer(canvasRef.value);
+  try {
+    if (!renderer) {
+      renderer = createMagicCircleRenderer(canvasRef.value);
+    }
+    renderer.start();
+  } catch (error) {
+    console.warn('[MagicCircleEffect] WebGL renderer failed; CSS fallback remains visible.', error);
+    destroyRenderer();
   }
-  renderer.start();
 }
 
 function destroyRenderer() {
@@ -672,7 +678,7 @@ void main() {
 <style scoped>
 .magic-circle-effect {
   position: absolute;
-  z-index: 0;
+  z-index: 2;
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, -50%) scaleY(0.76);
