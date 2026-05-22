@@ -1,4 +1,3 @@
-import { createScriptIdDiv } from '@util/script';
 import {
   applyTrainingSettlementToBattleRoster,
   BATTLE_ROSTER_STORAGE_KEY,
@@ -32,7 +31,6 @@ const SCRIPT_BUTTON_NAME = '重算日期';
 const STATUS_BAR_ID = 'th-story-date-sync-bar';
 const STORY_DATE_KEY = 'story_date';
 const STORY_DATE_SETTINGS_KEY = 'story_date_settings';
-const STATUS_POLL_MS = 1000;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const INITIAL_DATE = { year: 3197, month: 5, day: 29 } as const;
 const INITIAL_TIME_PERIOD = 'unknown' as const;
@@ -217,10 +215,6 @@ let syncRunning = false;
 let desiredRevision = 0;
 let pendingTask: PendingTask = emptyTask();
 let runtimeStatus: RuntimeStatus = 'synced';
-let runtimeStatusDetail = '';
-let lastFailureDetail = '';
-let statusPollTimer: number | null = null;
-let $statusBar: JQuery<HTMLDivElement> | null = null;
 let unregisterMacro: (() => void) | null = null;
 
 function emptyTask(): PendingTask {
@@ -803,175 +797,21 @@ function throwIfStale(revision: number) {
   }
 }
 
-function setRuntimeStatus(status: RuntimeStatus, detail = '') {
+function setRuntimeStatus(status: RuntimeStatus, _detail = '') {
   runtimeStatus = status;
-  runtimeStatusDetail = detail;
-  if (status !== 'failed') {
-    lastFailureDetail = '';
-  }
-  updateStatusBar();
 }
 
 function markSyncFailure(detail: string) {
-  lastFailureDetail = detail;
   setRuntimeStatus('failed', detail);
   console.error('[story-date-sync] sync failed:', detail);
 }
 
-function getStatusText(): string {
-  switch (runtimeStatus) {
-    case 'syncing':
-      return '同步中';
-    case 'missing':
-      return '配置缺失';
-    case 'failed':
-      return '同步失败';
-    case 'disabled':
-      return '已禁用';
-    case 'synced':
-    default:
-      return '已同步';
-  }
-}
-
-function getStatusColors() {
-  switch (runtimeStatus) {
-    case 'syncing':
-      return {
-        border: 'rgba(13, 148, 136, 0.55)',
-        badge: 'rgba(13, 148, 136, 0.16)',
-        badgeText: '#115e59',
-      };
-    case 'missing':
-      return {
-        border: 'rgba(217, 119, 6, 0.55)',
-        badge: 'rgba(251, 191, 36, 0.18)',
-        badgeText: '#92400e',
-      };
-    case 'failed':
-      return {
-        border: 'rgba(220, 38, 38, 0.55)',
-        badge: 'rgba(248, 113, 113, 0.16)',
-        badgeText: '#991b1b',
-      };
-    case 'disabled':
-      return {
-        border: 'rgba(107, 114, 128, 0.55)',
-        badge: 'rgba(107, 114, 128, 0.16)',
-        badgeText: '#374151',
-      };
-    case 'synced':
-    default:
-      return {
-        border: 'rgba(59, 130, 246, 0.45)',
-        badge: 'rgba(59, 130, 246, 0.14)',
-        badgeText: '#1d4ed8',
-      };
-  }
-}
-
-function ensureStatusBarMounted() {
-  if ($statusBar?.length) {
-    return;
-  }
-
+function removeLegacyStatusBar() {
   $(`#${STATUS_BAR_ID}`).remove();
-
-  $statusBar = createScriptIdDiv()
-    .attr('id', STATUS_BAR_ID)
-    .css({
-      position: 'fixed',
-      top: '14px',
-      right: '14px',
-      zIndex: '2147483000',
-      minWidth: '214px',
-      maxWidth: '280px',
-      padding: '10px 12px',
-      borderRadius: '14px',
-      background: 'rgba(255, 255, 255, 0.94)',
-      backdropFilter: 'blur(10px)',
-      boxShadow: '0 14px 32px rgba(15, 23, 42, 0.16)',
-      border: '1px solid rgba(59, 130, 246, 0.45)',
-      color: '#0f172a',
-      fontFamily:
-        '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif',
-      fontSize: '12px',
-      lineHeight: '1.45',
-      pointerEvents: 'none',
-    })
-    .append(
-      $('<div>')
-        .addClass('th-story-date-header')
-        .css({
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '10px',
-          marginBottom: '6px',
-        })
-        .append(
-          $('<span>')
-            .text('剧情日期')
-            .css({
-              fontWeight: '700',
-              letterSpacing: '0.04em',
-            }),
-        )
-        .append(
-          $('<span>')
-            .addClass('th-story-date-status')
-            .css({
-              padding: '2px 8px',
-              borderRadius: '999px',
-              fontWeight: '600',
-              background: 'rgba(59, 130, 246, 0.14)',
-              color: '#1d4ed8',
-            }),
-        ),
-    )
-    .append(
-      $('<div>')
-        .addClass('th-story-date-value')
-        .css({
-          fontSize: '18px',
-          fontWeight: '700',
-          letterSpacing: '0.02em',
-        }),
-    )
-    .append(
-      $('<div>')
-        .addClass('th-story-date-detail')
-        .css({
-          marginTop: '4px',
-          color: '#475569',
-          wordBreak: 'break-word',
-        }),
-    )
-    .appendTo('body');
-}
-
-function updateStatusBar() {
-  ensureStatusBarMounted();
-  if (!$statusBar) {
-    return;
-  }
-
-  const storyDate = readStoryDate(false);
-  const colors = getStatusColors();
-  const detail = runtimeStatus === 'failed' ? lastFailureDetail : runtimeStatusDetail;
-
-  $statusBar.css('border', `1px solid ${colors.border}`);
-  $statusBar.find('.th-story-date-status').text(getStatusText()).css({
-    background: colors.badge,
-    color: colors.badgeText,
-  });
-  $statusBar.find('.th-story-date-value').text(storyDate.display_text);
-  $statusBar.find('.th-story-date-detail').text(detail || `当前时段：${storyDate.time_period}`);
 }
 
 function refreshIdleStatus() {
   if (syncRunning || runtimeStatus === 'failed') {
-    updateStatusBar();
     return;
   }
 
@@ -1136,7 +976,6 @@ function handleChatChanged() {
   currentChatId = SillyTavern.getCurrentChatId();
   desiredRevision += 1;
   pendingTask = emptyTask();
-  lastFailureDetail = '';
 
   ensureStateInitialized();
   refreshIdleStatus();
@@ -1178,17 +1017,9 @@ function installCurrentDateMacro() {
 function mountStoryDateSync() {
   appendInexistentScriptButtons([{ name: SCRIPT_BUTTON_NAME, visible: true }]);
   ensureVariableSchemas();
-  ensureStatusBarMounted();
+  removeLegacyStatusBar();
   installCurrentDateMacro();
   bootstrapCurrentChat();
-
-  statusPollTimer = window.setInterval(() => {
-    if (runtimeStatus !== 'failed') {
-      refreshIdleStatus();
-    } else {
-      updateStatusBar();
-    }
-  }, STATUS_POLL_MS);
 
   const stopHandles = [
     eventOn(
@@ -1230,12 +1061,7 @@ function mountStoryDateSync() {
     stopHandles.forEach(stop => stop());
     unregisterMacro?.();
     unregisterMacro = null;
-    if (statusPollTimer !== null) {
-      window.clearInterval(statusPollTimer);
-      statusPollTimer = null;
-    }
-    $statusBar?.remove();
-    $statusBar = null;
+    removeLegacyStatusBar();
     $(window).off(PAGE_SCOPE);
   });
 }

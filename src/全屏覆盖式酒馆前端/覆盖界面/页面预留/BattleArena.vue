@@ -13,13 +13,65 @@
         <div
           v-for="effect in battleEffects"
           :key="effect.id"
-          class="skill-beam-effect"
-          :class="`tone-${effect.tone}`"
+          :class="getBattleEffectClass(effect)"
+          :style="getBattleEffectStyle(effect)"
         >
-          <div class="effect-charge"></div>
-          <div class="effect-beam"></div>
-          <div class="effect-shockwave"></div>
-          <div class="effect-damage">-{{ effect.damage }}</div>
+          <template v-if="effect.kind === 'beam'">
+            <div class="effect-charge"></div>
+            <div class="effect-beam"></div>
+            <div class="effect-shockwave"></div>
+            <div class="effect-damage">{{ formatDamageNumber(effect.damage) }}</div>
+          </template>
+          <template v-else>
+            <div class="mass-spell-circle-wrap">
+              <div class="mass-spell-core-glow"></div>
+              <div class="mass-spell-layer mass-spell-min-star"></div>
+              <div class="mass-spell-layer mass-spell-star"></div>
+              <div class="mass-spell-layer mass-spell-square"></div>
+              <div class="mass-spell-layer mass-spell-incantation mass-spell-incantation-small">
+                <span
+                  v-for="(glyph, index) in spellCircleGlyphs"
+                  :key="`small-incantation-${effect.id}-${glyph}-${index}`"
+                  class="mass-spell-rune"
+                  :style="getSpellGlyphStyle(index, 0.21, 0)"
+                >
+                  {{ glyph }}
+                </span>
+              </div>
+              <div class="mass-spell-layer mass-spell-double-circle"></div>
+              <div class="mass-spell-layer mass-spell-stripe-circle">
+                <span class="mass-spell-stripe-ring"></span>
+              </div>
+              <div class="mass-spell-layer mass-spell-quarter-stars">
+                <span v-for="index in 4" :key="`quarter-star-${effect.id}-${index}`"></span>
+              </div>
+              <div class="mass-spell-layer mass-spell-cross-line"></div>
+              <div class="mass-spell-layer mass-spell-cross-square"></div>
+              <div class="mass-spell-layer mass-spell-incantation mass-spell-incantation-large">
+                <span
+                  v-for="(glyph, index) in spellCircleGlyphs"
+                  :key="`large-incantation-${effect.id}-${glyph}-${index}`"
+                  class="mass-spell-rune"
+                  :style="getSpellGlyphStyle(index, 0.45, 0.5)"
+                >
+                  {{ glyph }}
+                </span>
+              </div>
+              <div class="mass-spell-layer mass-spell-middle-circle"></div>
+              <div class="mass-spell-layer mass-spell-big-star"></div>
+              <div class="mass-spell-layer mass-spell-outer-line"></div>
+              <div class="mass-spell-layer mass-spell-outer-markers">
+                <span
+                  v-for="index in 8"
+                  :key="`outer-marker-${effect.id}-${index}`"
+                  class="mass-spell-outer-marker"
+                  :style="getOuterMarkerStyle(index - 1)"
+                ></span>
+              </div>
+              <div class="mass-spell-layer mass-spell-impact-flash"></div>
+            </div>
+            <div v-if="effect.damage !== null" class="spell-damage">{{ formatDamageNumber(effect.damage) }}</div>
+          </template>
         </div>
       </div>
 
@@ -27,6 +79,7 @@
         <button
           v-for="slot in enemySlots"
           :key="slot.fighter.id"
+          :ref="el => setFighterCardRef(slot.fighter.id, el)"
           type="button"
           class="fighter-card"
           :class="cardClasses(slot.fighter)"
@@ -297,17 +350,35 @@ type DamageResult = {
   defeated: boolean;
 };
 
+type BattleEffectPosition = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 type EnemyActionChoice = {
   skill: SkillDefinition;
   target: BattleFighter;
   score: number;
 };
 
-type BattleEffect = {
+type BeamBattleEffect = {
   id: string;
+  kind: 'beam';
   tone: BattleEffectTone;
   damage: number;
 };
+
+type SpellCircleBattleEffect = {
+  id: string;
+  kind: 'spellCircle';
+  targetId: string;
+  damage: number | null;
+  position: BattleEffectPosition;
+};
+
+type BattleEffect = BeamBattleEffect | SpellCircleBattleEffect;
 
 type HostRuntime = Window & typeof globalThis;
 
@@ -751,8 +822,12 @@ const ALLY_POSITION: Record<SquadMemberRole, FormationSlot> = {
   mage: 'bottom',
 };
 
+const spellCircleGlyphs = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω'];
+const SHEN_XIXI_MASS_SPELL_IDS = new Set(['shen_xixi_arcane_tide', 'shen_xixi_twin_stars']);
 const maxRounds = 7;
 const battleDelayMs = 420;
+const shenXixiMassSpellDamageDelayMs = 8_650;
+const shenXixiMassSpellCleanupDelayMs = 1_700;
 const SHEN_XIXI_MEMBER_ID = 'shen_xixi' satisfies SquadMemberId;
 
 const battleLogs = ref<BattleLogEntry[]>([]);
@@ -1487,9 +1562,16 @@ async function executeSkill(actorId: string, skillId: string, targetId: string |
 
   applyUtilitySkillEffects(attacker, skill, target);
   const damageTargets = resolveDamageTargets(attacker, skill, target);
-  damageTargets.forEach(damageTarget => {
-    applySkillDamage(attacker, damageTarget, skill);
-  });
+  if (isShenXixiMassSpell(attacker, skill)) {
+    await runShenXixiMassSpellEffect(attacker, skill, damageTargets, token);
+  } else {
+    damageTargets.forEach(damageTarget => {
+      applySkillDamage(attacker, damageTarget, skill);
+    });
+  }
+  if (!isRunning.value || token !== battleToken.value) {
+    return;
+  }
   applyPostDamageSkillEffects(attacker, skill, target, damageTargets);
 
   attacker.cooldowns[skill.id] = skill.cooldown + 1;
@@ -1672,7 +1754,7 @@ function resolveDamageTargets(attacker: BattleFighter, skill: SkillDefinition, s
 
 function applySkillDamage(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
   if (!skill.kind || !skill.ratio || target.isDead) {
-    return;
+    return null;
   }
 
   const damage = calculateDamageNumbers(attacker, target, skill);
@@ -1685,6 +1767,35 @@ function applySkillDamage(attacker: BattleFighter, target: BattleFighter, skill:
   if (result.defeated) {
     appendLog(`${target.name} 已被击倒，角色框进入灰暗状态。`, 'result');
   }
+
+  return result;
+}
+
+function isShenXixiMassSpell(attacker: BattleFighter, skill: SkillDefinition) {
+  return attacker.id === SHEN_XIXI_MEMBER_ID && SHEN_XIXI_MASS_SPELL_IDS.has(skill.id);
+}
+
+async function runShenXixiMassSpellEffect(attacker: BattleFighter, skill: SkillDefinition, damageTargets: BattleFighter[], token: number) {
+  const activeTargets = damageTargets.filter(damageTarget => !damageTarget.isDead);
+  if (activeTargets.length === 0) {
+    return;
+  }
+
+  const spellEffects = triggerShenXixiMassSpellCircleEffects(activeTargets);
+  appendLog(`魔法阵笼罩 ${activeTargets.map(damageTarget => damageTarget.name).join('、')}，群星术式正在展开。`, 'action');
+  await sleepStep(shenXixiMassSpellDamageDelayMs, token);
+  if (!isRunning.value || token !== battleToken.value) {
+    return;
+  }
+
+  activeTargets.forEach(damageTarget => {
+    const result = applySkillDamage(attacker, damageTarget, skill);
+    updateSpellCircleDamage(damageTarget.id, result?.hpDamage ?? 0);
+  });
+
+  window.setTimeout(() => {
+    removeSpellCircleEffects(spellEffects.map(effect => effect.id));
+  }, shenXixiMassSpellCleanupDelayMs);
 }
 
 function resolveSkillEffectTone(attacker: BattleFighter, skill: SkillDefinition): BattleEffectTone | null {
@@ -1714,6 +1825,7 @@ function triggerSkillDamageEffect(attacker: BattleFighter, skill: SkillDefinitio
   battleEffects.value = [
     {
       id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      kind: 'beam',
       tone,
       damage,
     },
@@ -1723,6 +1835,120 @@ function triggerSkillDamageEffect(attacker: BattleFighter, skill: SkillDefinitio
     battleEffects.value = [];
     battleEffectTimer = null;
   }, 980);
+}
+
+function triggerShenXixiMassSpellCircleEffects(targets: BattleFighter[]) {
+  const stageElement = battleStageRef.value;
+  if (!stageElement) {
+    return [] as SpellCircleBattleEffect[];
+  }
+
+  const stageRect = stageElement.getBoundingClientRect();
+  if (stageRect.width <= 0 || stageRect.height <= 0) {
+    return [] as SpellCircleBattleEffect[];
+  }
+
+  const spellEffects = targets
+    .map(target => {
+      const position = resolveFighterEffectPosition(target.id, stageRect);
+      if (!position) {
+        return null;
+      }
+
+      return {
+        id: `${Date.now().toString(36)}_${target.id}_${Math.random().toString(36).slice(2, 7)}`,
+        kind: 'spellCircle',
+        targetId: target.id,
+        damage: null,
+        position,
+      } satisfies SpellCircleBattleEffect;
+    })
+    .filter(Boolean) as SpellCircleBattleEffect[];
+
+  battleEffects.value = [...battleEffects.value.filter(effect => effect.kind !== 'spellCircle'), ...spellEffects];
+  return spellEffects;
+}
+
+function resolveFighterEffectPosition(fighterId: string, stageRect: DOMRect): BattleEffectPosition | null {
+  const cardElement = fighterCardElements.get(fighterId);
+  if (!cardElement) {
+    return null;
+  }
+
+  const cardRect = cardElement.getBoundingClientRect();
+  if (cardRect.width <= 0 || cardRect.height <= 0) {
+    return null;
+  }
+
+  const circleSize = Math.max(230, Math.min(360, Math.max(cardRect.width, cardRect.height) * 2.55));
+  return {
+    x: cardRect.left - stageRect.left + cardRect.width / 2,
+    y: cardRect.top - stageRect.top + cardRect.height * 0.36,
+    width: circleSize,
+    height: circleSize,
+  };
+}
+
+function updateSpellCircleDamage(targetId: string, damage: number) {
+  battleEffects.value = battleEffects.value.map(effect =>
+    effect.kind === 'spellCircle' && effect.targetId === targetId
+      ? {
+          ...effect,
+          damage,
+        }
+      : effect,
+  );
+}
+
+function removeSpellCircleEffects(effectIds: string[]) {
+  const removingEffectIds = new Set(effectIds);
+  battleEffects.value = battleEffects.value.filter(effect => effect.kind !== 'spellCircle' || !removingEffectIds.has(effect.id));
+}
+
+function getBattleEffectClass(effect: BattleEffect) {
+  if (effect.kind === 'beam') {
+    return ['skill-beam-effect', `tone-${effect.tone}`];
+  }
+  return ['twin-stars-effect'];
+}
+
+function getBattleEffectStyle(effect: BattleEffect): Record<string, string> | undefined {
+  if (effect.kind !== 'spellCircle') {
+    return undefined;
+  }
+
+  const size = effect.position.width;
+  return {
+    left: `${effect.position.x}px`,
+    top: `${effect.position.y}px`,
+    width: `${size}px`,
+    height: `${effect.position.height}px`,
+    '--spell-effect-size': `${size}px`,
+    '--spell-small-rune-size': `${Math.max(10, Math.min(18, size * 0.046))}px`,
+    '--spell-large-rune-size': `${Math.max(12, Math.min(24, size * 0.062))}px`,
+    '--spell-damage-size': `${Math.max(28, Math.min(42, size * 0.13))}px`,
+  };
+}
+
+function getSpellGlyphStyle(index: number, radiusRate: number, delayOffsetSeconds: number) {
+  const rotation = (360 / spellCircleGlyphs.length) * index;
+  return {
+    '--glyph-rotation': `${rotation}deg`,
+    '--glyph-counter-rotation': `${-rotation}deg`,
+    '--glyph-radius-rate': `${radiusRate}`,
+    '--glyph-delay': `${delayOffsetSeconds + (3.8 / spellCircleGlyphs.length) * index}s`,
+  };
+}
+
+function getOuterMarkerStyle(index: number) {
+  return {
+    '--marker-angle': `${45 * index}deg`,
+    '--marker-counter-angle': `${-45 * index}deg`,
+  };
+}
+
+function formatDamageNumber(damage: number) {
+  return damage > 0 ? `-${damage}` : '0';
 }
 
 function clearBattleEffects() {
@@ -2186,7 +2412,7 @@ onBeforeUnmount(() => {
 .battle-shell {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr) auto minmax(112px, 0.28fr);
   gap: 10px;
 }
 
@@ -2236,19 +2462,21 @@ onBeforeUnmount(() => {
   position: relative;
   padding: 12px;
   display: grid;
-  grid-template-rows: auto auto auto;
+  grid-template-columns: minmax(270px, 1fr) minmax(210px, 0.62fr) minmax(270px, 1fr);
+  align-items: center;
   justify-items: center;
-  gap: 8px;
+  gap: 12px;
   overflow: hidden;
 }
 
 .formation-grid {
   position: relative;
   z-index: 1;
-  width: min(520px, 100%);
+  width: 100%;
+  max-width: 430px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(80px, 1fr));
-  grid-template-rows: repeat(3, 138px);
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  grid-template-rows: repeat(3, minmax(88px, 1fr));
   gap: 8px;
   align-items: center;
   justify-items: center;
@@ -2257,7 +2485,7 @@ onBeforeUnmount(() => {
 .arena-core {
   position: relative;
   z-index: 1;
-  width: min(290px, 86%);
+  width: min(230px, 100%);
   aspect-ratio: 1 / 1;
   border: 1px solid var(--line-color);
   border-radius: 14px;
@@ -2366,6 +2594,366 @@ onBeforeUnmount(() => {
   animation: battleDamageFloat 920ms ease-out forwards;
 }
 
+.twin-stars-effect {
+  --spell-cyan: #08fcec;
+  --spell-cyan-soft: rgba(8, 252, 236, 0.36);
+  --spell-cyan-faint: rgba(8, 252, 236, 0.14);
+  --spell-shadow: rgba(8, 252, 236, 0.84);
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  mix-blend-mode: screen;
+  perspective: 760px;
+  filter: drop-shadow(0 0 10px var(--spell-shadow)) drop-shadow(0 0 26px rgba(70, 180, 255, 0.58));
+}
+
+.mass-spell-circle-wrap {
+  position: absolute;
+  inset: 0;
+  color: var(--spell-cyan);
+  transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(50deg) scale(0.86);
+  transform-style: preserve-3d;
+  animation: massSpellCircleCast 10.3s ease-in-out forwards;
+}
+
+.mass-spell-layer,
+.mass-spell-layer::before,
+.mass-spell-layer::after {
+  box-sizing: border-box;
+}
+
+.mass-spell-layer,
+.mass-spell-core-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+}
+
+.mass-spell-core-glow {
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0 5%, rgba(8, 252, 236, 0.56) 24%, transparent 70%);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  animation: massSpellCorePulse 10.3s ease-in-out forwards;
+}
+
+.mass-spell-min-star,
+.mass-spell-star {
+  width: 28%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-min-star::before,
+.mass-spell-min-star::after,
+.mass-spell-star::before,
+.mass-spell-star::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72%;
+  height: 72%;
+  border: 1px solid currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mass-spell-min-star::after,
+.mass-spell-star::after {
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-min-star {
+  color: rgba(4, 12, 24, 0.92);
+  z-index: 3;
+  opacity: 0.9;
+}
+
+.mass-spell-min-star::before,
+.mass-spell-min-star::after {
+  width: 42%;
+  height: 42%;
+  background: rgba(2, 8, 18, 0.7);
+}
+
+.mass-spell-star {
+  animation: massSpellCounterRotate 8s linear infinite;
+}
+
+.mass-spell-star::before,
+.mass-spell-star::after {
+  box-shadow: 0 0 10px var(--spell-shadow);
+}
+
+.mass-spell-square {
+  width: 32%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+  animation: massSpellDiamondBloom 9.2s ease-out forwards;
+}
+
+.mass-spell-square::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.mass-spell-incantation {
+  transform: translate(-50%, -50%);
+  animation: massSpellRotate 28s linear infinite;
+}
+
+.mass-spell-incantation-small {
+  width: 42%;
+  height: 42%;
+}
+
+.mass-spell-incantation-large {
+  width: 82%;
+  height: 82%;
+  animation-direction: reverse;
+  animation-duration: 42s;
+}
+
+.mass-spell-rune {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  color: currentColor;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: var(--spell-small-rune-size);
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  text-shadow: 0 0 8px var(--spell-shadow), 0 0 16px var(--spell-shadow);
+  transform: rotate(var(--glyph-rotation)) translateY(calc(var(--spell-effect-size, 260px) * var(--glyph-radius-rate) * -1))
+    rotate(var(--glyph-counter-rotation));
+  animation: massSpellRuneReveal 0.28s linear var(--glyph-delay) forwards;
+}
+
+.mass-spell-incantation-large .mass-spell-rune {
+  font-size: var(--spell-large-rune-size);
+}
+
+.mass-spell-double-circle {
+  width: 47%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: massSpellZoomIn 4.6s ease-out forwards;
+}
+
+.mass-spell-double-circle::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.mass-spell-stripe-circle {
+  width: 64%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 5px,
+    var(--spell-cyan-soft) 5px,
+    var(--spell-cyan-soft) 7px
+  );
+  opacity: 0.34;
+  transform: translate(-50%, -50%);
+  animation: massSpellCounterRotate 18s linear infinite;
+}
+
+.mass-spell-stripe-ring {
+  position: absolute;
+  inset: 0;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+}
+
+.mass-spell-quarter-stars {
+  width: 92%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-quarter-stars span {
+  position: absolute;
+  width: 15%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid currentColor;
+  box-shadow: 0 0 8px var(--spell-shadow);
+}
+
+.mass-spell-quarter-stars span::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.mass-spell-quarter-stars span:nth-child(1) {
+  left: 23%;
+  top: 19%;
+}
+
+.mass-spell-quarter-stars span:nth-child(2) {
+  right: 23%;
+  top: 19%;
+}
+
+.mass-spell-quarter-stars span:nth-child(3) {
+  left: 23%;
+  bottom: 19%;
+}
+
+.mass-spell-quarter-stars span:nth-child(4) {
+  right: 23%;
+  bottom: 19%;
+}
+
+.mass-spell-cross-line {
+  width: 66%;
+  height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mass-spell-cross-line::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  transform: rotate(90deg);
+}
+
+.mass-spell-cross-square {
+  width: 75%;
+  height: 36%;
+  border: 1px solid currentColor;
+  transform: translate(-50%, -50%);
+  animation: massSpellCrossSquareBloom 8.6s ease-out forwards;
+}
+
+.mass-spell-cross-square::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid currentColor;
+  transform: rotate(90deg);
+}
+
+.mass-spell-middle-circle {
+  width: 42%;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-middle-circle::before,
+.mass-spell-middle-circle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260%;
+  height: 1px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-middle-circle::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.mass-spell-big-star {
+  width: 78%;
+  aspect-ratio: 1 / 1;
+  border: 1px dotted currentColor;
+  transform: translate(-50%, -50%);
+  animation: massSpellRotate 24s linear infinite;
+}
+
+.mass-spell-big-star::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px dotted currentColor;
+  transform: rotate(45deg);
+}
+
+.mass-spell-outer-line {
+  width: 96%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mass-spell-outer-line::before {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+
+.mass-spell-outer-markers {
+  width: 118%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  animation: massSpellCounterRotate 34s linear infinite;
+}
+
+.mass-spell-outer-marker {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4.8%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--spell-shadow);
+  transform: rotate(var(--marker-angle)) translateY(calc(var(--spell-effect-size, 260px) * -0.59)) rotate(var(--marker-counter-angle));
+}
+
+.mass-spell-impact-flash {
+  width: 88%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 4%, rgba(8, 252, 236, 0.7) 5% 12%, transparent 44%);
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: massSpellImpactFlash 10.3s ease-out forwards;
+}
+
+.spell-damage {
+  position: absolute;
+  left: 50%;
+  top: -2%;
+  color: #fff7d7;
+  font-size: var(--spell-damage-size);
+  font-weight: 900;
+  line-height: 1;
+  transform: translate(-50%, 0);
+  text-shadow: 0 2px 0 #215c64, 0 0 18px rgba(255, 230, 124, 0.95), 0 0 26px rgba(8, 252, 236, 0.88);
+  animation: spellDamageFloat 1.45s ease-out forwards;
+}
+
 .core-title {
   font-size: 18px;
   font-weight: 700;
@@ -2391,11 +2979,11 @@ onBeforeUnmount(() => {
 }
 
 .fighter-card {
-  width: min(128px, 100%);
-  min-height: 130px;
+  width: min(118px, 100%);
+  min-height: 100px;
   border: 1px solid var(--line-color);
   border-radius: 10px;
-  padding: 8px;
+  padding: 7px;
   color: var(--text-color);
   background: rgba(0, 0, 0, 0.14);
   text-align: left;
@@ -2455,8 +3043,8 @@ onBeforeUnmount(() => {
 .fighter-status,
 .dead-mark {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.32;
 }
 
 .fighter-name {
@@ -2700,7 +3288,7 @@ onBeforeUnmount(() => {
 
 .log-list {
   min-height: 0;
-  max-height: 190px;
+  max-height: 100%;
   overflow: auto;
   display: grid;
   gap: 4px;
@@ -2797,6 +3385,160 @@ onBeforeUnmount(() => {
   }
 }
 
+@keyframes massSpellCircleCast {
+  0% {
+    opacity: 0;
+    transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(50deg) scale(0.32);
+  }
+  14% {
+    opacity: 0.96;
+    transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(50deg) scale(0.86);
+  }
+  84% {
+    opacity: 0.96;
+    transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(72deg) scale(0.92);
+  }
+  92% {
+    opacity: 1;
+    transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(82deg) scale(1.02);
+  }
+  100% {
+    opacity: 0.46;
+    transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(90deg) scale(1.08);
+  }
+}
+
+@keyframes massSpellRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes massSpellCounterRotate {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
+}
+
+@keyframes massSpellZoomIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.38);
+  }
+  32%,
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes massSpellDiamondBloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(45deg) scale(0.1);
+  }
+  48% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) rotate(45deg) scale(0.54);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(45deg) scale(1);
+  }
+}
+
+@keyframes massSpellCrossSquareBloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.12);
+  }
+  48% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(0.58);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes massSpellRuneReveal {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes massSpellCorePulse {
+  0%,
+  18% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  34%,
+  72% {
+    opacity: 0.48;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  86% {
+    opacity: 0.88;
+    transform: translate(-50%, -50%) scale(1.28);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.6);
+  }
+}
+
+@keyframes massSpellImpactFlash {
+  0%,
+  78% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  84% {
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  91% {
+    opacity: 0.36;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.2);
+  }
+}
+
+@keyframes spellDamageFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 18px) scale(0.72);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.08);
+  }
+  52% {
+    opacity: 1;
+    transform: translate(-50%, -16px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -54px) scale(1.18);
+  }
+}
+
 @media (max-width: 980px) {
   .roster-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2814,19 +3556,27 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
   }
 
+  .battle-stage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+    overflow: visible;
+  }
+
   .formation-grid {
     grid-template-columns: repeat(3, minmax(70px, 1fr));
-    grid-template-rows: repeat(3, 126px);
+    grid-template-rows: repeat(3, 112px);
+    max-width: 520px;
     gap: 6px;
   }
 
   .fighter-card {
-    min-height: 120px;
+    min-height: 106px;
     padding: 7px;
   }
 
   .arena-core {
-    width: min(250px, 92%);
+    width: min(220px, 92%);
   }
 
   .effect-charge {
@@ -2853,6 +3603,43 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .battle-shell {
+    grid-template-rows: auto auto auto minmax(120px, 1fr);
+  }
+
+  .battle-stage {
+    padding: 10px;
+  }
+
+  .formation-grid {
+    grid-template-rows: repeat(3, 96px);
+  }
+
+  .fighter-card {
+    min-height: 90px;
+    padding: 6px;
+  }
+
+  .fighter-name,
+  .fighter-role,
+  .fighter-hp,
+  .fighter-shield,
+  .fighter-speed,
+  .fighter-status,
+  .dead-mark {
+    font-size: 10px;
+    line-height: 1.22;
+  }
+
+  .core-title {
+    font-size: 16px;
+  }
+
+  .arena-core {
+    width: min(196px, 92%);
+    padding: 8px;
+  }
+
   .fighter-modal {
     max-height: 90dvh;
   }
@@ -2867,6 +3654,56 @@ onBeforeUnmount(() => {
 
   .modal-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 760px) and (min-width: 901px) {
+  .battle-shell {
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(86px, 0.2fr);
+    gap: 8px;
+  }
+
+  .battle-stage {
+    padding: 10px;
+  }
+
+  .formation-grid {
+    grid-template-rows: repeat(3, minmax(74px, 1fr));
+    gap: 6px;
+  }
+
+  .fighter-card {
+    min-height: 82px;
+    padding: 6px;
+  }
+
+  .fighter-name,
+  .fighter-role,
+  .fighter-hp,
+  .fighter-shield,
+  .fighter-speed,
+  .fighter-status,
+  .dead-mark {
+    font-size: 10px;
+    line-height: 1.18;
+  }
+
+  .arena-core {
+    width: min(190px, 100%);
+    padding: 8px;
+    gap: 3px;
+  }
+
+  .core-title {
+    font-size: 16px;
+  }
+
+  .core-round,
+  .core-hp,
+  .core-tip,
+  .core-winner {
+    font-size: 11px;
+    line-height: 1.35;
   }
 }
 </style>
