@@ -1074,12 +1074,18 @@ function refreshStoryBattleState() {
 }
 
 function cardClasses(fighter: BattleFighter) {
+  const isTargetMode = selectedSkill.value !== null && requiresManualTarget(selectedSkill.value) && canChooseManualTarget.value;
+  const targetCheck = isTargetMode && selectedAlly.value ? canSkillTargetFighter(selectedAlly.value, selectedSkill.value, fighter) : null;
+
   return {
     dead: fighter.isDead,
     selected: selectedAllyId.value === fighter.id,
     pending: pendingActorId.value === fighter.id,
     enemy: fighter.side === 'enemy',
     ally: fighter.side === 'ally',
+    'target-mode': isTargetMode,
+    'target-valid': Boolean(targetCheck?.allowed),
+    'target-invalid': isTargetMode && !targetCheck?.allowed,
     'slot-top': getSlotClass(fighter.side, fighter.role) === 'top',
     'slot-left': getSlotClass(fighter.side, fighter.role) === 'left',
     'slot-right': getSlotClass(fighter.side, fighter.role) === 'right',
@@ -2208,10 +2214,15 @@ function onFighterCardClicked(fighter: BattleFighter) {
       onManualTargetChosen(fighter.id);
       return;
     }
-    if (fighter.side !== 'ally') {
-      toastr.warning(getManualTargetHint(fighter), '战斗场');
+
+    if (fighter.id === pendingActorId.value && fighter.side === 'ally') {
+      fighterDetailOpen.value = true;
+      turnHint.value = `${fighter.name}：可以重新选择技能，或继续点击合法目标释放。`;
       return;
     }
+
+    toastr.warning(getManualTargetHint(fighter), '战斗场');
+    return;
   }
 
   if (fighter.side === 'enemy') {
@@ -2274,6 +2285,7 @@ function onSkillClicked(skillId: string) {
     return;
   }
 
+  fighterDetailOpen.value = false;
   turnHint.value = '已选择技能，请点击合法目标释放。';
 }
 
@@ -3008,6 +3020,29 @@ onBeforeUnmount(() => {
 .fighter-card.pending {
   border-color: #ffd27c;
   box-shadow: 0 0 0 1px rgba(255, 210, 124, 0.5);
+}
+
+.fighter-card.target-mode {
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.fighter-card.target-valid {
+  border-color: #78ffc9;
+  box-shadow:
+    0 0 0 1px rgba(120, 255, 201, 0.58),
+    0 0 18px rgba(120, 255, 201, 0.3);
+}
+
+.fighter-card.target-valid:hover {
+  transform: translateY(-2px);
+}
+
+.fighter-card.target-invalid:not(.selected):not(.pending) {
+  opacity: 0.52;
 }
 
 .fighter-card.dead {
