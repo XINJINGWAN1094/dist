@@ -6,6 +6,14 @@
     :style="effectStyle"
     aria-hidden="true"
   >
+    <div class="magic-circle-fallback">
+      <span class="magic-circle-ring ring-outer"></span>
+      <span class="magic-circle-ring ring-middle"></span>
+      <span class="magic-circle-ring ring-inner"></span>
+      <span class="magic-circle-star star-one"></span>
+      <span class="magic-circle-star star-two"></span>
+      <span class="magic-circle-cross"></span>
+    </div>
     <canvas ref="canvasRef"></canvas>
   </div>
 </template>
@@ -680,8 +688,127 @@ void main() {
 }
 
 .magic-circle-effect canvas {
+  position: relative;
+  z-index: 2;
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.magic-circle-fallback,
+.magic-circle-ring,
+.magic-circle-star,
+.magic-circle-cross {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.magic-circle-fallback {
+  z-index: 1;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 2%, rgba(120, 245, 255, 0.24) 3% 9%, transparent 18%),
+    radial-gradient(circle, transparent 36%, rgba(255, 98, 214, 0.34) 37% 38%, transparent 39%),
+    radial-gradient(circle, transparent 54%, rgba(108, 245, 255, 0.42) 55% 56%, transparent 57%),
+    radial-gradient(circle, rgba(55, 240, 255, 0.08), transparent 68%);
+  animation: magicFallbackPulse 2200ms ease-in-out infinite;
+}
+
+.magic-circle-ring {
+  border: 1px solid rgba(122, 246, 255, 0.78);
+  box-shadow:
+    0 0 10px rgba(108, 245, 255, 0.52),
+    inset 0 0 12px rgba(255, 90, 210, 0.24);
+}
+
+.ring-outer {
+  inset: 8%;
+  animation: magicFallbackRotate 12s linear infinite;
+}
+
+.ring-middle {
+  inset: 22%;
+  border-color: rgba(255, 110, 215, 0.68);
+  animation: magicFallbackRotate 8s linear infinite reverse;
+}
+
+.ring-inner {
+  inset: 36%;
+  border-color: rgba(255, 255, 255, 0.72);
+  animation: magicFallbackRotate 5.5s linear infinite;
+}
+
+.magic-circle-star {
+  inset: 18%;
+  border-radius: 0;
+  opacity: 0.84;
+}
+
+.magic-circle-star::before,
+.magic-circle-star::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(140, 248, 255, 0.88), transparent);
+  transform-origin: center;
+}
+
+.magic-circle-star::before {
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.magic-circle-star::after {
+  transform: translate(-50%, -50%) rotate(60deg);
+}
+
+.star-one {
+  animation: magicFallbackRotate 10s linear infinite;
+}
+
+.star-two {
+  transform: rotate(30deg);
+  animation: magicFallbackRotate 14s linear infinite reverse;
+}
+
+.magic-circle-cross {
+  inset: 30%;
+  border-radius: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.72);
+  transform: rotate(45deg);
+  animation: magicFallbackGlow 1800ms ease-in-out infinite alternate;
+}
+
+@keyframes magicFallbackRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes magicFallbackPulse {
+  0%,
+  100% {
+    filter: brightness(0.95);
+    transform: scale(0.98);
+  }
+  50% {
+    filter: brightness(1.35);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes magicFallbackGlow {
+  from {
+    opacity: 0.36;
+  }
+  to {
+    opacity: 0.9;
+  }
 }
 </style>

@@ -75,6 +75,10 @@
         </div>
       </div>
 
+      <div v-if="isManualTargetArmed" class="manual-target-banner" aria-live="polite">
+        {{ manualTargetBannerText }}
+      </div>
+
       <div class="formation-grid enemy-formation">
         <button
           v-for="slot in enemySlots"
@@ -182,6 +186,8 @@
             </p>
           </button>
         </div>
+
+        <p v-if="selectedSkillActionHint" class="skill-action-hint">{{ selectedSkillActionHint }}</p>
 
         <div v-if="selectedSkill && requiresManualTarget(selectedSkill)" class="target-zone">
           <p class="target-title">{{ targetZoneTitle }}</p>
@@ -926,6 +932,34 @@ const visibleManualTargets = computed(() => {
     return selectedSkill.value?.targetType === 'any';
   });
 });
+const isManualTargetArmed = computed(
+  () => selectedSkill.value !== null && requiresManualTarget(selectedSkill.value) && canChooseManualTarget.value,
+);
+const manualTargetBannerText = computed(() => {
+  if (!selectedAlly.value || !selectedSkill.value) {
+    return '';
+  }
+  return `已选择「${selectedSkill.value.name}」：点击高亮目标释放。`;
+});
+const selectedSkillActionHint = computed(() => {
+  if (!selectedAlly.value || !selectedSkill.value) {
+    return '';
+  }
+  if (!isRunning.value) {
+    return '当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。';
+  }
+  if (pendingActorId.value !== selectedAlly.value.id) {
+    const pending = pendingActorId.value ? findFighterById(pendingActorId.value) : null;
+    return pending ? `当前轮到 ${pending.name} 行动，${selectedAlly.value.name} 暂时只能预览技能。` : '当前还没有可操作角色。';
+  }
+  if (getSkillCooldown(selectedAlly.value, selectedSkill.value.id) > 0) {
+    return '该技能仍在冷却中。';
+  }
+  if (requiresManualTarget(selectedSkill.value)) {
+    return '关闭弹窗后，点击战场中高亮的合法目标释放。';
+  }
+  return '再次点击技能即可直接释放。';
+});
 const targetZoneTitle = computed(() => {
   if (!selectedSkill.value) {
     return '目标选择';
@@ -1074,8 +1108,8 @@ function refreshStoryBattleState() {
 }
 
 function cardClasses(fighter: BattleFighter) {
-  const isTargetMode = selectedSkill.value !== null && requiresManualTarget(selectedSkill.value) && canChooseManualTarget.value;
-  const targetCheck = isTargetMode && selectedAlly.value ? canSkillTargetFighter(selectedAlly.value, selectedSkill.value, fighter) : null;
+  const isTargetMode = isManualTargetArmed.value;
+  const targetCheck = isTargetMode && selectedAlly.value && selectedSkill.value ? canSkillTargetFighter(selectedAlly.value, selectedSkill.value, fighter) : null;
 
   return {
     dead: fighter.isDead,
@@ -2257,12 +2291,15 @@ function onSkillClicked(skillId: string) {
   }
 
   if (!isRunning.value) {
+    turnHint.value = `${selectedAlly.value.name}：当前是技能预览，剧情比赛触发后才能释放技能。`;
+    toastr.info('当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。', '战斗场');
     return;
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
     const pending = pendingActorId.value ? findFighterById(pendingActorId.value) : null;
     if (pending) {
       toastr.info(`当前轮到 ${pending.name} 行动。`, '战斗场');
+      turnHint.value = `当前轮到 ${pending.name} 行动，${selectedAlly.value.name} 暂时只能预览技能。`;
     }
     return;
   }
@@ -2516,6 +2553,25 @@ onBeforeUnmount(() => {
   z-index: 3;
   pointer-events: none;
   overflow: hidden;
+}
+
+.manual-target-banner {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  z-index: 5;
+  max-width: min(560px, calc(100% - 24px));
+  border: 1px solid rgba(120, 255, 201, 0.82);
+  border-radius: 999px;
+  padding: 8px 16px;
+  color: #ecfff8;
+  background: linear-gradient(135deg, rgba(5, 31, 32, 0.92), rgba(20, 65, 58, 0.88));
+  box-shadow: 0 0 0 1px rgba(120, 255, 201, 0.24), 0 10px 24px rgba(0, 0, 0, 0.28);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .skill-beam-effect {
@@ -3213,6 +3269,17 @@ onBeforeUnmount(() => {
 
 .skill-name {
   font-weight: 700;
+}
+
+.skill-action-hint {
+  margin: 2px 0 0;
+  border: 1px solid rgba(120, 255, 201, 0.34);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: var(--sub-color);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .fighter-modal-backdrop {
