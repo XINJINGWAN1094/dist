@@ -8,7 +8,21 @@
       </div>
     </header>
 
-    <section class="battle-stage">
+    <section ref="battleStageRef" class="battle-stage">
+      <div class="battle-effect-layer" aria-hidden="true">
+        <div
+          v-for="effect in battleEffects"
+          :key="effect.id"
+          class="skill-beam-effect"
+          :class="`tone-${effect.tone}`"
+        >
+          <div class="effect-charge"></div>
+          <div class="effect-beam"></div>
+          <div class="effect-shockwave"></div>
+          <div class="effect-damage">-{{ effect.damage }}</div>
+        </div>
+      </div>
+
       <div class="formation-grid enemy-formation">
         <button
           v-for="slot in enemySlots"
@@ -43,6 +57,7 @@
         <button
           v-for="slot in allySlots"
           :key="slot.fighter.id"
+          :ref="el => setFighterCardRef(slot.fighter.id, el)"
           type="button"
           class="fighter-card"
           :class="cardClasses(slot.fighter)"
@@ -59,6 +74,8 @@
           <p v-if="slot.fighter.isDead" class="dead-mark">已阵亡</p>
         </button>
       </div>
+
+      <MagicCircleEffect :active="isShenXixiSelected" :anchor="shenXixiMagicCircleAnchor" />
     </section>
 
     <p class="battle-help">{{ rosterSyncHint }} 点击我方人物查看属性和技能。</p>
@@ -145,7 +162,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue';
+import MagicCircleEffect from './MagicCircleEffect.vue';
 import {
   battleRosterMembers,
   ensureBattleRosterLoaded,
@@ -173,6 +191,7 @@ type SkillTargetType = 'opponent' | 'ally' | 'any' | 'none';
 type SkillTargetMode = 'selected' | 'allOpponents' | 'randomOpponents' | 'none';
 type FormationSlot = 'top' | 'left' | 'right' | 'bottom';
 type BattleLogKind = 'info' | 'turn' | 'action' | 'result' | 'warn';
+type BattleEffectTone = 'arcane' | 'crimson';
 type BattleStatusKind =
   | 'attack_buff'
   | 'team_stat_buff'
@@ -238,6 +257,12 @@ type FormationCell = {
   fighter: BattleFighter;
 };
 
+type MagicCircleAnchor = {
+  x: number;
+  y: number;
+  size: number;
+};
+
 type BattleStatus = {
   id: string;
   kind: BattleStatusKind;
@@ -276,6 +301,12 @@ type EnemyActionChoice = {
   skill: SkillDefinition;
   target: BattleFighter;
   score: number;
+};
+
+type BattleEffect = {
+  id: string;
+  tone: BattleEffectTone;
+  damage: number;
 };
 
 type HostRuntime = Window & typeof globalThis;
@@ -722,6 +753,7 @@ const ALLY_POSITION: Record<SquadMemberRole, FormationSlot> = {
 
 const maxRounds = 7;
 const battleDelayMs = 420;
+const SHEN_XIXI_MEMBER_ID = 'shen_xixi' satisfies SquadMemberId;
 
 const battleLogs = ref<BattleLogEntry[]>([]);
 const fighters = ref<BattleFighter[]>(createInitialFighters());
@@ -737,12 +769,19 @@ const roundQueueText = ref('');
 const battleToken = ref(0);
 const lastAutoStartedStoryBattleSessionId = ref('');
 const fighterDetailOpen = ref(false);
+const battleEffects = ref<BattleEffect[]>([]);
+const battleStageRef = ref<HTMLElement | null>(null);
+const shenXixiMagicCircleAnchor = ref<MagicCircleAnchor | null>(null);
 
 let pendingManualResolver: ((action: ManualAction | null) => void) | null = null;
 let storyBattlePollTimer: number | null = null;
 let pendingRoundHeals: PendingRoundHeal[] = [];
+let battleEffectTimer: number | null = null;
+let magicCircleAnchorFrame: number | null = null;
+const fighterCardElements = new Map<string, HTMLElement>();
 
 const selectedAlly = computed(() => fighters.value.find(fighter => fighter.id === selectedAllyId.value && fighter.side === 'ally') ?? null);
+const isShenXixiSelected = computed(() => selectedAllyId.value === SHEN_XIXI_MEMBER_ID);
 const selectedAllySkills = computed(() => {
   if (!selectedAlly.value) {
     return [];
@@ -973,6 +1012,49 @@ function cardClasses(fighter: BattleFighter) {
   };
 }
 
+function setFighterCardRef(fighterId: string, element: Element | ComponentPublicInstance | null) {
+  if (element instanceof HTMLElement) {
+    fighterCardElements.set(fighterId, element);
+    scheduleMagicCircleAnchorUpdate();
+    return;
+  }
+  fighterCardElements.delete(fighterId);
+  scheduleMagicCircleAnchorUpdate();
+}
+
+function scheduleMagicCircleAnchorUpdate() {
+  if (magicCircleAnchorFrame !== null) {
+    return;
+  }
+
+  magicCircleAnchorFrame = window.requestAnimationFrame(() => {
+    magicCircleAnchorFrame = null;
+    updateMagicCircleAnchor();
+  });
+}
+
+function updateMagicCircleAnchor() {
+  const stageElement = battleStageRef.value;
+  const cardElement = fighterCardElements.get(SHEN_XIXI_MEMBER_ID);
+  if (!stageElement || !cardElement) {
+    shenXixiMagicCircleAnchor.value = null;
+    return;
+  }
+
+  const stageRect = stageElement.getBoundingClientRect();
+  const cardRect = cardElement.getBoundingClientRect();
+  if (stageRect.width <= 0 || stageRect.height <= 0 || cardRect.width <= 0 || cardRect.height <= 0) {
+    shenXixiMagicCircleAnchor.value = null;
+    return;
+  }
+
+  shenXixiMagicCircleAnchor.value = {
+    x: cardRect.left - stageRect.left + cardRect.width / 2,
+    y: cardRect.top - stageRect.top + cardRect.height / 2,
+    size: Math.max(180, Math.min(260, Math.max(cardRect.width, cardRect.height) * 1.82)),
+  };
+}
+
 function getSlotClass(side: FighterSide, role: SquadMemberRole) {
   return side === 'enemy' ? ENEMY_POSITION[role] : ALLY_POSITION[role];
 }
@@ -1098,6 +1180,7 @@ function resetBattleState() {
   pendingActorId.value = null;
   fighterDetailOpen.value = false;
   roundQueueText.value = '';
+  clearBattleEffects();
   pendingRoundHeals = [];
   selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
   turnHint.value = getIdleTurnHint();
@@ -1140,6 +1223,7 @@ function stopBattle(reason: string) {
   isRunning.value = false;
   pendingActorId.value = null;
   selectedSkillId.value = null;
+  clearBattleEffects();
   pendingRoundHeals = [];
 }
 
@@ -1163,6 +1247,7 @@ async function startBattle() {
   winnerText.value = '';
   roundQueueText.value = '';
   battleLogs.value = [];
+  clearBattleEffects();
   pendingRoundHeals = [];
   isRunning.value = true;
   lastAutoStartedStoryBattleSessionId.value = sessionId;
@@ -1592,12 +1677,59 @@ function applySkillDamage(attacker: BattleFighter, target: BattleFighter, skill:
 
   const damage = calculateDamageNumbers(attacker, target, skill);
   const result = applyDamage(attacker, target, damage, true);
+  triggerSkillDamageEffect(attacker, skill, result.hpDamage);
   const damageText = `${target.name} 受到 ${result.hpDamage} 点${damage.kind === 'magic' ? '法术' : '物理'}伤害`;
   const shieldText = result.shieldDamage > 0 ? `，护盾抵消 ${result.shieldDamage}` : '';
   appendLog(`${damageText}${shieldText}（${result.beforeHp} → ${result.afterHp}）。`, 'action');
 
   if (result.defeated) {
     appendLog(`${target.name} 已被击倒，角色框进入灰暗状态。`, 'result');
+  }
+}
+
+function resolveSkillEffectTone(attacker: BattleFighter, skill: SkillDefinition): BattleEffectTone | null {
+  if (attacker.id !== 'shen_xixi') {
+    return null;
+  }
+  if (skill.id === 'shen_xixi_moon_spark') {
+    return 'arcane';
+  }
+  if (skill.id === 'shen_xixi_star_lance') {
+    return 'crimson';
+  }
+  return null;
+}
+
+function triggerSkillDamageEffect(attacker: BattleFighter, skill: SkillDefinition, damage: number) {
+  const tone = resolveSkillEffectTone(attacker, skill);
+  if (!tone || damage <= 0) {
+    return;
+  }
+
+  if (battleEffectTimer !== null) {
+    window.clearTimeout(battleEffectTimer);
+    battleEffectTimer = null;
+  }
+
+  battleEffects.value = [
+    {
+      id: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+      tone,
+      damage,
+    },
+  ];
+
+  battleEffectTimer = window.setTimeout(() => {
+    battleEffects.value = [];
+    battleEffectTimer = null;
+  }, 980);
+}
+
+function clearBattleEffects() {
+  battleEffects.value = [];
+  if (battleEffectTimer !== null) {
+    window.clearTimeout(battleEffectTimer);
+    battleEffectTimer = null;
   }
 }
 
@@ -2005,8 +2137,16 @@ watch(
   () => {
     syncIdleBattlePreviewFromRoster();
     syncStoryBattleState();
+    void nextTick(scheduleMagicCircleAnchorUpdate);
   },
   { deep: true },
+);
+
+watch(
+  selectedAllyId,
+  () => {
+    void nextTick(scheduleMagicCircleAnchorUpdate);
+  },
 );
 
 watch(
@@ -2019,6 +2159,8 @@ watch(
 onMounted(() => {
   ensureBattleRosterLoaded();
   syncIdleBattlePreviewFromRoster();
+  scheduleMagicCircleAnchorUpdate();
+  window.addEventListener('resize', scheduleMagicCircleAnchorUpdate, { passive: true });
   refreshStoryBattleState();
   storyBattlePollTimer = window.setInterval(refreshStoryBattleState, 1_000);
 });
@@ -2026,6 +2168,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   battleToken.value += 1;
   resolvePendingManualAction(null);
+  clearBattleEffects();
+  window.removeEventListener('resize', scheduleMagicCircleAnchorUpdate);
+  if (magicCircleAnchorFrame !== null) {
+    window.cancelAnimationFrame(magicCircleAnchorFrame);
+    magicCircleAnchorFrame = null;
+  }
+  fighterCardElements.clear();
   if (storyBattlePollTimer !== null) {
     window.clearInterval(storyBattlePollTimer);
     storyBattlePollTimer = null;
@@ -2084,14 +2233,18 @@ onBeforeUnmount(() => {
 }
 
 .battle-stage {
+  position: relative;
   padding: 12px;
   display: grid;
   grid-template-rows: auto auto auto;
   justify-items: center;
   gap: 8px;
+  overflow: hidden;
 }
 
 .formation-grid {
+  position: relative;
+  z-index: 1;
   width: min(520px, 100%);
   display: grid;
   grid-template-columns: repeat(3, minmax(80px, 1fr));
@@ -2102,6 +2255,8 @@ onBeforeUnmount(() => {
 }
 
 .arena-core {
+  position: relative;
+  z-index: 1;
   width: min(290px, 86%);
   aspect-ratio: 1 / 1;
   border: 1px solid var(--line-color);
@@ -2113,6 +2268,102 @@ onBeforeUnmount(() => {
   justify-items: center;
   gap: 5px;
   text-align: center;
+}
+
+.battle-effect-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.skill-beam-effect {
+  --beam-core: #ffffff;
+  --beam-start: #63f5ff;
+  --beam-end: #ff5cc8;
+  --beam-glow: rgba(99, 245, 255, 0.66);
+  --impact-glow: rgba(255, 92, 200, 0.74);
+  --damage-shadow: #7f163d;
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: screen;
+}
+
+.skill-beam-effect.tone-crimson {
+  --beam-start: #ffb39b;
+  --beam-end: #ff1f35;
+  --beam-glow: rgba(255, 53, 39, 0.7);
+  --impact-glow: rgba(255, 40, 48, 0.78);
+  --damage-shadow: #771119;
+}
+
+.effect-charge {
+  position: absolute;
+  left: 48%;
+  top: 84%;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    var(--beam-core) 0 8%,
+    var(--beam-start) 9% 22%,
+    rgba(99, 245, 255, 0.12) 54%,
+    transparent 72%
+  );
+  filter: blur(0.2px);
+  animation: battleChargePulse 920ms ease-out forwards;
+}
+
+.skill-beam-effect.tone-crimson .effect-charge {
+  background: radial-gradient(
+    circle,
+    var(--beam-core) 0 8%,
+    var(--beam-start) 9% 20%,
+    rgba(255, 31, 53, 0.16) 55%,
+    transparent 72%
+  );
+}
+
+.effect-beam {
+  position: absolute;
+  left: 45%;
+  top: 66%;
+  width: 30%;
+  height: 14px;
+  border-radius: 999px;
+  transform-origin: left center;
+  transform: rotate(-24deg) scaleX(0);
+  background: linear-gradient(90deg, transparent, var(--beam-start) 14%, var(--beam-core) 48%, var(--beam-end) 78%, transparent);
+  box-shadow: 0 0 18px var(--beam-glow), 0 0 36px var(--impact-glow);
+  animation: battleBeamStrike 920ms ease-out forwards;
+}
+
+.effect-shockwave {
+  position: absolute;
+  right: 50%;
+  top: 18%;
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  transform: translate(50%, -50%) scale(0.4);
+  box-shadow: 0 0 24px var(--impact-glow);
+  animation: battleShockwave 920ms ease-out forwards;
+}
+
+.effect-damage {
+  position: absolute;
+  right: 45%;
+  top: 8%;
+  color: #fff7d7;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 0 var(--damage-shadow), 0 0 18px rgba(255, 230, 124, 0.95);
+  animation: battleDamageFloat 920ms ease-out forwards;
 }
 
 .core-title {
@@ -2481,6 +2732,71 @@ onBeforeUnmount(() => {
   background: rgba(255, 112, 145, 0.14);
 }
 
+@keyframes battleChargePulse {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  52%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+}
+
+@keyframes battleBeamStrike {
+  0%,
+  28% {
+    opacity: 0;
+    transform: rotate(-24deg) scaleX(0);
+  }
+  43% {
+    opacity: 1;
+    transform: rotate(-24deg) scaleX(1);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: rotate(-24deg) scaleX(1.05);
+  }
+}
+
+@keyframes battleShockwave {
+  0%,
+  38% {
+    opacity: 0;
+    transform: translate(50%, -50%) scale(0.4);
+  }
+  52% {
+    opacity: 0.9;
+  }
+  82%,
+  100% {
+    opacity: 0;
+    transform: translate(50%, -50%) scale(4.8);
+  }
+}
+
+@keyframes battleDamageFloat {
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.8);
+  }
+  58% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-38px) scale(1.18);
+  }
+}
+
 @media (max-width: 980px) {
   .roster-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2511,6 +2827,24 @@ onBeforeUnmount(() => {
 
   .arena-core {
     width: min(250px, 92%);
+  }
+
+  .effect-charge {
+    left: 48%;
+    top: 84%;
+    width: 74px;
+    height: 74px;
+  }
+
+  .effect-beam {
+    left: 45%;
+    top: 66%;
+    width: 32%;
+  }
+
+  .effect-damage {
+    right: 43%;
+    font-size: 28px;
   }
 }
 
