@@ -2,7 +2,7 @@
   <div
     v-if="isVisible && hasAnchor"
     class="magic-circle-effect"
-    :class="{ active: isOpaque }"
+    :class="{ active: isActive }"
     :style="effectStyle"
     aria-hidden="true"
   >
@@ -48,14 +48,13 @@ const props = defineProps<{
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const isVisible = ref(false);
-const isOpaque = ref(false);
 const transitionDurationMs = ref(BRIGHTEN_DURATION_MS);
 
 let hideTimer: number | null = null;
-let activateFrame: number | null = null;
 let renderer: MagicCircleRendererHandle | null = null;
 
 const hasAnchor = computed(() => props.anchor !== null);
+const isActive = computed(() => props.active && hasAnchor.value);
 const effectStyle = computed<Record<string, string>>(() => {
   if (!props.anchor) {
     return {
@@ -99,30 +98,20 @@ watch(
 
 onBeforeUnmount(() => {
   clearHideTimer();
-  clearActivateFrame();
   destroyRenderer();
 });
 
 async function showCircle() {
   clearHideTimer();
-  clearActivateFrame();
   transitionDurationMs.value = BRIGHTEN_DURATION_MS;
   isVisible.value = true;
   await nextTick();
-
-  activateFrame = window.requestAnimationFrame(() => {
-    activateFrame = null;
-    isOpaque.value = true;
-  });
-
   startRenderer();
 }
 
 function hideCircle() {
   clearHideTimer();
-  clearActivateFrame();
   transitionDurationMs.value = FADE_OUT_DURATION_MS;
-  isOpaque.value = false;
 
   if (!isVisible.value) {
     destroyRenderer();
@@ -165,14 +154,6 @@ function clearHideTimer() {
   }
   window.clearTimeout(hideTimer);
   hideTimer = null;
-}
-
-function clearActivateFrame() {
-  if (activateFrame === null) {
-    return;
-  }
-  window.cancelAnimationFrame(activateFrame);
-  activateFrame = null;
 }
 
 function createMagicCircleRenderer(canvas: HTMLCanvasElement): MagicCircleRendererHandle {
@@ -678,7 +659,7 @@ void main() {
 <style scoped>
 .magic-circle-effect {
   position: absolute;
-  z-index: 2;
+  z-index: 24;
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, -50%) scaleY(0.76);
