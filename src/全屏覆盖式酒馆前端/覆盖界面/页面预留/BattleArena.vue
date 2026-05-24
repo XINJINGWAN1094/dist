@@ -4,6 +4,16 @@
       <p class="battle-state">{{ battleStatusText }}</p>
 
       <div class="toolbar-actions">
+        <button v-if="isTrainingMode" type="button" class="toolbar-btn" :disabled="isRunning" @click="startTrainingBattle">
+          开始训练
+        </button>
+        <button v-if="isTrainingMode && isRunning" type="button" class="toolbar-btn" @click="stopBattle('训练已手动停止。')">
+          停止训练
+        </button>
+        <button type="button" class="toolbar-btn" :disabled="isRunning" @click="openEnemyStatEditor">
+          敌方属性 {{ enemyStatPercent }}%
+        </button>
+        <span v-if="enemyDifficultyRemark" class="difficulty-badge">{{ enemyDifficultyRemark }}</span>
         <button type="button" class="toolbar-btn" :disabled="isRunning" @click="resetBattleState">刷新预览</button>
       </div>
     </header>
@@ -209,6 +219,37 @@
       </article>
     </section>
 
+    <section
+      v-if="enemyStatEditorOpen"
+      class="enemy-percent-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="enemy-percent-title"
+      @click.self="closeEnemyStatEditor"
+    >
+      <article class="enemy-percent-modal">
+        <header class="enemy-percent-head">
+          <h3 id="enemy-percent-title">敌方属性倍率</h3>
+          <button type="button" class="modal-close-btn" @click="closeEnemyStatEditor">关闭</button>
+        </header>
+
+        <p v-if="enemyStatDraftRemark" class="enemy-percent-remark">{{ enemyStatDraftRemark }}</p>
+        <input class="enemy-percent-input" :value="enemyStatDraftDisplay" readonly inputmode="none" aria-label="敌方属性百分比" />
+
+        <div class="enemy-percent-keypad">
+          <button v-for="digit in enemyStatDigitKeys" :key="digit" type="button" class="keypad-btn" @click="appendEnemyStatDigit(digit)">
+            {{ digit }}
+          </button>
+          <button type="button" class="keypad-btn delete" @click="deleteEnemyStatDigit">删除</button>
+        </div>
+
+        <div class="enemy-percent-actions">
+          <button type="button" class="toolbar-btn" @click="commitEnemyStatDraft">确定</button>
+          <button type="button" class="toolbar-btn" @click="closeEnemyStatEditor">取消</button>
+        </div>
+      </article>
+    </section>
+
     <section class="log-panel">
       <p class="log-title">战斗日志</p>
       <div class="log-list">
@@ -239,50 +280,34 @@ import {
   STORY_BATTLE_STATE_KEY,
   type StoryBattleState,
 } from '../../共享/比赛状态';
+import {
+  ENEMY_SKILL_LIBRARY_GLOBAL_KEY,
+  type BattleStatusKind,
+  type EnemyRoleSkillLibrary,
+  type FighterSide,
+  type SkillDefinition,
+  type SkillKind,
+  type SkillTargetMode,
+  type SkillTargetType,
+} from '../../共享/战斗技能';
 
-const props = defineProps<{
-  ignoredStoryBattleSessionId?: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    mode?: 'story' | 'training';
+    ignoredStoryBattleSessionId?: string | null;
+  }>(),
+  {
+    mode: 'story',
+    ignoredStoryBattleSessionId: null,
+  },
+);
 
-type FighterSide = 'ally' | 'enemy';
-type SkillKind = 'physical' | 'magic';
-type SkillTargetType = 'opponent' | 'ally' | 'any' | 'none';
-type SkillTargetMode = 'selected' | 'allOpponents' | 'randomOpponents' | 'none';
 type FormationSlot = 'top' | 'left' | 'right' | 'bottom';
 type BattleLogKind = 'info' | 'turn' | 'action' | 'result' | 'warn';
 type BattleEffectTone = 'arcane' | 'crimson';
-type BattleStatusKind =
-  | 'attack_buff'
-  | 'team_stat_buff'
-  | 'defense_buff'
-  | 'counter_stance'
-  | 'silenced'
-  | 'untargetable'
-  | 'overload';
-
-type SkillDefinition = {
-  id: string;
-  name: string;
-  kind?: SkillKind;
-  ratio?: number;
-  cooldown: number;
-  description: string;
-  targetType: SkillTargetType;
-  targetMode: SkillTargetMode;
-  randomTargetCount?: number;
-  ignoreResistRate?: number;
-  selfHealMaxHpRate?: number;
-  targetHealMaxHpRate?: number;
-  teamHealMaxHpRate?: number;
-  teamShieldMaxHpRate?: number;
-  cooldownReduction?: number;
-  attackBuffRate?: number;
-  nextRoundTeamStatBuffRate?: number;
-  selfDefenseBuffRate?: number;
-  counterStance?: boolean;
-  silenceNextRound?: boolean;
-  selfUntargetableNextRound?: boolean;
-  selfOverloadDebuff?: boolean;
+type EnemyStatSettings = {
+  version: number;
+  percent: number;
 };
 
 type BattleFighter = {
@@ -293,6 +318,7 @@ type BattleFighter = {
   stats: SquadMemberStats;
   currentHp: number;
   isDead: boolean;
+  skills: SkillDefinition[];
   cooldowns: Record<string, number>;
   shield: number;
   shieldExpiresAtRoundStart: number | null;
@@ -643,47 +669,51 @@ const ALLY_SKILLS_BY_MEMBER_ID: Record<SquadMemberId, SkillDefinition[]> = {
   ],
 };
 
-const ENEMY_ROLE_SKILLS: Record<SquadMemberRole, SkillDefinition[]> = {
+const FALLBACK_ENEMY_ROLE_SKILLS: EnemyRoleSkillLibrary = {
   guard: [
     {
       id: 'guard_shield_bash',
       name: '盾击',
       kind: 'physical',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 1.2,
+      cooldown: 1,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      description: '对单体造成 120% 物理伤害。',
     },
     {
       id: 'guard_iron_crash',
       name: '钢铁冲撞',
       kind: 'physical',
-      ratio: 2,
+      ratio: 1.8,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      selfDefenseBuffRate: 0.1,
+      description: '对单体造成 180% 物理伤害，自身本回合双抗 +10%。',
     },
     {
       id: 'guard_counter_wall',
       name: '反击壁垒',
-      kind: 'physical',
-      ratio: 2,
-      cooldown: 2,
-      targetType: 'opponent',
-      targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      cooldown: 3,
+      targetType: 'none',
+      targetMode: 'none',
+      counterStance: true,
+      counterIncomingDamageMultiplier: 0.8,
+      counterReflectRate: 0.3,
+      counterNextRoundHealMaxHpRate: 0.12,
+      description: '本回合承伤 80%，返还 30% 法术伤害；下一回合回复 12% 最大生命。',
     },
     {
-      id: 'guard_crushing_roar',
-      name: '压制怒吼',
+      id: 'guard_line_lock',
+      name: '战线封锁',
       kind: 'physical',
-      ratio: 2,
+      ratio: 1,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      silenceNextRound: true,
+      description: '对单体造成 100% 物理伤害，并使其下回合沉默。',
     },
   ],
   mage: [
@@ -691,41 +721,42 @@ const ENEMY_ROLE_SKILLS: Record<SquadMemberRole, SkillDefinition[]> = {
       id: 'mage_fire_lance',
       name: '炎枪术',
       kind: 'magic',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 1.2,
+      cooldown: 1,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      description: '对单体造成 120% 法术伤害。',
     },
     {
       id: 'mage_arcane_burst',
       name: '奥术爆裂',
       kind: 'magic',
-      ratio: 2,
+      ratio: 1.9,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      description: '对单体造成 190% 法术伤害。',
     },
     {
       id: 'mage_frost_spike',
       name: '霜锥',
       kind: 'magic',
-      ratio: 2,
+      ratio: 1.4,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      silenceNextRound: true,
+      description: '对单体造成 140% 法术伤害，并使其下回合沉默。',
     },
     {
       id: 'mage_meteor_fall',
       name: '陨星落',
       kind: 'magic',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 0.65,
+      cooldown: 3,
       targetType: 'opponent',
-      targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      targetMode: 'allOpponents',
+      description: '对敌方全体造成 65% 法术伤害。',
     },
   ],
   support: [
@@ -733,41 +764,41 @@ const ENEMY_ROLE_SKILLS: Record<SquadMemberRole, SkillDefinition[]> = {
       id: 'support_light_bolt',
       name: '辉光箭',
       kind: 'magic',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 0.9,
+      cooldown: 1,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
-    },
-    {
-      id: 'support_judgment',
-      name: '裁决光束',
-      kind: 'magic',
-      ratio: 2,
-      cooldown: 2,
-      targetType: 'opponent',
-      targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      description: '对单体造成 90% 法术伤害。',
     },
     {
       id: 'support_holy_pulse',
       name: '圣息脉冲',
-      kind: 'magic',
-      ratio: 2,
-      cooldown: 2,
-      targetType: 'opponent',
-      targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      cooldown: 3,
+      targetType: 'none',
+      targetMode: 'none',
+      teamHealMaxHpRate: 0.1,
+      description: '敌方全体回复 10% 最大生命。',
     },
     {
       id: 'support_grace_mark',
       name: '恩典刻印',
-      kind: 'magic',
-      ratio: 2,
       cooldown: 2,
+      targetType: 'ally',
+      targetMode: 'selected',
+      cooldownReduction: 1,
+      attackBuffRate: 0.2,
+      description: '指定己方冷却 -1，并使其攻击 +20%。',
+    },
+    {
+      id: 'support_silence_prayer',
+      name: '禁言祷词',
+      kind: 'magic',
+      ratio: 0.5,
+      cooldown: 3,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 法术伤害。',
+      silenceNextRound: true,
+      description: '对单体造成 50% 法术伤害，并使其下回合沉默。',
     },
   ],
   assassin: [
@@ -775,41 +806,44 @@ const ENEMY_ROLE_SKILLS: Record<SquadMemberRole, SkillDefinition[]> = {
       id: 'assassin_backstab',
       name: '背刺',
       kind: 'physical',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 1.3,
+      cooldown: 1,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      description: '对单体造成 130% 物理伤害。',
     },
     {
       id: 'assassin_shadow_combo',
       name: '影连斩',
       kind: 'physical',
-      ratio: 2,
+      ratio: 1.9,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      description: '对单体造成 190% 物理伤害。',
     },
     {
-      id: 'assassin_poison_edge',
-      name: '毒刃',
+      id: 'assassin_vanish_cut',
+      name: '隐袭',
       kind: 'physical',
-      ratio: 2,
+      ratio: 1,
       cooldown: 2,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      selfUntargetableNextRound: true,
+      description: '对单体造成 100% 物理伤害，自身下回合不可被选中。',
     },
     {
       id: 'assassin_execute',
       name: '处决',
       kind: 'physical',
-      ratio: 2,
-      cooldown: 2,
+      ratio: 2.6,
+      cooldown: 3,
       targetType: 'opponent',
       targetMode: 'selected',
-      description: '造成 200% 物理伤害。',
+      executeThresholdHpRate: 0.35,
+      executeRatio: 3.2,
+      description: '对单体造成 260% 物理伤害；目标生命低于 35% 时改为 320%。',
     },
   ],
 };
@@ -835,7 +869,23 @@ const battleDelayMs = 420;
 const shenXixiMassSpellDamageDelayMs = 8_650;
 const shenXixiMassSpellCleanupDelayMs = 1_700;
 const SHEN_XIXI_MEMBER_ID = 'shen_xixi' satisfies SquadMemberId;
+const ENEMY_SKILL_DRAW_COUNT = 4;
+const SQUAD_ROLES: readonly SquadMemberRole[] = ['guard', 'mage', 'support', 'assassin'];
+const ENEMY_SKILL_LIBRARY_URL_VARIABLE_KEY = 'th_fullscreen_enemy_skill_library_url';
+const ENEMY_STAT_SETTINGS_KEY = 'th_fullscreen_enemy_stat_settings_v1';
+const ENEMY_STAT_SETTINGS_VERSION = 1;
+const DEFAULT_ENEMY_STAT_PERCENT = 100;
+const MIN_ENEMY_STAT_PERCENT = 1;
+const MAX_ENEMY_STAT_PERCENT = 999;
+const ENEMY_STAT_DIGIT_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] as const;
 
+let activeEnemyRoleSkills: EnemyRoleSkillLibrary = cloneEnemyRoleSkillLibrary(FALLBACK_ENEMY_ROLE_SKILLS);
+let enemySkillLibraryLoadPromise: Promise<void> | null = null;
+
+const enemySkillLibrarySourceText = ref('内置兜底技能库');
+const enemyStatSettings = ref<EnemyStatSettings>(createDefaultEnemyStatSettings());
+const enemyStatEditorOpen = ref(false);
+const enemyStatDraft = ref(String(DEFAULT_ENEMY_STAT_PERCENT));
 const battleLogs = ref<BattleLogEntry[]>([]);
 const fighters = ref<BattleFighter[]>(createInitialFighters());
 const storyBattleState = ref<StoryBattleState>(createDefaultStoryBattleState());
@@ -861,6 +911,16 @@ let battleEffectTimer: number | null = null;
 let magicCircleAnchorFrame: number | null = null;
 const fighterCardElements = new Map<string, HTMLElement>();
 
+const isTrainingMode = computed(() => props.mode === 'training');
+const enemyStatPercent = computed(() => enemyStatSettings.value.percent);
+const enemyDifficultyRemark = computed(() => getEnemyDifficultyRemark(enemyStatPercent.value));
+const enemyStatDraftPercent = computed(() => parseEnemyStatPercent(enemyStatDraft.value));
+const enemyStatDraftDisplay = computed(() => `${enemyStatDraft.value || ''}%`);
+const enemyStatDraftRemark = computed(() => {
+  const draftPercent = enemyStatDraftPercent.value;
+  return draftPercent === null ? '' : getEnemyDifficultyRemark(draftPercent);
+});
+const enemyStatDigitKeys = ENEMY_STAT_DIGIT_KEYS;
 const selectedAlly = computed(() => fighters.value.find(fighter => fighter.id === selectedAllyId.value && fighter.side === 'ally') ?? null);
 const isShenXixiSelected = computed(() => selectedAllyId.value === SHEN_XIXI_MEMBER_ID);
 const selectedAllySkills = computed(() => {
@@ -889,7 +949,13 @@ const isCurrentStoryBattleIgnored = computed(
 );
 const battleStatusText = computed(() => {
   if (isRunning.value) {
-    return `当前状态：比赛进行中（第 ${currentRound.value} 回合）`;
+    return `当前状态：${isTrainingMode.value ? '训练' : '比赛'}进行中（第 ${currentRound.value} 回合）`;
+  }
+  if (isTrainingMode.value) {
+    if (winnerText.value) {
+      return `当前状态：训练结束（${winnerText.value}）`;
+    }
+    return '当前状态：训练预览，可随时开始';
   }
   if (isCurrentStoryBattleIgnored.value) {
     return '当前状态：已无视本次比赛';
@@ -909,10 +975,15 @@ const canChooseManualTarget = computed(() => {
   return pendingActorId.value === selectedAlly.value.id && getSkillCooldown(selectedAlly.value, selectedSkill.value.id) <= 0;
 });
 const rosterSyncHint = computed(() => {
-  if (isRunning.value) {
-    return '本场比赛已锁定触发时的我方属性；战队页后续修改会在下一次剧情比赛触发时生效。';
+  const skillLibraryText = `敌方技能库：${enemySkillLibrarySourceText.value}；每名敌人本场抽取 ${ENEMY_SKILL_DRAW_COUNT} 个技能。`;
+  const statRuleText = `敌方除物抗、法抗外按我方同职位属性的 ${enemyStatPercent.value}% 创建，物抗、法抗固定为 100%。`;
+  if (isTrainingMode.value) {
+    return `训练开始时锁定当前战队属性；${statRuleText}${skillLibraryText}`;
   }
-  return '战队页中的属性会实时同步到这里，剧情变量触发比赛时会按当前值创建我方战斗单位。';
+  if (isRunning.value) {
+    return `本场比赛已锁定触发时的我方属性；战队页后续修改会在下一次剧情比赛触发时生效。${statRuleText}${skillLibraryText}`;
+  }
+  return `战队页中的属性会实时同步到这里，剧情变量触发比赛时会按当前值创建我方战斗单位。${statRuleText}${skillLibraryText}`;
 });
 const visibleManualTargets = computed(() => {
   if (!selectedAlly.value || !selectedSkill.value || !requiresManualTarget(selectedSkill.value)) {
@@ -946,7 +1017,9 @@ const selectedSkillActionHint = computed(() => {
     return '';
   }
   if (!isRunning.value) {
-    return '当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。';
+    return isTrainingMode.value
+      ? '当前是训练预览：开始训练后，轮到该角色行动时才能释放技能。'
+      : '当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。';
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
     const pending = pendingActorId.value ? findFighterById(pendingActorId.value) : null;
@@ -984,14 +1057,371 @@ function cloneSquadStats(stats: SquadMemberStats): SquadMemberStats {
   };
 }
 
-function createInitialFighters() {
-  return [...createEnemyFighters(), ...createAllyFightersFromRoster()];
+function cloneSkillDefinition(skill: SkillDefinition): SkillDefinition {
+  return {
+    ...skill,
+    targetPriorityRoles: skill.targetPriorityRoles ? [...skill.targetPriorityRoles] : undefined,
+  };
 }
 
-function createEnemyFighters() {
+function cloneSkillDefinitions(skills: SkillDefinition[]): SkillDefinition[] {
+  return skills.map(cloneSkillDefinition);
+}
+
+function cloneEnemyRoleSkillLibrary(library: EnemyRoleSkillLibrary): EnemyRoleSkillLibrary {
+  return {
+    guard: cloneSkillDefinitions(library.guard),
+    mage: cloneSkillDefinitions(library.mage),
+    support: cloneSkillDefinitions(library.support),
+    assassin: cloneSkillDefinitions(library.assassin),
+  };
+}
+
+function createFallbackEnemyRoleSkillLibrary(): EnemyRoleSkillLibrary {
+  return cloneEnemyRoleSkillLibrary(FALLBACK_ENEMY_ROLE_SKILLS);
+}
+
+function isSkillTargetType(value: unknown): value is SkillTargetType {
+  return value === 'opponent' || value === 'ally' || value === 'any' || value === 'none';
+}
+
+function isSkillTargetMode(value: unknown): value is SkillTargetMode {
+  return value === 'selected' || value === 'allOpponents' || value === 'randomOpponents' || value === 'none';
+}
+
+function isSkillKind(value: unknown): value is SkillKind {
+  return value === 'physical' || value === 'magic';
+}
+
+function normalizeFiniteNumber(value: unknown): number | undefined {
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function normalizeNonNegativeInteger(value: unknown): number | undefined {
+  const numberValue = normalizeFiniteNumber(value);
+  if (numberValue === undefined) {
+    return undefined;
+  }
+  return Math.max(0, Math.trunc(numberValue));
+}
+
+function parseEnemyStatPercent(value: string): number | null {
+  if (!/^\d+$/.test(value)) {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+  return _.clamp(Math.trunc(numberValue), MIN_ENEMY_STAT_PERCENT, MAX_ENEMY_STAT_PERCENT);
+}
+
+function normalizeEnemyStatPercent(value: unknown, fallback = DEFAULT_ENEMY_STAT_PERCENT): number {
+  const numberValue = typeof value === 'number' ? value : Number(String(value).replace('%', ''));
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+  return _.clamp(Math.trunc(numberValue), MIN_ENEMY_STAT_PERCENT, MAX_ENEMY_STAT_PERCENT);
+}
+
+function createDefaultEnemyStatSettings(): EnemyStatSettings {
+  return {
+    version: ENEMY_STAT_SETTINGS_VERSION,
+    percent: DEFAULT_ENEMY_STAT_PERCENT,
+  };
+}
+
+function normalizeEnemyStatSettings(raw: unknown): EnemyStatSettings {
+  if (!raw || typeof raw !== 'object') {
+    return createDefaultEnemyStatSettings();
+  }
+
+  const record = raw as Record<string, unknown>;
+  return {
+    version:
+      typeof record.version === 'number' && Number.isFinite(record.version)
+        ? Math.trunc(record.version)
+        : ENEMY_STAT_SETTINGS_VERSION,
+    percent: normalizeEnemyStatPercent(record.percent, DEFAULT_ENEMY_STAT_PERCENT),
+  };
+}
+
+function loadEnemyStatSettings() {
+  const variables = readChatVariables();
+  enemyStatSettings.value = normalizeEnemyStatSettings(_.get(variables, ENEMY_STAT_SETTINGS_KEY));
+}
+
+function persistEnemyStatSettings() {
+  const variables = readChatVariables();
+  _.set(variables, ENEMY_STAT_SETTINGS_KEY, {
+    version: ENEMY_STAT_SETTINGS_VERSION,
+    percent: enemyStatSettings.value.percent,
+  });
+
+  void withTavernHelper('写入敌方属性倍率', false, helper => {
+    helper.replaceVariables(variables, { type: 'chat' });
+    return true;
+  });
+}
+
+function getEnemyDifficultyRemark(percent: number): string {
+  if (percent < 50) {
+    return '你诗人？';
+  }
+  if (percent < 80) {
+    return '我是懦夫';
+  }
+  if (percent < 100) {
+    return '养生打法';
+  }
+  if (percent === 100) {
+    return '';
+  }
+  if (percent <= 120) {
+    return '来点难度';
+  }
+  if (percent <= 140) {
+    return '压力！';
+  }
+  if (percent <= 150) {
+    return '群英荟萃';
+  }
+  if (percent <= 170) {
+    return '天骄尽出';
+  }
+  return '我不做人了！';
+}
+
+function normalizeSkillDefinition(raw: unknown): SkillDefinition | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const id = typeof record.id === 'string' ? record.id.trim() : '';
+  const name = typeof record.name === 'string' ? record.name.trim() : '';
+  const description = typeof record.description === 'string' ? record.description.trim() : '';
+  const targetType = isSkillTargetType(record.targetType) ? record.targetType : null;
+  const targetMode = isSkillTargetMode(record.targetMode) ? record.targetMode : null;
+  const cooldown = normalizeNonNegativeInteger(record.cooldown);
+
+  if (!id || !name || !description || !targetType || !targetMode || cooldown === undefined) {
+    return null;
+  }
+
+  const kind = isSkillKind(record.kind) ? record.kind : undefined;
+  const priorityRoles = Array.isArray(record.targetPriorityRoles)
+    ? record.targetPriorityRoles.filter((role): role is SquadMemberRole => SQUAD_ROLES.includes(role as SquadMemberRole))
+    : undefined;
+
+  return {
+    id,
+    name,
+    kind,
+    ratio: normalizeFiniteNumber(record.ratio),
+    cooldown: Math.min(cooldown, 3),
+    description,
+    targetType,
+    targetMode,
+    randomTargetCount: normalizeNonNegativeInteger(record.randomTargetCount),
+    ignoreResistRate: normalizeFiniteNumber(record.ignoreResistRate),
+    selfHealMaxHpRate: normalizeFiniteNumber(record.selfHealMaxHpRate),
+    targetHealMaxHpRate: normalizeFiniteNumber(record.targetHealMaxHpRate),
+    teamHealMaxHpRate: normalizeFiniteNumber(record.teamHealMaxHpRate),
+    teamShieldMaxHpRate: normalizeFiniteNumber(record.teamShieldMaxHpRate),
+    cooldownReduction: normalizeNonNegativeInteger(record.cooldownReduction),
+    attackBuffRate: normalizeFiniteNumber(record.attackBuffRate),
+    nextRoundTeamStatBuffRate: normalizeFiniteNumber(record.nextRoundTeamStatBuffRate),
+    selfDefenseBuffRate: normalizeFiniteNumber(record.selfDefenseBuffRate),
+    counterStance: record.counterStance === true,
+    counterIncomingDamageMultiplier: normalizeFiniteNumber(record.counterIncomingDamageMultiplier),
+    counterReflectRate: normalizeFiniteNumber(record.counterReflectRate),
+    counterNextRoundHealMaxHpRate: normalizeFiniteNumber(record.counterNextRoundHealMaxHpRate),
+    silenceNextRound: record.silenceNextRound === true,
+    selfUntargetableNextRound: record.selfUntargetableNextRound === true,
+    selfOverloadDebuff: record.selfOverloadDebuff === true,
+    targetVulnerableNextRoundRate: normalizeFiniteNumber(record.targetVulnerableNextRoundRate),
+    executeThresholdHpRate: normalizeFiniteNumber(record.executeThresholdHpRate),
+    executeRatio: normalizeFiniteNumber(record.executeRatio),
+    targetPriorityRoles: priorityRoles && priorityRoles.length > 0 ? priorityRoles : undefined,
+    selfCurrentHpCostRate: normalizeFiniteNumber(record.selfCurrentHpCostRate),
+  };
+}
+
+function normalizeEnemySkillLibraryPayload(raw: unknown): EnemyRoleSkillLibrary | null {
+  const record = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const roleSkillsRecord = record.roleSkills && typeof record.roleSkills === 'object' ? (record.roleSkills as Record<string, unknown>) : record;
+  const nextLibrary: Partial<EnemyRoleSkillLibrary> = {};
+
+  for (const role of SQUAD_ROLES) {
+    const rawSkills = roleSkillsRecord[role];
+    if (!Array.isArray(rawSkills)) {
+      return null;
+    }
+
+    const skills = rawSkills.map(normalizeSkillDefinition).filter(Boolean) as SkillDefinition[];
+    if (skills.length < ENEMY_SKILL_DRAW_COUNT) {
+      return null;
+    }
+
+    nextLibrary[role] = skills;
+  }
+
+  return cloneEnemyRoleSkillLibrary(nextLibrary as EnemyRoleSkillLibrary);
+}
+
+function readEnemySkillLibraryGlobal(): EnemyRoleSkillLibrary | null {
+  const candidates = [window, resolveHostRuntime(), window.parent, window.top].filter(Boolean) as Array<
+    Window & typeof globalThis & Record<string, unknown>
+  >;
+  const visited = new Set<Window>();
+
+  for (const candidate of candidates) {
+    if (visited.has(candidate)) {
+      continue;
+    }
+    visited.add(candidate);
+
+    try {
+      const library = normalizeEnemySkillLibraryPayload(candidate[ENEMY_SKILL_LIBRARY_GLOBAL_KEY]);
+      if (library) {
+        return library;
+      }
+    } catch {
+      // ignore cross-origin access failures
+    }
+  }
+
+  return null;
+}
+
+function getEnemySkillLibraryUrlFromVariables(): string {
+  const variables = readChatVariables();
+  const value = _.get(variables, ENEMY_SKILL_LIBRARY_URL_VARIABLE_KEY);
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function pushUniqueUrl(urls: string[], url: string) {
+  if (url && !urls.includes(url)) {
+    urls.push(url);
+  }
+}
+
+function resolveDefaultEnemySkillLibraryUrls(): string[] {
+  const urls: string[] = [];
+  try {
+    const moduleUrl = String(import.meta.url);
+    pushUniqueUrl(urls, new URL(`../${'敌方技能库'}/index.js`, moduleUrl).href);
+    pushUniqueUrl(urls, new URL(`../${'全屏覆盖式酒馆前端'}/${'敌方技能库'}/index.js`, moduleUrl).href);
+  } catch {
+    // fall back to script element discovery below
+  }
+
+  const runtime = resolveHostRuntime();
+  const candidates = [runtime?.document?.currentScript, document.currentScript].filter(Boolean) as HTMLScriptElement[];
+  for (const script of candidates) {
+    const source = script.src;
+    if (!source) {
+      continue;
+    }
+
+    try {
+      pushUniqueUrl(urls, new URL('../敌方技能库/index.js', source).href);
+      pushUniqueUrl(urls, new URL('../全屏覆盖式酒馆前端/敌方技能库/index.js', source).href);
+    } catch {
+      // ignore malformed script URLs
+    }
+  }
+  return urls;
+}
+
+function loadScriptOnce(url: string) {
+  return new Promise<void>((resolve, reject) => {
+    const hostDocument = resolveHostRuntime()?.document ?? document;
+    const existing = Array.from(hostDocument.querySelectorAll<HTMLScriptElement>('script[data-th-enemy-skill-library-url]')).find(
+      script => script.dataset.thEnemySkillLibraryUrl === url,
+    );
+    if (existing) {
+      resolve();
+      return;
+    }
+
+    const script = hostDocument.createElement('script');
+    script.type = 'module';
+    script.src = url;
+    script.dataset.thEnemySkillLibraryUrl = url;
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => reject(Error(`敌方技能库加载失败：${url}`)), { once: true });
+    hostDocument.head.append(script);
+  });
+}
+
+async function ensureEnemySkillLibraryLoaded() {
+  if (enemySkillLibraryLoadPromise) {
+    return enemySkillLibraryLoadPromise;
+  }
+
+  enemySkillLibraryLoadPromise = (async () => {
+    const loadedGlobalLibrary = readEnemySkillLibraryGlobal();
+    if (loadedGlobalLibrary) {
+      activeEnemyRoleSkills = loadedGlobalLibrary;
+      enemySkillLibrarySourceText.value = '外部已注册技能库';
+      return;
+    }
+
+    const configuredUrl = getEnemySkillLibraryUrlFromVariables();
+    const urls = configuredUrl ? [configuredUrl] : resolveDefaultEnemySkillLibraryUrls();
+    if (urls.length === 0) {
+      activeEnemyRoleSkills = createFallbackEnemyRoleSkillLibrary();
+      enemySkillLibrarySourceText.value = '内置兜底技能库';
+      return;
+    }
+
+    let lastError: unknown = null;
+    for (const url of urls) {
+      try {
+        await loadScriptOnce(url);
+        const externalLibrary = readEnemySkillLibraryGlobal();
+        if (!externalLibrary) {
+          throw Error('外部脚本没有注册有效技能库。');
+        }
+        activeEnemyRoleSkills = externalLibrary;
+        enemySkillLibrarySourceText.value = configuredUrl ? '聊天变量指定的外部技能库' : '同目录外部技能库';
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    try {
+      throw lastError ?? Error('没有可用的敌方技能库链接。');
+    } catch (error) {
+      activeEnemyRoleSkills = createFallbackEnemyRoleSkillLibrary();
+      enemySkillLibrarySourceText.value = '内置兜底技能库';
+      console.warn('[全屏覆盖式酒馆前端] 敌方技能库加载失败，已回退内置技能库。', error);
+    }
+  })();
+
+  return enemySkillLibraryLoadPromise;
+}
+
+function sampleEnemySkillsForBattle(role: SquadMemberRole) {
+  const roleSkills = activeEnemyRoleSkills[role] ?? FALLBACK_ENEMY_ROLE_SKILLS[role];
+  return _.shuffle(roleSkills).slice(0, ENEMY_SKILL_DRAW_COUNT).map(cloneSkillDefinition);
+}
+
+function createInitialFighters() {
+  const allyFighters = createAllyFightersFromRoster();
+  return [...createEnemyFighters(allyFighters), ...allyFighters];
+}
+
+function createEnemyFighters(allyFighters: BattleFighter[]) {
   const enemyRoles: SquadMemberRole[] = ['guard', 'mage', 'support', 'assassin'];
   return enemyRoles.map(role => {
-    const stats = cloneSquadStats(ENEMY_STATS[role]);
+    const stats = createEnemyStatsForRole(role, allyFighters);
+    const skills = sampleEnemySkillsForBattle(role);
     return {
       id: `enemy_${role}`,
       side: 'enemy',
@@ -1000,12 +1430,35 @@ function createEnemyFighters() {
       stats,
       currentHp: stats.hp,
       isDead: false,
-      cooldowns: createCooldownsForFighter('enemy', role, `enemy_${role}`),
+      skills,
+      cooldowns: createCooldownsForSkills(skills),
       shield: 0,
       shieldExpiresAtRoundStart: null,
       statuses: [],
     } satisfies BattleFighter;
   });
+}
+
+function createEnemyStatsForRole(role: SquadMemberRole, allyFighters: BattleFighter[]) {
+  const ally = allyFighters.find(fighter => fighter.role === role);
+  if (!ally) {
+    return cloneSquadStats(ENEMY_STATS[role]);
+  }
+
+  const multiplier = enemyStatSettings.value.percent / 100;
+  const allyStats = ally.stats;
+  return {
+    physicalAttack: scaleEnemyStat(allyStats.physicalAttack, multiplier),
+    magicAttack: scaleEnemyStat(allyStats.magicAttack, multiplier),
+    hp: scaleEnemyStat(allyStats.hp, multiplier),
+    physicalResist: allyStats.physicalResist,
+    magicResist: allyStats.magicResist,
+    speed: scaleEnemyStat(allyStats.speed, multiplier),
+  } satisfies SquadMemberStats;
+}
+
+function scaleEnemyStat(value: number, multiplier: number) {
+  return Math.max(1, Math.round(value * multiplier));
 }
 
 function createAllyFightersFromRoster() {
@@ -1019,6 +1472,7 @@ function createAllyFightersFromRoster() {
       stats,
       currentHp: stats.hp,
       isDead: false,
+      skills: getSkillDefinitionsFor('ally', member.role, member.id),
       cooldowns: createCooldownsForFighter('ally', member.role, member.id),
       shield: 0,
       shieldExpiresAtRoundStart: null,
@@ -1028,8 +1482,12 @@ function createAllyFightersFromRoster() {
 }
 
 function createCooldownsForFighter(side: FighterSide, role: SquadMemberRole, fighterId: string) {
+  return createCooldownsForSkills(getSkillDefinitionsFor(side, role, fighterId));
+}
+
+function createCooldownsForSkills(skills: SkillDefinition[]) {
   const cooldowns: Record<string, number> = {};
-  getSkillDefinitionsFor(side, role, fighterId).forEach(skill => {
+  skills.forEach(skill => {
     cooldowns[skill.id] = 0;
   });
   return cooldowns;
@@ -1043,11 +1501,11 @@ function getSkillDefinitionsFor(side: FighterSide, role: SquadMemberRole, fighte
   if (side === 'ally' && isSquadMemberId(fighterId)) {
     return ALLY_SKILLS_BY_MEMBER_ID[fighterId];
   }
-  return ENEMY_ROLE_SKILLS[role];
+  return activeEnemyRoleSkills[role] ?? FALLBACK_ENEMY_ROLE_SKILLS[role];
 }
 
 function getSkillsForFighter(fighter: BattleFighter) {
-  return getSkillDefinitionsFor(fighter.side, fighter.role, fighter.id);
+  return fighter.skills;
 }
 
 function getSkillForFighter(fighter: BattleFighter, skillId: string) {
@@ -1089,6 +1547,9 @@ function resolveStoryBattleSessionId(state: StoryBattleState): string {
 }
 
 function getIdleTurnHint() {
+  if (isTrainingMode.value) {
+    return '训练场待机中，可随时开始训练。';
+  }
   if (isCurrentStoryBattleIgnored.value) {
     return '已无视本次比赛，战斗场不会自动开启。';
   }
@@ -1299,10 +1760,14 @@ function resetBattleState() {
   pendingRoundHeals = [];
   selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
   turnHint.value = getIdleTurnHint();
-  appendLog('赛场预览已刷新。', 'info');
+  appendLog(`${isTrainingMode.value ? '训练' : '赛场'}预览已刷新。`, 'info');
 }
 
 function syncStoryBattleState() {
+  if (isTrainingMode.value) {
+    return;
+  }
+
   const sessionId = currentStoryBattleSessionId.value;
   if (isCurrentStoryBattleIgnored.value) {
     if (isRunning.value || pendingActorId.value) {
@@ -1316,7 +1781,7 @@ function syncStoryBattleState() {
     if (!sessionId || isRunning.value || lastAutoStartedStoryBattleSessionId.value === sessionId) {
       return;
     }
-    void startBattle();
+    void startBattle('story');
     return;
   }
 
@@ -1342,12 +1807,21 @@ function stopBattle(reason: string) {
   pendingRoundHeals = [];
 }
 
-async function startBattle() {
+async function startBattle(source: 'story' | 'training' = 'story') {
   const sessionId = currentStoryBattleSessionId.value;
-  if (!isStoryBattleActive(storyBattleState.value) || isCurrentStoryBattleIgnored.value || !sessionId) {
+  const isStorySource = source === 'story';
+  if (isStorySource && (!isStoryBattleActive(storyBattleState.value) || isCurrentStoryBattleIgnored.value || !sessionId)) {
     return;
   }
   if (isRunning.value) {
+    return;
+  }
+
+  await ensureEnemySkillLibraryLoaded();
+  if (isStorySource && (!isStoryBattleActive(storyBattleState.value) || isCurrentStoryBattleIgnored.value || isRunning.value)) {
+    return;
+  }
+  if (!isStorySource && isRunning.value) {
     return;
   }
 
@@ -1365,12 +1839,59 @@ async function startBattle() {
   clearBattleEffects();
   pendingRoundHeals = [];
   isRunning.value = true;
-  lastAutoStartedStoryBattleSessionId.value = sessionId;
-  turnHint.value = '比赛开始：按速度决定出手顺序。';
-  appendLog('比赛开始。', 'info');
+  if (isStorySource) {
+    lastAutoStartedStoryBattleSessionId.value = sessionId;
+  }
+  turnHint.value = `${isTrainingMode.value ? '训练' : '比赛'}开始：按速度决定出手顺序。`;
+  appendLog(`${isTrainingMode.value ? '训练' : '比赛'}开始。`, 'info');
 
   const token = battleToken.value;
   await runBattleLoop(token);
+}
+
+function startTrainingBattle() {
+  if (!isTrainingMode.value || isRunning.value) {
+    return;
+  }
+  void startBattle('training');
+}
+
+function openEnemyStatEditor() {
+  enemyStatDraft.value = String(enemyStatPercent.value);
+  enemyStatEditorOpen.value = true;
+}
+
+function closeEnemyStatEditor() {
+  enemyStatEditorOpen.value = false;
+}
+
+function appendEnemyStatDigit(digit: string) {
+  if (!/^\d$/.test(digit)) {
+    return;
+  }
+  const nextDraft = `${enemyStatDraft.value}${digit}`.replace(/^0+(?=\d)/, '').slice(0, 3);
+  enemyStatDraft.value = nextDraft || '0';
+}
+
+function deleteEnemyStatDigit() {
+  enemyStatDraft.value = enemyStatDraft.value.slice(0, -1);
+}
+
+function commitEnemyStatDraft() {
+  const percent = enemyStatDraftPercent.value;
+  if (percent === null) {
+    toastr.warning('请输入数字百分比。', '敌方属性');
+    return;
+  }
+
+  enemyStatSettings.value = {
+    version: ENEMY_STAT_SETTINGS_VERSION,
+    percent,
+  };
+  persistEnemyStatSettings();
+  closeEnemyStatEditor();
+  syncIdleBattlePreviewFromRoster();
+  appendLog(`敌方属性倍率已调整为 ${percent}%。`, 'info');
 }
 
 async function runBattleLoop(token: number) {
@@ -1532,11 +2053,11 @@ function pickEnemyAction(actor: BattleFighter, available: SkillDefinition[]) {
   const choices: EnemyActionChoice[] = [];
 
   available.forEach(skill => {
-    getSelectableTargetsForSkill(actor, skill).forEach(target => {
+    resolveEnemyTargetsForSkill(actor, skill).forEach(target => {
       choices.push({
         skill,
         target,
-        score: estimateSkillDamage(actor, target, skill),
+        score: scoreEnemySkill(actor, target, skill),
       });
     });
   });
@@ -1554,11 +2075,80 @@ function pickEnemyAction(actor: BattleFighter, available: SkillDefinition[]) {
   return choices[0];
 }
 
+function resolveEnemyTargetsForSkill(actor: BattleFighter, skill: SkillDefinition) {
+  if (!requiresManualTarget(skill)) {
+    return [actor];
+  }
+
+  if (skill.targetType === 'ally') {
+    const target = resolveUtilityTarget(actor, skill, null);
+    return target ? [target] : [];
+  }
+
+  const selectableTargets = getSelectableTargetsForSkill(actor, skill);
+  if (!skill.targetPriorityRoles || skill.targetPriorityRoles.length === 0) {
+    return selectableTargets;
+  }
+
+  const priorityTargets = selectableTargets.filter(target => skill.targetPriorityRoles?.includes(target.role));
+  return priorityTargets.length > 0 ? priorityTargets : selectableTargets;
+}
+
+function scoreEnemySkill(actor: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
+  let score = estimateSkillDamage(actor, target, skill);
+
+  if (!isDamageSkill(skill)) {
+    if (skill.teamHealMaxHpRate) {
+      score += getAliveTeam(actor.side).reduce((total, member) => {
+        const missingHp = member.stats.hp - member.currentHp;
+        return total + Math.min(missingHp, Math.round(member.stats.hp * skill.teamHealMaxHpRate!));
+      }, 0);
+    }
+
+    if (skill.targetHealMaxHpRate && target.side === actor.side) {
+      score += Math.min(target.stats.hp - target.currentHp, Math.round(target.stats.hp * skill.targetHealMaxHpRate));
+    }
+
+    if (skill.teamShieldMaxHpRate) {
+      score += getAliveTeam(actor.side).length * actor.stats.hp * skill.teamShieldMaxHpRate * 0.35;
+    }
+
+    if (skill.attackBuffRate || skill.cooldownReduction || skill.nextRoundTeamStatBuffRate) {
+      score += 55;
+    }
+
+    if (skill.counterStance || skill.selfUntargetableNextRound) {
+      score += actor.currentHp <= actor.stats.hp * 0.55 ? 70 : 28;
+    }
+  }
+
+  if (skill.silenceNextRound || skill.targetVulnerableNextRoundRate) {
+    score += target.side !== actor.side ? 42 : 0;
+  }
+
+  if (skill.targetPriorityRoles?.includes(target.role)) {
+    score += 34;
+  }
+
+  if (target.side === actor.side) {
+    const missingRate = 1 - target.currentHp / target.stats.hp;
+    score += missingRate * 90;
+  } else {
+    score += (1 - target.currentHp / target.stats.hp) * 45;
+  }
+
+  return score;
+}
+
 function estimateSkillDamage(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
-  if (!skill.kind || !skill.ratio) {
+  if (!isDamageSkill(skill) || target.side === attacker.side) {
     return 0;
   }
   return calculateDamageNumbers(attacker, target, skill).finalDamage;
+}
+
+function isDamageSkill(skill: SkillDefinition) {
+  return Boolean(skill.kind && (skill.ratio !== undefined || skill.executeRatio !== undefined));
 }
 
 async function executeSkill(actorId: string, skillId: string, targetId: string | null, token: number) {
@@ -1593,6 +2183,7 @@ async function executeSkill(actorId: string, skillId: string, targetId: string |
     }
   }
 
+  const utilityTarget = resolveUtilityTarget(attacker, skill, target);
   applyPreDamageSkillEffects(attacker, skill);
   appendLog(`${attacker.name}${target ? ` 对 ${target.name}` : ''}释放「${skill.name}」。`, 'action');
   await sleepStep(battleDelayMs, token);
@@ -1600,8 +2191,9 @@ async function executeSkill(actorId: string, skillId: string, targetId: string |
     return;
   }
 
-  applyUtilitySkillEffects(attacker, skill, target);
+  applyUtilitySkillEffects(attacker, skill, utilityTarget);
   const damageTargets = resolveDamageTargets(attacker, skill, target);
+  const statusTargets = damageTargets.length > 0 ? damageTargets : resolveStatusTargets(attacker, skill, target);
   if (isShenXixiMassSpell(attacker, skill)) {
     await runShenXixiMassSpellEffect(attacker, skill, damageTargets, token);
   } else {
@@ -1612,18 +2204,48 @@ async function executeSkill(actorId: string, skillId: string, targetId: string |
   if (!isRunning.value || token !== battleToken.value) {
     return;
   }
-  applyPostDamageSkillEffects(attacker, skill, target, damageTargets);
+  applyPostDamageSkillEffects(attacker, skill, utilityTarget, statusTargets);
 
   attacker.cooldowns[skill.id] = skill.cooldown + 1;
   await sleepStep(battleDelayMs, token);
 }
 
+function resolveUtilityTarget(attacker: BattleFighter, skill: SkillDefinition, selectedTarget: BattleFighter | null) {
+  if (selectedTarget && selectedTarget.side === attacker.side) {
+    return selectedTarget;
+  }
+
+  if (skill.targetType !== 'ally' || skill.targetMode !== 'selected') {
+    return selectedTarget;
+  }
+
+  const allies = getAliveTeam(attacker.side);
+  if (allies.length === 0) {
+    return null;
+  }
+
+  if (skill.targetHealMaxHpRate) {
+    return [...allies].sort((left, right) => left.currentHp / left.stats.hp - right.currentHp / right.stats.hp)[0];
+  }
+
+  if (skill.attackBuffRate && attacker.role === 'mage') {
+    return _.maxBy(allies, ally => getEffectiveStat(ally, 'magicAttack')) ?? allies[0];
+  }
+
+  if (skill.cooldownReduction && !skill.attackBuffRate) {
+    return _.maxBy(allies, ally => getEffectiveStat(ally, 'speed')) ?? allies[0];
+  }
+
+  return _.maxBy(allies, ally => Math.max(getEffectiveStat(ally, 'physicalAttack'), getEffectiveStat(ally, 'magicAttack'))) ?? allies[0];
+}
+
 function applyPreDamageSkillEffects(attacker: BattleFighter, skill: SkillDefinition) {
   if (skill.selfDefenseBuffRate) {
+    const label = `双抗+${formatPercent(skill.selfDefenseBuffRate)}`;
     addStatus(attacker, {
-      id: 'li_yenan_guarded_defense',
+      id: `${skill.id}_defense_buff`,
       kind: 'defense_buff',
-      label: '双抗+10%',
+      label,
       startsAtRound: currentRound.value,
       expiresAtRoundEnd: currentRound.value,
       statMultipliers: {
@@ -1631,31 +2253,39 @@ function applyPreDamageSkillEffects(attacker: BattleFighter, skill: SkillDefinit
         magicResist: 1 + skill.selfDefenseBuffRate,
       },
     });
-    appendLog(`${attacker.name} 进入守势，本回合双抗提高 10%。`, 'info');
+    appendEffectLogIfEnemy(attacker, attacker, `本回合受到「${skill.name}」影响：${label}。`);
+    appendLog(`${attacker.name} 进入守势，本回合双抗提高 ${formatPercent(skill.selfDefenseBuffRate)}。`, 'info');
   }
 
   if (skill.counterStance) {
+    const incomingMultiplier = skill.counterIncomingDamageMultiplier ?? 0.8;
+    const reflectRate = skill.counterReflectRate ?? 0.3;
+    const nextRoundHealRate = skill.counterNextRoundHealMaxHpRate ?? 0.15;
+    const label = reflectRate > 0 ? '返伤壁垒' : '防御壁垒';
     addStatus(attacker, {
-      id: 'li_yenan_counter_stance',
+      id: `${skill.id}_counter_stance`,
       kind: 'counter_stance',
-      label: '返伤壁垒',
+      label,
       startsAtRound: currentRound.value,
       expiresAtRoundEnd: currentRound.value,
-      incomingDamageMultiplier: 0.8,
-      counterReflectRate: 0.3,
+      incomingDamageMultiplier: incomingMultiplier,
+      counterReflectRate: reflectRate,
     });
-    pendingRoundHeals.push({
-      fighterId: attacker.id,
-      round: currentRound.value + 1,
-      maxHpRate: 0.15,
-      sourceName: '返伤壁垒',
-    });
-    appendLog(`${attacker.name} 架起返伤壁垒，并将在下一回合回复生命。`, 'info');
+    if (nextRoundHealRate > 0) {
+      pendingRoundHeals.push({
+        fighterId: attacker.id,
+        round: currentRound.value + 1,
+        maxHpRate: nextRoundHealRate,
+        sourceName: skill.name,
+      });
+    }
+    appendEffectLogIfEnemy(attacker, attacker, `本回合受到「${skill.name}」影响：承伤 ${formatPercent(incomingMultiplier)}。`);
+    appendLog(`${attacker.name} 架起${label}${nextRoundHealRate > 0 ? '，并将在下一回合回复生命' : ''}。`, 'info');
   }
 
   if (skill.selfOverloadDebuff) {
     addStatus(attacker, {
-      id: 'bai_zhi_overload',
+      id: `${skill.id}_overload`,
       kind: 'overload',
       label: '破限负荷',
       startsAtRound: currentRound.value,
@@ -1666,6 +2296,7 @@ function applyPreDamageSkillEffects(attacker: BattleFighter, skill: SkillDefinit
       incomingDamageMultiplier: 1.1,
       ignoreIncomingResist: true,
     });
+    appendEffectLogIfEnemy(attacker, attacker, `受到「${skill.name}」负荷影响：速度 -20%，双抗失效，受到伤害 +10%，持续到下回合结束。`);
     appendLog(`${attacker.name} 进入破限负荷，负面效果持续到下回合结束。`, 'warn');
   }
 }
@@ -1676,8 +2307,9 @@ function applyUtilitySkillEffects(attacker: BattleFighter, skill: SkillDefinitio
     team.forEach(member => {
       member.shield = Math.max(member.shield, Math.round(member.stats.hp * skill.teamShieldMaxHpRate!));
       member.shieldExpiresAtRoundStart = currentRound.value + 1;
+      appendEffectLogIfEnemy(attacker, member, `受到「${skill.name}」影响：获得 ${formatPercent(skill.teamShieldMaxHpRate!)} 最大生命护盾，下一回合开始清除。`);
     });
-    appendLog(`我方全体获得护盾，下一回合开始时清除。`, 'info');
+    appendLog(`${attacker.side === 'ally' ? '我方' : '敌方'}全体获得护盾，下一回合开始时清除。`, 'info');
   }
 
   if (skill.teamHealMaxHpRate) {
@@ -1689,9 +2321,9 @@ function applyUtilitySkillEffects(attacker: BattleFighter, skill: SkillDefinitio
   if (skill.nextRoundTeamStatBuffRate) {
     getAliveTeam(attacker.side).forEach(member => {
       addStatus(member, {
-        id: 'su_su_next_round_stat_boost',
+        id: `${skill.id}_next_round_stat_boost`,
         kind: 'team_stat_buff',
-        label: '下回合全属性+10%',
+        label: `下回合全属性+${formatPercent(skill.nextRoundTeamStatBuffRate!)}`,
         startsAtRound: currentRound.value + 1,
         expiresAtRoundStart: currentRound.value + 2,
         statMultipliers: {
@@ -1702,11 +2334,19 @@ function applyUtilitySkillEffects(attacker: BattleFighter, skill: SkillDefinitio
           speed: 1 + skill.nextRoundTeamStatBuffRate!,
         },
       });
+      appendEffectLogIfEnemy(attacker, member, `将在下回合受到「${skill.name}」影响：除生命外全属性 +${formatPercent(skill.nextRoundTeamStatBuffRate!)}。`);
     });
-    appendLog(`我方全体将在下一回合获得除生命外全属性 +10%。`, 'info');
+    appendLog(`${attacker.side === 'ally' ? '我方' : '敌方'}全体将在下一回合获得除生命外全属性 +${formatPercent(skill.nextRoundTeamStatBuffRate!)}。`, 'info');
   }
 
-  if (!target || target.side !== attacker.side) {
+  if (skill.selfCurrentHpCostRate && attacker.currentHp > 1) {
+    const cost = Math.min(attacker.currentHp - 1, Math.max(1, Math.round(attacker.currentHp * skill.selfCurrentHpCostRate)));
+    const beforeHp = attacker.currentHp;
+    attacker.currentHp -= cost;
+    appendLog(`${attacker.name} 因「${skill.name}」消耗生命 ${cost}（${beforeHp} → ${attacker.currentHp}）。`, 'warn');
+  }
+
+  if (!target || target.isDead || target.side !== attacker.side) {
     return;
   }
 
@@ -1720,10 +2360,11 @@ function applyUtilitySkillEffects(attacker: BattleFighter, skill: SkillDefinitio
   }
 
   if (skill.attackBuffRate) {
+    const label = `攻击+${formatPercent(skill.attackBuffRate)}`;
     addStatus(target, {
-      id: 'su_su_attack_boost',
+      id: `${skill.id}_attack_boost`,
       kind: 'attack_buff',
-      label: '攻击+20%',
+      label,
       startsAtRound: currentRound.value,
       expiresAtRoundStart: currentRound.value + 2,
       statMultipliers: {
@@ -1731,7 +2372,8 @@ function applyUtilitySkillEffects(attacker: BattleFighter, skill: SkillDefinitio
         magicAttack: 1 + skill.attackBuffRate,
       },
     });
-    appendLog(`${target.name} 获得 20% 攻击提升，持续到下回合结束。`, 'info');
+    appendEffectLogIfEnemy(attacker, target, `受到「${skill.name}」影响：${label}，持续到下回合结束。`);
+    appendLog(`${target.name} 获得 ${formatPercent(skill.attackBuffRate)} 攻击提升，持续到下回合结束。`, 'info');
   }
 }
 
@@ -1748,30 +2390,73 @@ function applyPostDamageSkillEffects(
   if (skill.silenceNextRound) {
     damageTargets.forEach(damageTarget => {
       addStatus(damageTarget, {
-        id: 'su_su_silenced',
+        id: `${skill.id}_silenced`,
         kind: 'silenced',
         label: '下回合沉默',
         startsAtRound: currentRound.value + 1,
         expiresAtRoundStart: currentRound.value + 2,
       });
+      appendEffectLogIfEnemy(attacker, damageTarget, `将在下回合受到「${skill.name}」影响：无法释放技能。`);
       appendLog(`${damageTarget.name} 下回合无法释放技能。`, 'info');
     });
   }
 
-  if (skill.selfUntargetableNextRound && target && target.side !== attacker.side) {
+  if (skill.targetVulnerableNextRoundRate) {
+    damageTargets.forEach(damageTarget => {
+      const label = `受伤+${formatPercent(skill.targetVulnerableNextRoundRate!)}`;
+      addStatus(damageTarget, {
+        id: `${skill.id}_vulnerable`,
+        kind: 'vulnerable',
+        label,
+        startsAtRound: currentRound.value + 1,
+        expiresAtRoundStart: currentRound.value + 2,
+        incomingDamageMultiplier: 1 + skill.targetVulnerableNextRoundRate!,
+      });
+      appendEffectLogIfEnemy(attacker, damageTarget, `将在下回合受到「${skill.name}」影响：${label}。`);
+      appendLog(`${damageTarget.name} 下回合受到伤害提高 ${formatPercent(skill.targetVulnerableNextRoundRate!)}。`, 'info');
+    });
+  }
+
+  if (skill.selfUntargetableNextRound && (!target || target.side !== attacker.side || skill.targetMode === 'none')) {
     addStatus(attacker, {
-      id: 'bai_zhi_untargetable',
+      id: `${skill.id}_untargetable`,
       kind: 'untargetable',
       label: '下回合不可选中',
       startsAtRound: currentRound.value + 1,
       expiresAtRoundStart: currentRound.value + 2,
     });
+    appendEffectLogIfEnemy(attacker, attacker, `将在下回合受到「${skill.name}」影响：不可被选中。`);
     appendLog(`${attacker.name} 将在下回合无法被敌方选中。`, 'info');
   }
 }
 
 function resolveDamageTargets(attacker: BattleFighter, skill: SkillDefinition, selectedTarget: BattleFighter | null) {
-  if (!skill.kind || !skill.ratio) {
+  if (!isDamageSkill(skill)) {
+    return [];
+  }
+
+  if (skill.targetMode === 'selected') {
+    if (!selectedTarget || selectedTarget.side === attacker.side) {
+      return [];
+    }
+    return [selectedTarget];
+  }
+
+  const opponents = fighters.value.filter(fighter => fighter.side !== attacker.side && !fighter.isDead);
+  if (skill.targetMode === 'allOpponents') {
+    return opponents;
+  }
+  if (skill.targetMode === 'randomOpponents') {
+    return _.shuffle(opponents).slice(0, skill.randomTargetCount ?? 1);
+  }
+  if (skill.targetMode === 'none') {
+    return [];
+  }
+  return [];
+}
+
+function resolveStatusTargets(attacker: BattleFighter, skill: SkillDefinition, selectedTarget: BattleFighter | null) {
+  if (!skill.silenceNextRound && !skill.targetVulnerableNextRoundRate) {
     return [];
   }
 
@@ -1793,7 +2478,7 @@ function resolveDamageTargets(attacker: BattleFighter, skill: SkillDefinition, s
 }
 
 function applySkillDamage(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
-  if (!skill.kind || !skill.ratio || target.isDead) {
+  if (!isDamageSkill(skill) || target.isDead) {
     return null;
   }
 
@@ -2001,7 +2686,7 @@ function clearBattleEffects() {
 
 function calculateDamageNumbers(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition): DamageNumbers {
   const kind = skill.kind ?? 'physical';
-  const ratio = skill.ratio ?? 0;
+  const ratio = getEffectiveSkillRatio(target, skill);
   const attackValue = kind === 'magic' ? getEffectiveStat(attacker, 'magicAttack') : getEffectiveStat(attacker, 'physicalAttack');
   const rawDamage = Math.max(1, Math.round(attackValue * ratio));
   const baseResist = kind === 'magic' ? getEffectiveStat(target, 'magicResist') : getEffectiveStat(target, 'physicalResist');
@@ -2013,6 +2698,16 @@ function calculateDamageNumbers(attacker: BattleFighter, target: BattleFighter, 
     rawDamage,
     finalDamage: Math.max(1, rawDamage - effectiveResist),
   };
+}
+
+function getEffectiveSkillRatio(target: BattleFighter, skill: SkillDefinition) {
+  if (skill.executeThresholdHpRate !== undefined && skill.executeRatio !== undefined) {
+    const targetHpRate = target.currentHp / target.stats.hp;
+    if (targetHpRate <= skill.executeThresholdHpRate) {
+      return skill.executeRatio;
+    }
+  }
+  return skill.ratio ?? 0;
 }
 
 function applyDamage(attacker: BattleFighter, target: BattleFighter, damage: DamageNumbers, allowCounter: boolean): DamageResult {
@@ -2146,6 +2841,12 @@ function canSkillTargetFighter(attacker: BattleFighter, skill: SkillDefinition, 
   if (skill.targetType === 'none') {
     return { allowed: false, reason: '该技能不需要目标。' };
   }
+  if (skill.targetType === 'any' && skill.targetHealMaxHpRate && target.side !== attacker.side && !isDamageSkill(skill)) {
+    return { allowed: false, reason: '该技能当前只能选择己方治疗目标。' };
+  }
+  if (skill.targetType === 'any' && isDamageSkill(skill) && target.side === attacker.side && !skill.targetHealMaxHpRate) {
+    return { allowed: false, reason: '该技能当前只能选择敌方伤害目标。' };
+  }
   if (attacker.side === 'enemy' && target.side === 'ally' && isUntargetableToEnemy(target)) {
     return { allowed: false, reason: `${target.name} 下回合无法被敌方选中。` };
   }
@@ -2172,7 +2873,7 @@ function getEnemyGuardBlockReason(attacker: BattleFighter, target: BattleFighter
   if (attacker.role === 'assassin') {
     return '';
   }
-  if (!skill.kind || !skill.ratio || skill.targetMode !== 'selected') {
+  if (!isDamageSkill(skill) || skill.targetMode !== 'selected') {
     return '';
   }
   if (attacker.role === 'mage') {
@@ -2267,7 +2968,7 @@ function onFighterCardClicked(fighter: BattleFighter) {
   fighterDetailOpen.value = true;
 
   if (!isRunning.value) {
-    turnHint.value = `${fighter.name}：等待剧情比赛触发，可预览技能。`;
+    turnHint.value = `${fighter.name}：${isTrainingMode.value ? '训练开始前' : '等待剧情比赛触发'}，可预览技能。`;
     return;
   }
 
@@ -2291,8 +2992,11 @@ function onSkillClicked(skillId: string) {
   }
 
   if (!isRunning.value) {
-    turnHint.value = `${selectedAlly.value.name}：当前是技能预览，剧情比赛触发后才能释放技能。`;
-    toastr.info('当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。', '战斗场');
+    const previewText = isTrainingMode.value
+      ? '当前是训练预览：开始训练后，轮到该角色行动时才能释放技能。'
+      : '当前是预览状态：剧情比赛触发后，轮到该角色行动时才能释放技能。';
+    turnHint.value = `${selectedAlly.value.name}：${previewText}`;
+    toastr.info(previewText, isTrainingMode.value ? '训练场' : '战斗场');
     return;
   }
   if (pendingActorId.value !== selectedAlly.value.id) {
@@ -2395,6 +3099,17 @@ function appendLog(text: string, kind: BattleLogKind) {
   }
 }
 
+function appendEffectLogIfEnemy(source: BattleFighter, affected: BattleFighter, text: string) {
+  if (source.side !== 'enemy') {
+    return;
+  }
+  appendLog(`${affected.name}${text}`, 'warn');
+}
+
+function formatPercent(rate: number) {
+  return `${Math.round(rate * 100)}%`;
+}
+
 function sleepStep(ms: number, token: number) {
   return new Promise<void>(resolve => {
     window.setTimeout(() => {
@@ -2431,13 +3146,27 @@ watch(
   },
 );
 
+watch(
+  enemyStatPercent,
+  () => {
+    syncIdleBattlePreviewFromRoster();
+  },
+);
+
 onMounted(() => {
   ensureBattleRosterLoaded();
+  loadEnemyStatSettings();
+  void ensureEnemySkillLibraryLoaded().then(() => {
+    syncIdleBattlePreviewFromRoster();
+    syncStoryBattleState();
+  });
   syncIdleBattlePreviewFromRoster();
   scheduleMagicCircleAnchorUpdate();
   window.addEventListener('resize', scheduleMagicCircleAnchorUpdate, { passive: true });
-  refreshStoryBattleState();
-  storyBattlePollTimer = window.setInterval(refreshStoryBattleState, 1_000);
+  if (!isTrainingMode.value) {
+    refreshStoryBattleState();
+    storyBattlePollTimer = window.setInterval(refreshStoryBattleState, 1_000);
+  }
 });
 
 onBeforeUnmount(() => {
@@ -2491,6 +3220,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .toolbar-btn {
@@ -2505,6 +3236,17 @@ onBeforeUnmount(() => {
 .toolbar-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.difficulty-badge {
+  border: 1px solid var(--line-color);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--btn-fg);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 .battle-stage {
@@ -3292,10 +4034,32 @@ onBeforeUnmount(() => {
   place-items: center;
 }
 
+.enemy-percent-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 22;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.48);
+  display: grid;
+  place-items: center;
+}
+
 .fighter-modal {
   width: min(780px, 100%);
   max-height: min(86dvh, 760px);
   overflow: auto;
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--text-color);
+  background: var(--panel-bg);
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
+  display: grid;
+  gap: 12px;
+}
+
+.enemy-percent-modal {
+  width: min(340px, 100%);
   border: 1px solid var(--line-color);
   border-radius: 14px;
   padding: 14px;
@@ -3313,9 +4077,21 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.enemy-percent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .fighter-modal-head h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.enemy-percent-head h3 {
+  margin: 0;
+  font-size: 17px;
 }
 
 .modal-close-btn {
@@ -3325,6 +4101,55 @@ onBeforeUnmount(() => {
   color: var(--btn-fg);
   background: var(--btn-bg);
   cursor: pointer;
+}
+
+.enemy-percent-remark {
+  min-height: 22px;
+  margin: 0;
+  color: #ffd780;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.enemy-percent-input {
+  width: 100%;
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text-color);
+  background: var(--input-bg);
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+}
+
+.enemy-percent-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.keypad-btn {
+  min-height: 44px;
+  border: 1px solid var(--line-color);
+  border-radius: 10px;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.keypad-btn.delete {
+  grid-column: span 2;
+}
+
+.enemy-percent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .modal-stat-grid {

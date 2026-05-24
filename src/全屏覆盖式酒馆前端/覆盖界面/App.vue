@@ -263,14 +263,11 @@
         </section>
 
         <section v-else-if="activePage === 'battle'" class="page-view simple-view battle-view">
-          <BattleArena :ignored-story-battle-session-id="ignoredStoryBattleSessionId" />
+          <BattleArena mode="story" :ignored-story-battle-session-id="ignoredStoryBattleSessionId" />
         </section>
 
-        <section v-else-if="activePage === 'training'" class="page-view simple-view">
-          <article class="placeholder-card">
-            <h2>训练场</h2>
-            <p>已预留页面结构。后续可以在这里接入训练项目、属性成长、训练结算等功能。</p>
-          </article>
+        <section v-else-if="activePage === 'training'" class="page-view simple-view battle-view">
+          <BattleArena mode="training" />
         </section>
 
         <section v-else class="page-view settings-view">
