@@ -13,6 +13,8 @@
         <button type="button" class="toolbar-btn" :disabled="isRunning" @click="openEnemyStatEditor">
           敌方属性 {{ enemyStatPercent }}%
         </button>
+        <button type="button" class="toolbar-btn" @click="openEnemySkillLibrary">敌方技能库</button>
+        <button type="button" class="toolbar-btn" @click="openBattleLogPanel">战斗日志 {{ battleLogs.length }}</button>
         <span v-if="enemyDifficultyRemark" class="difficulty-badge">{{ enemyDifficultyRemark }}</span>
         <button type="button" class="toolbar-btn" :disabled="isRunning" @click="resetBattleState">刷新预览</button>
       </div>
@@ -147,76 +149,66 @@
 
     <p class="battle-help">{{ rosterSyncHint }} 点击我方人物查看属性和技能。</p>
 
-    <section
-      v-if="fighterDetailOpen && selectedAlly"
-      class="fighter-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="fighter-modal-title"
-      @click.self="closeFighterDetail"
-    >
-      <article class="fighter-modal">
-        <header class="fighter-modal-head">
-          <div>
-            <h3 id="fighter-modal-title">{{ selectedAlly.name }}</h3>
-            <p class="attr-line">
-              {{ roleLabel(selectedAlly.role) }} · 生命 {{ selectedAlly.currentHp }}/{{ selectedAlly.stats.hp }}
-              <span v-if="selectedAlly.shield > 0"> · 护盾 {{ selectedAlly.shield }}</span>
-            </p>
-          </div>
-          <button type="button" class="modal-close-btn" @click="closeFighterDetail">关闭</button>
-        </header>
+    <section v-if="selectedAlly" class="skill-dock" aria-label="技能选择">
+      <header class="skill-dock-head">
+        <div>
+          <h3>{{ selectedAlly.name }}</h3>
+          <p class="attr-line">
+            {{ roleLabel(selectedAlly.role) }} · 生命 {{ selectedAlly.currentHp }}/{{ selectedAlly.stats.hp }}
+            <span v-if="selectedAlly.shield > 0"> · 护盾 {{ selectedAlly.shield }}</span>
+          </p>
+        </div>
 
-        <div class="modal-stat-grid">
+        <div class="modal-stat-grid compact">
           <p>物攻 {{ getEffectiveStat(selectedAlly, 'physicalAttack') }}</p>
           <p>法攻 {{ getEffectiveStat(selectedAlly, 'magicAttack') }}</p>
           <p>物抗 {{ getEffectiveStat(selectedAlly, 'physicalResist') }}</p>
           <p>法抗 {{ getEffectiveStat(selectedAlly, 'magicResist') }}</p>
           <p>速度 {{ getEffectiveStat(selectedAlly, 'speed') }}</p>
         </div>
+      </header>
 
-        <div v-if="getStatusLabels(selectedAlly).length > 0" class="status-strip">
-          <span v-for="label in getStatusLabels(selectedAlly)" :key="label">{{ label }}</span>
-        </div>
+      <div v-if="getStatusLabels(selectedAlly).length > 0" class="status-strip">
+        <span v-for="label in getStatusLabels(selectedAlly)" :key="label">{{ label }}</span>
+      </div>
 
-        <div class="skill-grid">
+      <div class="skill-grid">
+        <button
+          v-for="skill in selectedAllySkills"
+          :key="skill.id"
+          type="button"
+          class="skill-card"
+          :class="{ selected: selectedSkillId === skill.id, cooling: getSkillCooldown(selectedAlly, skill.id) > 0 }"
+          @click="onSkillClicked(skill.id)"
+        >
+          <p class="skill-name">{{ skill.name }}</p>
+          <p class="skill-desc">{{ skill.description }}</p>
+          <p class="skill-state">
+            冷却：{{ getDisplayedSkillCooldown(selectedAlly, skill.id) }} 回合
+            <span v-if="getSkillCooldown(selectedAlly, skill.id) > 0">（不可释放）</span>
+          </p>
+        </button>
+      </div>
+
+      <p v-if="selectedSkillActionHint" class="skill-action-hint">{{ selectedSkillActionHint }}</p>
+
+      <div v-if="selectedSkill && requiresManualTarget(selectedSkill)" class="target-zone">
+        <p class="target-title">{{ targetZoneTitle }}</p>
+        <div class="target-grid">
           <button
-            v-for="skill in selectedAllySkills"
-            :key="skill.id"
+            v-for="target in visibleManualTargets"
+            :key="target.id"
             type="button"
-            class="skill-card"
-            :class="{ selected: selectedSkillId === skill.id, cooling: getSkillCooldown(selectedAlly, skill.id) > 0 }"
-            @click="onSkillClicked(skill.id)"
+            class="target-btn"
+            :disabled="!canSelectFighterAsManualTarget(target)"
+            :title="getManualTargetHint(target)"
+            @click="onManualTargetChosen(target.id)"
           >
-            <p class="skill-name">{{ skill.name }}</p>
-            <p class="skill-desc">{{ skill.description }}</p>
-            <p class="skill-state">
-              冷却：{{ getDisplayedSkillCooldown(selectedAlly, skill.id) }} 回合
-              <span v-if="getSkillCooldown(selectedAlly, skill.id) > 0">（不可释放）</span>
-            </p>
+            {{ target.name }} · {{ target.currentHp }}/{{ target.stats.hp }}
+            <span v-if="target.shield > 0"> · 护盾 {{ target.shield }}</span>
           </button>
         </div>
-
-        <p v-if="selectedSkillActionHint" class="skill-action-hint">{{ selectedSkillActionHint }}</p>
-
-        <div v-if="selectedSkill && requiresManualTarget(selectedSkill)" class="target-zone">
-          <p class="target-title">{{ targetZoneTitle }}</p>
-          <div class="target-grid">
-            <button
-              v-for="target in visibleManualTargets"
-              :key="target.id"
-              type="button"
-              class="target-btn"
-              :disabled="!canSelectFighterAsManualTarget(target)"
-              :title="getManualTargetHint(target)"
-              @click="onManualTargetChosen(target.id)"
-            >
-              {{ target.name }} · {{ target.currentHp }}/{{ target.stats.hp }}
-              <span v-if="target.shield > 0"> · 护盾 {{ target.shield }}</span>
-            </button>
-          </div>
-        </div>
-      </article>
+      </div>
     </section>
 
     <section
@@ -250,13 +242,61 @@
       </article>
     </section>
 
-    <section class="log-panel">
-      <p class="log-title">战斗日志</p>
-      <div class="log-list">
-        <p v-for="entry in battleLogs" :key="entry.id" class="log-item" :class="`log-${entry.kind}`">
-          {{ entry.text }}
-        </p>
-      </div>
+    <section
+      v-if="enemySkillLibraryOpen"
+      class="battle-drawer-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="enemy-skill-library-title"
+      @click.self="closeEnemySkillLibrary"
+    >
+      <article class="battle-drawer library-drawer">
+        <header class="drawer-head">
+          <div>
+            <h3 id="enemy-skill-library-title">敌方技能库</h3>
+            <p class="attr-line">{{ enemySkillLibrarySourceText }}</p>
+          </div>
+          <button type="button" class="modal-close-btn" @click="closeEnemySkillLibrary">关闭</button>
+        </header>
+
+        <div class="enemy-library-grid">
+          <section v-for="group in enemySkillLibraryRoleGroups" :key="group.role" class="enemy-library-group">
+            <h4>{{ group.label }}</h4>
+            <article v-for="skill in group.skills" :key="skill.id" class="enemy-library-skill">
+              <div class="enemy-library-skill-head">
+                <strong>{{ skill.name }}</strong>
+                <span>冷却 {{ skill.cooldown }}</span>
+              </div>
+              <p>{{ skill.description }}</p>
+              <p class="enemy-library-meta">
+                {{ skillKindLabel(skill) }} · {{ skillTargetTypeLabel(skill.targetType) }} · {{ skillTargetModeLabel(skill.targetMode) }}
+              </p>
+            </article>
+          </section>
+        </div>
+      </article>
+    </section>
+
+    <section
+      v-if="battleLogPanelOpen"
+      class="battle-drawer-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="battle-log-title"
+      @click.self="closeBattleLogPanel"
+    >
+      <article class="battle-drawer log-panel">
+        <header class="drawer-head">
+          <h3 id="battle-log-title">战斗日志</h3>
+          <button type="button" class="modal-close-btn" @click="closeBattleLogPanel">关闭</button>
+        </header>
+        <div class="log-list">
+          <p v-for="entry in battleLogs" :key="entry.id" class="log-item" :class="`log-${entry.kind}`">
+            {{ entry.text }}
+          </p>
+          <p v-if="battleLogs.length === 0" class="log-empty">暂无战斗日志。</p>
+        </div>
+      </article>
     </section>
   </section>
 </template>
@@ -305,6 +345,7 @@ const props = withDefaults(
 type FormationSlot = 'top' | 'left' | 'right' | 'bottom';
 type BattleLogKind = 'info' | 'turn' | 'action' | 'result' | 'warn';
 type BattleEffectTone = 'arcane' | 'crimson';
+type SpellCircleTone = 'cyan' | 'reference-red';
 type EnemyStatSettings = {
   version: number;
   percent: number;
@@ -405,6 +446,7 @@ type BeamBattleEffect = {
 type SpellCircleBattleEffect = {
   id: string;
   kind: 'spellCircle';
+  tone: SpellCircleTone;
   targetId: string;
   damage: number | null;
   position: BattleEffectPosition;
@@ -850,16 +892,16 @@ const FALLBACK_ENEMY_ROLE_SKILLS: EnemyRoleSkillLibrary = {
 
 const ENEMY_POSITION: Record<SquadMemberRole, FormationSlot> = {
   mage: 'top',
-  support: 'left',
-  assassin: 'right',
-  guard: 'bottom',
+  assassin: 'left',
+  guard: 'right',
+  support: 'bottom',
 };
 
 const ALLY_POSITION: Record<SquadMemberRole, FormationSlot> = {
-  guard: 'top',
-  assassin: 'left',
-  support: 'right',
-  mage: 'bottom',
+  mage: 'top',
+  guard: 'left',
+  assassin: 'right',
+  support: 'bottom',
 };
 
 const spellCircleGlyphs = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ', 'ν', 'ξ', 'ο', 'π', 'ρ', 'σ', 'τ', 'υ', 'φ', 'χ', 'ψ', 'ω'];
@@ -883,6 +925,7 @@ let activeEnemyRoleSkills: EnemyRoleSkillLibrary = cloneEnemyRoleSkillLibrary(FA
 let enemySkillLibraryLoadPromise: Promise<void> | null = null;
 
 const enemySkillLibrarySourceText = ref('内置兜底技能库');
+const enemySkillLibraryRevision = ref(0);
 const enemyStatSettings = ref<EnemyStatSettings>(createDefaultEnemyStatSettings());
 const enemyStatEditorOpen = ref(false);
 const enemyStatDraft = ref(String(DEFAULT_ENEMY_STAT_PERCENT));
@@ -899,7 +942,8 @@ const turnHint = ref('等待剧情中的比赛开始。');
 const roundQueueText = ref('');
 const battleToken = ref(0);
 const lastAutoStartedStoryBattleSessionId = ref('');
-const fighterDetailOpen = ref(false);
+const enemySkillLibraryOpen = ref(false);
+const battleLogPanelOpen = ref(false);
 const battleEffects = ref<BattleEffect[]>([]);
 const battleStageRef = ref<HTMLElement | null>(null);
 const shenXixiMagicCircleAnchor = ref<MagicCircleAnchor | null>(null);
@@ -935,6 +979,16 @@ const selectedSkill = computed(() => {
   }
   return getSkillForFighter(selectedAlly.value, selectedSkillId.value);
 });
+const enemySkillLibraryRoleGroups = computed(() =>
+  {
+    enemySkillLibraryRevision.value;
+    return SQUAD_ROLES.map(role => ({
+      role,
+      label: roleLabel(role),
+      skills: activeEnemyRoleSkills[role] ?? [],
+    }));
+  },
+);
 const allyTotalHp = computed(() =>
   fighters.value.filter(fighter => fighter.side === 'ally').reduce((total, fighter) => total + fighter.currentHp, 0),
 );
@@ -1366,7 +1420,7 @@ async function ensureEnemySkillLibraryLoaded() {
   enemySkillLibraryLoadPromise = (async () => {
     const loadedGlobalLibrary = readEnemySkillLibraryGlobal();
     if (loadedGlobalLibrary) {
-      activeEnemyRoleSkills = loadedGlobalLibrary;
+      setActiveEnemyRoleSkills(loadedGlobalLibrary);
       enemySkillLibrarySourceText.value = '外部已注册技能库';
       return;
     }
@@ -1374,7 +1428,7 @@ async function ensureEnemySkillLibraryLoaded() {
     const configuredUrl = getEnemySkillLibraryUrlFromVariables();
     const urls = configuredUrl ? [configuredUrl] : resolveDefaultEnemySkillLibraryUrls();
     if (urls.length === 0) {
-      activeEnemyRoleSkills = createFallbackEnemyRoleSkillLibrary();
+      setActiveEnemyRoleSkills(createFallbackEnemyRoleSkillLibrary());
       enemySkillLibrarySourceText.value = '内置兜底技能库';
       return;
     }
@@ -1387,7 +1441,7 @@ async function ensureEnemySkillLibraryLoaded() {
         if (!externalLibrary) {
           throw Error('外部脚本没有注册有效技能库。');
         }
-        activeEnemyRoleSkills = externalLibrary;
+        setActiveEnemyRoleSkills(externalLibrary);
         enemySkillLibrarySourceText.value = configuredUrl ? '聊天变量指定的外部技能库' : '同目录外部技能库';
         return;
       } catch (error) {
@@ -1398,13 +1452,18 @@ async function ensureEnemySkillLibraryLoaded() {
     try {
       throw lastError ?? Error('没有可用的敌方技能库链接。');
     } catch (error) {
-      activeEnemyRoleSkills = createFallbackEnemyRoleSkillLibrary();
+      setActiveEnemyRoleSkills(createFallbackEnemyRoleSkillLibrary());
       enemySkillLibrarySourceText.value = '内置兜底技能库';
       console.warn('[全屏覆盖式酒馆前端] 敌方技能库加载失败，已回退内置技能库。', error);
     }
   })();
 
   return enemySkillLibraryLoadPromise;
+}
+
+function setActiveEnemyRoleSkills(library: EnemyRoleSkillLibrary) {
+  activeEnemyRoleSkills = library;
+  enemySkillLibraryRevision.value += 1;
 }
 
 function sampleEnemySkillsForBattle(role: SquadMemberRole) {
@@ -1537,6 +1596,39 @@ function formationOrder(slot: FormationSlot) {
 
 function roleLabel(role: SquadMemberRole) {
   return getRoleLabel(role);
+}
+
+function skillKindLabel(skill: SkillDefinition) {
+  if (!skill.kind) {
+    return '功能';
+  }
+  return skill.kind === 'magic' ? '法术' : '物理';
+}
+
+function skillTargetTypeLabel(targetType: SkillTargetType) {
+  if (targetType === 'opponent') {
+    return '敌方';
+  }
+  if (targetType === 'ally') {
+    return '己方';
+  }
+  if (targetType === 'any') {
+    return '任意';
+  }
+  return '无目标';
+}
+
+function skillTargetModeLabel(targetMode: SkillTargetMode) {
+  if (targetMode === 'selected') {
+    return '单体';
+  }
+  if (targetMode === 'allOpponents') {
+    return '全体敌方';
+  }
+  if (targetMode === 'randomOpponents') {
+    return '随机敌方';
+  }
+  return '无需选择';
 }
 
 function resolveStoryBattleSessionId(state: StoryBattleState): string {
@@ -1754,7 +1846,6 @@ function resetBattleState() {
   winnerText.value = '';
   selectedSkillId.value = null;
   pendingActorId.value = null;
-  fighterDetailOpen.value = false;
   roundQueueText.value = '';
   clearBattleEffects();
   pendingRoundHeals = [];
@@ -1831,7 +1922,6 @@ async function startBattle(source: 'story' | 'training' = 'story') {
   selectedAllyId.value = fighters.value.find(fighter => fighter.side === 'ally')?.id ?? null;
   selectedSkillId.value = null;
   pendingActorId.value = null;
-  fighterDetailOpen.value = false;
   currentRound.value = 1;
   winnerText.value = '';
   roundQueueText.value = '';
@@ -1863,6 +1953,23 @@ function openEnemyStatEditor() {
 
 function closeEnemyStatEditor() {
   enemyStatEditorOpen.value = false;
+}
+
+function openEnemySkillLibrary() {
+  void ensureEnemySkillLibraryLoaded();
+  enemySkillLibraryOpen.value = true;
+}
+
+function closeEnemySkillLibrary() {
+  enemySkillLibraryOpen.value = false;
+}
+
+function openBattleLogPanel() {
+  battleLogPanelOpen.value = true;
+}
+
+function closeBattleLogPanel() {
+  battleLogPanelOpen.value = false;
 }
 
 function appendEnemyStatDigit(digit: string) {
@@ -2007,7 +2114,6 @@ async function handleAllyTurn(actor: BattleFighter, token: number) {
   selectedAllyId.value = actor.id;
   selectedSkillId.value = null;
   pendingActorId.value = actor.id;
-  fighterDetailOpen.value = true;
   turnHint.value = `轮到 ${actor.name}：请选择技能。`;
   appendLog(`轮到 ${actor.name} 行动。`, 'turn');
 
@@ -2077,7 +2183,11 @@ function pickEnemyAction(actor: BattleFighter, available: SkillDefinition[]) {
 
 function resolveEnemyTargetsForSkill(actor: BattleFighter, skill: SkillDefinition) {
   if (!requiresManualTarget(skill)) {
-    return [actor];
+    if (!isDamageSkill(skill)) {
+      return [actor];
+    }
+    const targets = getReachableDamageOpponents(actor, skill);
+    return targets.length > 0 ? targets : [];
   }
 
   if (skill.targetType === 'ally') {
@@ -2436,13 +2546,13 @@ function resolveDamageTargets(attacker: BattleFighter, skill: SkillDefinition, s
   }
 
   if (skill.targetMode === 'selected') {
-    if (!selectedTarget || selectedTarget.side === attacker.side) {
+    if (!selectedTarget || selectedTarget.side === attacker.side || getGuardBlockReason(attacker, selectedTarget, skill)) {
       return [];
     }
     return [selectedTarget];
   }
 
-  const opponents = fighters.value.filter(fighter => fighter.side !== attacker.side && !fighter.isDead);
+  const opponents = getReachableDamageOpponents(attacker, skill);
   if (skill.targetMode === 'allOpponents') {
     return opponents;
   }
@@ -2461,13 +2571,13 @@ function resolveStatusTargets(attacker: BattleFighter, skill: SkillDefinition, s
   }
 
   if (skill.targetMode === 'selected') {
-    if (!selectedTarget || selectedTarget.side === attacker.side) {
+    if (!selectedTarget || selectedTarget.side === attacker.side || getGuardBlockReason(attacker, selectedTarget, skill)) {
       return [];
     }
     return [selectedTarget];
   }
 
-  const opponents = fighters.value.filter(fighter => fighter.side !== attacker.side && !fighter.isDead);
+  const opponents = getReachableDamageOpponents(attacker, skill);
   if (skill.targetMode === 'allOpponents') {
     return opponents;
   }
@@ -2475,6 +2585,12 @@ function resolveStatusTargets(attacker: BattleFighter, skill: SkillDefinition, s
     return _.shuffle(opponents).slice(0, skill.randomTargetCount ?? 1);
   }
   return [];
+}
+
+function getReachableDamageOpponents(attacker: BattleFighter, skill: SkillDefinition) {
+  return fighters.value.filter(
+    fighter => fighter.side !== attacker.side && !fighter.isDead && !getGuardBlockReason(attacker, fighter, skill),
+  );
 }
 
 function applySkillDamage(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
@@ -2506,7 +2622,7 @@ async function runShenXixiMassSpellEffect(attacker: BattleFighter, skill: SkillD
     return;
   }
 
-  const spellEffects = triggerShenXixiMassSpellCircleEffects(activeTargets);
+  const spellEffects = triggerShenXixiMassSpellCircleEffects(activeTargets, resolveShenXixiMassSpellTone(skill));
   appendLog(`魔法阵笼罩 ${activeTargets.map(damageTarget => damageTarget.name).join('、')}，群星术式正在展开。`, 'action');
   await sleepStep(shenXixiMassSpellDamageDelayMs, token);
   if (!isRunning.value || token !== battleToken.value) {
@@ -2562,7 +2678,11 @@ function triggerSkillDamageEffect(attacker: BattleFighter, skill: SkillDefinitio
   }, 980);
 }
 
-function triggerShenXixiMassSpellCircleEffects(targets: BattleFighter[]) {
+function resolveShenXixiMassSpellTone(skill: SkillDefinition): SpellCircleTone {
+  return skill.id === 'shen_xixi_twin_stars' ? 'reference-red' : 'cyan';
+}
+
+function triggerShenXixiMassSpellCircleEffects(targets: BattleFighter[], tone: SpellCircleTone) {
   const stageElement = battleStageRef.value;
   if (!stageElement) {
     return [] as SpellCircleBattleEffect[];
@@ -2583,6 +2703,7 @@ function triggerShenXixiMassSpellCircleEffects(targets: BattleFighter[]) {
       return {
         id: `${Date.now().toString(36)}_${target.id}_${Math.random().toString(36).slice(2, 7)}`,
         kind: 'spellCircle',
+        tone,
         targetId: target.id,
         damage: null,
         position,
@@ -2634,7 +2755,7 @@ function getBattleEffectClass(effect: BattleEffect) {
   if (effect.kind === 'beam') {
     return ['skill-beam-effect', `tone-${effect.tone}`];
   }
-  return ['twin-stars-effect'];
+  return ['twin-stars-effect', `tone-${effect.tone}`];
 }
 
 function getBattleEffectStyle(effect: BattleEffect): Record<string, string> | undefined {
@@ -2851,7 +2972,7 @@ function canSkillTargetFighter(attacker: BattleFighter, skill: SkillDefinition, 
     return { allowed: false, reason: `${target.name} 下回合无法被敌方选中。` };
   }
 
-  const guardBlockReason = getEnemyGuardBlockReason(attacker, target, skill);
+  const guardBlockReason = getGuardBlockReason(attacker, target, skill);
   if (guardBlockReason) {
     return { allowed: false, reason: guardBlockReason };
   }
@@ -2863,26 +2984,39 @@ function isUntargetableToEnemy(target: BattleFighter) {
   return getActiveStatuses(target).some(status => status.kind === 'untargetable');
 }
 
-function getEnemyGuardBlockReason(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
-  if (attacker.side !== 'ally' || target.side !== 'enemy' || target.role === 'guard') {
+function getGuardBlockReason(attacker: BattleFighter, target: BattleFighter, skill: SkillDefinition) {
+  if (target.side === attacker.side || target.role === 'guard') {
     return '';
   }
-  if (!fighters.value.some(fighter => fighter.side === 'enemy' && fighter.role === 'guard' && !fighter.isDead)) {
+  if (!fighters.value.some(fighter => fighter.side === target.side && fighter.role === 'guard' && !fighter.isDead)) {
     return '';
+  }
+  if (!isDamageSkill(skill)) {
+    return '';
+  }
+  if (currentRound.value > 1) {
+    return attacker.role === 'guard' ? `${sideLabel(target.side)}战士仍存活，战士只能攻击对方战士。` : '';
   }
   if (attacker.role === 'assassin') {
     return '';
   }
-  if (!isDamageSkill(skill) || skill.targetMode !== 'selected') {
+  if (attacker.role === 'mage' && skill.targetMode !== 'selected') {
     return '';
   }
+  if (skill.targetMode !== 'selected') {
+    return `${sideLabel(target.side)}战士仍存活，非刺客和非法师群攻无法攻击后排。`;
+  }
   if (attacker.role === 'mage') {
-    return '敌方战士仍存活，法师单体技能无法攻击后排。';
+    return `${sideLabel(target.side)}战士仍存活，法师单体技能无法攻击后排。`;
   }
   if (attacker.role === 'guard' || attacker.role === 'support') {
-    return '敌方战士仍存活，战士和辅助无法攻击后排。';
+    return `${sideLabel(target.side)}战士仍存活，战士和辅助无法攻击后排。`;
   }
   return '';
+}
+
+function sideLabel(side: FighterSide) {
+  return side === 'ally' ? '我方' : '敌方';
 }
 
 function canSelectFighterAsManualTarget(target: BattleFighter) {
@@ -2951,7 +3085,6 @@ function onFighterCardClicked(fighter: BattleFighter) {
     }
 
     if (fighter.id === pendingActorId.value && fighter.side === 'ally') {
-      fighterDetailOpen.value = true;
       turnHint.value = `${fighter.name}：可以重新选择技能，或继续点击合法目标释放。`;
       return;
     }
@@ -2965,7 +3098,6 @@ function onFighterCardClicked(fighter: BattleFighter) {
   }
 
   selectedAllyId.value = fighter.id;
-  fighterDetailOpen.value = true;
 
   if (!isRunning.value) {
     turnHint.value = `${fighter.name}：${isTrainingMode.value ? '训练开始前' : '等待剧情比赛触发'}，可预览技能。`;
@@ -3026,7 +3158,6 @@ function onSkillClicked(skillId: string) {
     return;
   }
 
-  fighterDetailOpen.value = false;
   turnHint.value = '已选择技能，请点击合法目标释放。';
 }
 
@@ -3062,10 +3193,6 @@ function onManualTargetChosen(targetId: string) {
   });
 }
 
-function closeFighterDetail() {
-  fighterDetailOpen.value = false;
-}
-
 function waitForManualAction(actorId: string) {
   return new Promise<ManualAction | null>(resolve => {
     resolvePendingManualAction(null);
@@ -3079,9 +3206,6 @@ function resolvePendingManualAction(action: ManualAction | null) {
   pendingManualResolver = null;
   if (resolver) {
     resolver(action);
-  }
-  if (action) {
-    fighterDetailOpen.value = false;
   }
   if (action || pendingActorId.value) {
     pendingActorId.value = null;
@@ -3188,15 +3312,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .battle-shell {
-  min-height: 0;
+  min-height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto minmax(112px, 0.28fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 10px;
 }
 
 .battle-toolbar,
 .battle-stage,
-.log-panel {
+.skill-dock {
   border: 1px solid var(--line-color);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.08);
@@ -3253,7 +3377,7 @@ onBeforeUnmount(() => {
   position: relative;
   padding: 12px;
   display: grid;
-  grid-template-columns: minmax(270px, 1fr) minmax(210px, 0.62fr) minmax(270px, 1fr);
+  grid-template-columns: minmax(270px, 1fr) minmax(190px, 0.48fr) minmax(270px, 1fr);
   align-items: center;
   justify-items: center;
   gap: 12px;
@@ -3267,7 +3391,7 @@ onBeforeUnmount(() => {
   max-width: 430px;
   display: grid;
   grid-template-columns: repeat(3, minmax(74px, 1fr));
-  grid-template-rows: repeat(3, minmax(88px, 1fr));
+  grid-template-rows: repeat(3, minmax(78px, 1fr));
   gap: 8px;
   align-items: center;
   justify-items: center;
@@ -3405,10 +3529,16 @@ onBeforeUnmount(() => {
 }
 
 .twin-stars-effect {
-  --spell-cyan: #08fcec;
-  --spell-cyan-soft: rgba(8, 252, 236, 0.36);
-  --spell-cyan-faint: rgba(8, 252, 236, 0.14);
+  --spell-primary: #08fcec;
+  --spell-primary-soft: rgba(8, 252, 236, 0.36);
+  --spell-primary-faint: rgba(8, 252, 236, 0.14);
   --spell-shadow: rgba(8, 252, 236, 0.84);
+  --spell-contrast: rgba(70, 180, 255, 0.58);
+  --spell-core-glow: rgba(8, 252, 236, 0.56);
+  --spell-impact-glow: rgba(8, 252, 236, 0.7);
+  --spell-inner-fill: rgba(4, 12, 24, 0.92);
+  --spell-inner-bg: rgba(2, 8, 18, 0.7);
+  --spell-damage-shadow: #215c64;
   position: absolute;
   z-index: 4;
   pointer-events: none;
@@ -3416,13 +3546,26 @@ onBeforeUnmount(() => {
   transform-origin: center;
   mix-blend-mode: screen;
   perspective: 760px;
-  filter: drop-shadow(0 0 10px var(--spell-shadow)) drop-shadow(0 0 26px rgba(70, 180, 255, 0.58));
+  filter: drop-shadow(0 0 10px var(--spell-shadow)) drop-shadow(0 0 26px var(--spell-contrast));
+}
+
+.twin-stars-effect.tone-reference-red {
+  --spell-primary: #f44336;
+  --spell-primary-soft: rgba(244, 67, 54, 0.36);
+  --spell-primary-faint: rgba(244, 67, 54, 0.14);
+  --spell-shadow: rgba(244, 67, 54, 0.88);
+  --spell-contrast: rgba(244, 67, 54, 0.62);
+  --spell-core-glow: rgba(244, 67, 54, 0.58);
+  --spell-impact-glow: rgba(244, 67, 54, 0.72);
+  --spell-inner-fill: rgba(34, 6, 6, 0.9);
+  --spell-inner-bg: rgba(24, 4, 4, 0.7);
+  --spell-damage-shadow: #7b1711;
 }
 
 .mass-spell-circle-wrap {
   position: absolute;
   inset: 0;
-  color: var(--spell-cyan);
+  color: var(--spell-primary);
   transform: translateY(-10%) rotateX(64deg) rotateY(-14deg) rotateZ(50deg) scale(0.86);
   transform-style: preserve-3d;
   animation: massSpellCircleCast 10.3s ease-in-out forwards;
@@ -3446,7 +3589,7 @@ onBeforeUnmount(() => {
   width: 28%;
   height: 28%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0 5%, rgba(8, 252, 236, 0.56) 24%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0 5%, var(--spell-core-glow) 24%, transparent 70%);
   transform: translate(-50%, -50%);
   opacity: 0;
   animation: massSpellCorePulse 10.3s ease-in-out forwards;
@@ -3479,7 +3622,7 @@ onBeforeUnmount(() => {
 }
 
 .mass-spell-min-star {
-  color: rgba(4, 12, 24, 0.92);
+  color: var(--spell-inner-fill);
   z-index: 3;
   opacity: 0.9;
 }
@@ -3488,7 +3631,7 @@ onBeforeUnmount(() => {
 .mass-spell-min-star::after {
   width: 42%;
   height: 42%;
-  background: rgba(2, 8, 18, 0.7);
+  background: var(--spell-inner-bg);
 }
 
 .mass-spell-star {
@@ -3578,8 +3721,8 @@ onBeforeUnmount(() => {
     45deg,
     transparent 0,
     transparent 5px,
-    var(--spell-cyan-soft) 5px,
-    var(--spell-cyan-soft) 7px
+    var(--spell-primary-soft) 5px,
+    var(--spell-primary-soft) 7px
   );
   opacity: 0.34;
   transform: translate(-50%, -50%);
@@ -3745,7 +3888,7 @@ onBeforeUnmount(() => {
   width: 88%;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 4%, rgba(8, 252, 236, 0.7) 5% 12%, transparent 44%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 4%, var(--spell-impact-glow) 5% 12%, transparent 44%);
   transform: translate(-50%, -50%) scale(0.4);
   opacity: 0;
   animation: massSpellImpactFlash 10.3s ease-out forwards;
@@ -3760,7 +3903,7 @@ onBeforeUnmount(() => {
   font-weight: 900;
   line-height: 1;
   transform: translate(-50%, 0);
-  text-shadow: 0 2px 0 #215c64, 0 0 18px rgba(255, 230, 124, 0.95), 0 0 26px rgba(8, 252, 236, 0.88);
+  text-shadow: 0 2px 0 var(--spell-damage-shadow), 0 0 18px rgba(255, 230, 124, 0.95), 0 0 26px var(--spell-shadow);
   animation: spellDamageFloat 1.45s ease-out forwards;
 }
 
@@ -3907,12 +4050,6 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
-.roster-panel,
-.skill-panel,
-.log-panel {
-  padding: 10px 12px;
-}
-
 .panel-headline {
   display: flex;
   align-items: flex-start;
@@ -3982,9 +4119,30 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.skill-dock {
+  min-height: 0;
+  max-height: min(34dvh, 260px);
+  overflow: auto;
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.skill-dock-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.4fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.skill-dock-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
 .skill-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -4024,16 +4182,6 @@ onBeforeUnmount(() => {
   line-height: 1.55;
 }
 
-.fighter-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  padding: 18px;
-  background: rgba(0, 0, 0, 0.48);
-  display: grid;
-  place-items: center;
-}
-
 .enemy-percent-backdrop {
   position: fixed;
   inset: 0;
@@ -4042,20 +4190,6 @@ onBeforeUnmount(() => {
   background: rgba(0, 0, 0, 0.48);
   display: grid;
   place-items: center;
-}
-
-.fighter-modal {
-  width: min(780px, 100%);
-  max-height: min(86dvh, 760px);
-  overflow: auto;
-  border: 1px solid var(--line-color);
-  border-radius: 14px;
-  padding: 14px;
-  color: var(--text-color);
-  background: var(--panel-bg);
-  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
-  display: grid;
-  gap: 12px;
 }
 
 .enemy-percent-modal {
@@ -4070,23 +4204,11 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
-.fighter-modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .enemy-percent-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-}
-
-.fighter-modal-head h3 {
-  margin: 0;
-  font-size: 18px;
 }
 
 .enemy-percent-head h3 {
@@ -4158,6 +4280,10 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.modal-stat-grid.compact {
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
+}
+
 .modal-stat-grid p,
 .status-strip span {
   margin: 0;
@@ -4206,11 +4332,95 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-.log-panel {
+.battle-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  align-items: end;
+}
+
+.battle-drawer {
   min-height: 0;
+  max-height: min(82dvh, 760px);
+  border: 1px solid var(--line-color);
+  border-radius: 16px 16px 0 0;
+  padding: 14px;
+  color: var(--text-color);
+  background: var(--panel-bg);
+  box-shadow: 0 -18px 54px rgba(0, 0, 0, 0.34);
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 6px;
+  gap: 10px;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawer-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.library-drawer {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.enemy-library-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.enemy-library-group {
+  min-height: 0;
+  border: 1px solid var(--line-color);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.enemy-library-group h4,
+.enemy-library-skill p {
+  margin: 0;
+}
+
+.enemy-library-group h4 {
+  font-size: 15px;
+}
+
+.enemy-library-skill {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  display: grid;
+  gap: 5px;
+}
+
+.enemy-library-skill-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.enemy-library-skill-head span,
+.enemy-library-meta,
+.log-empty {
+  color: var(--sub-color);
+  font-size: 12px;
 }
 
 .log-list {
@@ -4219,6 +4429,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   display: grid;
   gap: 4px;
+  align-content: start;
 }
 
 .log-item {
@@ -4470,6 +4681,11 @@ onBeforeUnmount(() => {
   .roster-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .skill-grid,
+  .enemy-library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -4487,7 +4703,7 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     gap: 8px;
-    overflow: visible;
+    overflow: auto;
   }
 
   .formation-grid {
@@ -4504,6 +4720,10 @@ onBeforeUnmount(() => {
 
   .arena-core {
     width: min(220px, 92%);
+  }
+
+  .skill-dock-head {
+    grid-template-columns: 1fr;
   }
 
   .effect-charge {
@@ -4531,7 +4751,7 @@ onBeforeUnmount(() => {
   }
 
   .battle-shell {
-    grid-template-rows: auto auto auto minmax(120px, 1fr);
+    grid-template-rows: auto auto auto auto;
   }
 
   .battle-stage {
@@ -4567,26 +4787,32 @@ onBeforeUnmount(() => {
     padding: 8px;
   }
 
-  .fighter-modal {
-    max-height: 90dvh;
-  }
-
-  .fighter-modal-head {
-    display: grid;
-  }
-
   .modal-close-btn {
     justify-self: start;
   }
 
-  .modal-stat-grid {
+  .modal-stat-grid,
+  .modal-stat-grid.compact,
+  .skill-grid,
+  .target-grid,
+  .enemy-library-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .modal-stat-grid,
+  .modal-stat-grid.compact,
+  .skill-grid,
+  .target-grid,
+  .enemy-library-grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-height: 760px) and (min-width: 901px) {
   .battle-shell {
-    grid-template-rows: auto minmax(0, 1fr) auto minmax(86px, 0.2fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
     gap: 8px;
   }
 

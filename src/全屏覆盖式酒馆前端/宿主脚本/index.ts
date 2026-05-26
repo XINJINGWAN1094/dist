@@ -111,7 +111,44 @@ function mountFullscreenOverlayHost() {
     })
     .appendTo('body');
 
+  const syncOverlayFrameViewport = () => {
+    const width = Math.max(window.innerWidth, document.documentElement.clientWidth, 1);
+    const height = Math.max(window.innerHeight, document.documentElement.clientHeight, 1);
+
+    $frame.css({
+      position: 'fixed',
+      inset: '0',
+      width: `${width}px`,
+      height: `${height}px`,
+      minWidth: `${width}px`,
+      minHeight: `${height}px`,
+      maxWidth: 'none',
+      maxHeight: 'none',
+      border: '0',
+      display: overlayVisible ? 'block' : 'none',
+    });
+
+    const frameElement = $frame[0];
+    const frameDocument = frameElement?.contentDocument;
+    if (frameDocument) {
+      frameDocument.documentElement.style.width = '100%';
+      frameDocument.documentElement.style.height = '100%';
+      frameDocument.body.style.width = '100%';
+      frameDocument.body.style.height = '100%';
+      frameDocument.getElementById(OVERLAY_ROOT_ID)?.style.setProperty('width', '100%');
+      frameDocument.getElementById(OVERLAY_ROOT_ID)?.style.setProperty('height', '100%');
+      frameElement.contentWindow?.dispatchEvent(new Event('resize'));
+    }
+  };
+
+  const syncOverlayFrameViewportSoon = () => {
+    syncOverlayFrameViewport();
+    window.requestAnimationFrame(syncOverlayFrameViewport);
+    _.delay(syncOverlayFrameViewport, 80);
+  };
+
   const mountVueOnFrame = () => {
+    syncOverlayFrameViewport();
     const frameElement = $frame[0];
     const frameDocument = frameElement?.contentDocument;
     if (!frameDocument) {
@@ -179,6 +216,7 @@ function mountFullscreenOverlayHost() {
   const setOverlayVisible = (visible: boolean, source: OverlayVisibilityPayload['source']) => {
     overlayVisible = visible;
     $frame.toggle(visible);
+    syncOverlayFrameViewportSoon();
     updateLauncherText();
     updateLauncherLayer();
     void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, { visible, source } satisfies OverlayVisibilityPayload);
@@ -299,6 +337,7 @@ function mountFullscreenOverlayHost() {
   });
 
   $(window).on(`resize${PAGE_SCOPE}`, () => {
+    syncOverlayFrameViewportSoon();
     const rect = $launcher[0].getBoundingClientRect();
     if ($launcher.css('left') !== 'auto') {
       setLauncherPosition(rect.left, rect.top);
@@ -306,6 +345,7 @@ function mountFullscreenOverlayHost() {
   });
 
   $frame.on(`load${PAGE_SCOPE}`, mountVueOnFrame);
+  syncOverlayFrameViewportSoon();
   _.delay(mountVueOnFrame, 16);
   _.delay(applyNativeUiVisibility, 80);
   void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, {

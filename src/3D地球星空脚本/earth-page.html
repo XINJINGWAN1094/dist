@@ -20,12 +20,14 @@
     let Points;
     let PointsMaterial;
     let Quaternion;
+    let Raycaster;
     let RepeatWrapping;
     let SRGBColorSpace;
     let Scene;
     let SphereGeometry;
     let Sprite;
     let SpriteMaterial;
+    let Vector2;
     let Vector3;
     let WebGLRenderer;
 
@@ -38,6 +40,15 @@
     const CAMERA_DEFAULT_RADIUS = 4.3;
     const CAMERA_MIN_RADIUS = 1.18;
     const CAMERA_MAX_RADIUS = 8.4;
+    const CYBER_BLUE_POINTS = [
+      { id: 'district', lon: 98.8, lat: 34.4, label: '区级赛地点' },
+      { id: 'county', lon: 100.4, lat: 34.4, label: '县级赛地点' },
+      { id: 'city', lon: 99.6, lat: 37.6, label: '市级赛地点' },
+      { id: 'province', lon: 106.7, lat: 36.2, label: '省级赛地点' },
+      { id: 'south', lon: 103.9, lat: 22.0, label: '南部赛区赛' },
+      { id: 'nation', lon: 101.7, lat: 54.5, label: '全国赛地点' },
+      { id: 'final', lon: 126.4, lat: 42.6, label: '息界决赛赛点' },
+    ];
 
     function setRuntimeMessage(message, isError = false) {
       const stage = document.querySelector('#globe-stage');
@@ -114,12 +125,14 @@
       Points = three.Points;
       PointsMaterial = three.PointsMaterial;
       Quaternion = three.Quaternion;
+      Raycaster = three.Raycaster;
       RepeatWrapping = three.RepeatWrapping;
       SRGBColorSpace = three.SRGBColorSpace ?? three.sRGBEncoding;
       Scene = three.Scene;
       SphereGeometry = three.SphereGeometry;
       Sprite = three.Sprite;
       SpriteMaterial = three.SpriteMaterial;
+      Vector2 = three.Vector2;
       Vector3 = three.Vector3;
       WebGLRenderer = three.WebGLRenderer;
     }
@@ -173,9 +186,11 @@
       ctx.closePath();
       ctx.fillStyle = fillStyle;
       ctx.fill();
-      ctx.lineWidth = lineWidth;
-      ctx.strokeStyle = strokeStyle;
-      ctx.stroke();
+      if (lineWidth > 0) {
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = strokeStyle;
+        ctx.stroke();
+      }
     }
 
     function toTrackballVector(clientX, clientY, element) {
@@ -186,6 +201,16 @@
       const nz = radiusSq <= 1 ? Math.sqrt(1 - radiusSq) : 0;
       const vector = new Vector3(nx, ny, nz);
       return vector.normalize();
+    }
+
+    function lonLatToSpherePosition(lon, lat, radius = 1) {
+      const phi = ((lon + 180) / 360) * Math.PI * 2;
+      const theta = ((90 - lat) / 180) * Math.PI;
+      return new Vector3(
+        -radius * Math.cos(phi) * Math.sin(theta),
+        radius * Math.cos(theta),
+        radius * Math.sin(phi) * Math.sin(theta),
+      );
     }
 
     function createEarthTexture(size = 2048) {
@@ -242,58 +267,8 @@
           width,
           height,
           continentColors[index % continentColors.length],
-          'rgba(176, 214, 178, 0.5)',
-          Math.max(1, width * 0.0012),
-        );
-      });
-
-      const countryPolygons = [
-        [[-160, 63], [-145, 70], [-123, 69], [-101, 62], [-91, 52], [-99, 45], [-123, 47], [-147, 53]],
-        [[-135, 45], [-121, 49], [-104, 45], [-101, 36], [-112, 30], [-127, 34]],
-        [[-103, 47], [-83, 46], [-68, 40], [-73, 30], [-91, 26], [-104, 34]],
-        [[-82, 49], [-64, 44], [-66, 34], [-79, 29], [-88, 38]],
-        [[-116, 30], [-101, 27], [-88, 19], [-87, 13], [-100, 12], [-111, 20]],
-        [[-56, 80], [-34, 80], [-20, 73], [-31, 62], [-50, 62], [-60, 70]],
-        [[-80, 8], [-66, 7], [-51, -4], [-55, -17], [-70, -12], [-79, 0]],
-        [[-58, -15], [-45, -24], [-47, -36], [-60, -42], [-68, -29]],
-        [[-75, -12], [-65, -19], [-63, -33], [-68, -53], [-76, -47], [-78, -28]],
-        [[-10, 60], [4, 58], [13, 51], [10, 43], [-2, 43], [-9, 50]],
-        [[5, 60], [28, 58], [39, 50], [30, 42], [15, 44], [10, 51]],
-        [[-7, 38], [13, 37], [31, 32], [29, 20], [11, 18], [-4, 26]],
-        [[-17, 33], [2, 36], [20, 31], [32, 22], [37, 7], [28, -7], [13, -5], [0, 2], [-11, 14]],
-        [[0, 1], [15, -5], [31, -14], [28, -30], [14, -35], [3, -22]],
-        [[31, 20], [43, 8], [47, -7], [38, -16], [29, -7]],
-        [[17, -10], [32, -17], [38, -28], [28, -35], [18, -32], [11, -22]],
-        [[34, 34], [49, 31], [58, 22], [53, 14], [43, 16], [36, 24]],
-        [[-2, 65], [28, 70], [62, 69], [98, 65], [134, 59], [151, 51], [135, 43], [100, 45], [65, 52], [25, 54], [3, 58]],
-        [[41, 45], [67, 49], [91, 46], [105, 38], [96, 27], [72, 29], [55, 36]],
-        [[102, 42], [122, 44], [143, 39], [139, 28], [119, 24], [105, 31]],
-        [[66, 29], [82, 30], [93, 23], [89, 9], [75, 9], [67, 18]],
-        [[95, 22], [111, 18], [122, 11], [115, 1], [101, 3], [94, 12]],
-        [[49, 32], [67, 30], [72, 20], [64, 12], [52, 17]],
-        [[112, -12], [131, -14], [151, -25], [146, -40], [127, -44], [113, -31]],
-        [[166, -34], [178, -40], [173, -47], [166, -45]],
-      ];
-
-      const borderPalette = [
-        'rgba(208, 236, 209, 0.58)',
-        'rgba(195, 224, 196, 0.52)',
-        'rgba(186, 214, 188, 0.5)',
-        'rgba(173, 205, 179, 0.48)',
-      ];
-
-      const countryStrokeWidth = Math.max(0.8, width * 0.0007);
-      countryPolygons.forEach((polygon, index) => {
-        const fillAlpha = 0.06 + (index % 5) * 0.012;
-        const fillStyle = 'rgba(92, 139, 83, ' + fillAlpha.toFixed(3) + ')';
-        drawClosedPolygon(
-          ctx,
-          polygon,
-          width,
-          height,
-          fillStyle,
-          borderPalette[index % borderPalette.length],
-          countryStrokeWidth,
+          'rgba(176, 214, 178, 0)',
+          0,
         );
       });
 
@@ -523,6 +498,47 @@
       return texture;
     }
 
+    function createLocationMarkerTexture(size = 192) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('无法创建赛博点位纹理上下文');
+      }
+
+      const center = size / 2;
+      const glow = ctx.createRadialGradient(center, center, 0, center, center, center);
+      glow.addColorStop(0, 'rgba(90, 248, 255, 0.95)');
+      glow.addColorStop(0.14, 'rgba(69, 243, 255, 0.82)');
+      glow.addColorStop(0.36, 'rgba(26, 175, 255, 0.28)');
+      glow.addColorStop(0.68, 'rgba(21, 102, 188, 0.08)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.strokeStyle = 'rgba(155, 252, 255, 0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(center, center, size * 0.26, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(63, 224, 255, 0.68)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(center, center, size * 0.39, Math.PI * 0.1, Math.PI * 1.72);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(222, 255, 255, 0.98)';
+      ctx.beginPath();
+      ctx.arc(center, center, size * 0.075, 0, Math.PI * 2);
+      ctx.fill();
+
+      const texture = new CanvasTexture(canvas);
+      applySrgbToTexture(texture);
+      return texture;
+    }
+
     function initPage() {
       const globeStage = document.querySelector('#globe-stage');
       const modeButton = document.querySelector('#drag-mode-btn');
@@ -654,6 +670,25 @@
       const earthMesh = new Mesh(earthGeometry, earthMaterial);
       earthSpinGroup.add(earthMesh);
 
+      const markerTexture = createLocationMarkerTexture();
+      const markerMaterial = new SpriteMaterial({
+        map: markerTexture,
+        color: '#53f6ff',
+        transparent: true,
+        opacity: 0.98,
+        depthWrite: false,
+        depthTest: true,
+        blending: AdditiveBlending,
+      });
+      const locationMarkers = CYBER_BLUE_POINTS.map(point => {
+        const marker = new Sprite(markerMaterial);
+        marker.position.copy(lonLatToSpherePosition(point.lon, point.lat, 1.035));
+        marker.scale.set(0.082, 0.082, 1);
+        marker.userData.locationPoint = point;
+        earthMesh.add(marker);
+        return marker;
+      });
+
       const cloudTexture = createCloudTexture();
       const cloudMaterial = new MeshStandardMaterial({
         map: cloudTexture,
@@ -709,6 +744,7 @@
         const radiusLabel = cameraState.radius.toFixed(2);
         zoomValue.textContent = radiusLabel;
         zoomRange.value = radiusLabel;
+        hideLocationPopup();
       };
 
       let dragMode = 'earth';
@@ -716,14 +752,76 @@
         active: false,
         pointerId: -1,
         mode: 'earth',
+        startX: 0,
+        startY: 0,
+        moved: false,
         lastVector: new Vector3(),
       };
       const deltaQuaternion = new Quaternion();
+      const cameraAlignedQuaternion = new Quaternion();
+      const parentWorldQuaternion = new Quaternion();
+      const inverseParentQuaternion = new Quaternion();
+      const ndcPointer = new Vector2();
+      const raycaster = new Raycaster();
+      const markerWorldPosition = new Vector3();
+      const markerViewVector = new Vector3();
+      const popupElement = document.createElement('div');
+      popupElement.className = 'location-popup';
+      popupElement.hidden = true;
+      globeStage.append(popupElement);
+
+      const hideLocationPopup = () => {
+        popupElement.hidden = true;
+        delete popupElement.dataset.pointId;
+      };
+
+      const showLocationPopup = (point, clientX, clientY) => {
+        if (dragMode !== 'earth') {
+          return;
+        }
+
+        const rect = globeStage.getBoundingClientRect();
+        popupElement.textContent = point.label;
+        popupElement.hidden = false;
+        popupElement.dataset.pointId = point.id;
+
+        const popupRect = popupElement.getBoundingClientRect();
+        const left = clamp(clientX - rect.left + 16, 8, rect.width - popupRect.width - 8);
+        const top = clamp(clientY - rect.top - popupRect.height - 16, 8, rect.height - popupRect.height - 8);
+        popupElement.style.left = left + 'px';
+        popupElement.style.top = top + 'px';
+      };
+
+      const pickLocationMarker = event => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        ndcPointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -(((event.clientY - rect.top) / rect.height) * 2 - 1));
+        raycaster.setFromCamera(ndcPointer, camera);
+        const intersects = raycaster.intersectObjects(locationMarkers, false);
+        for (const intersect of intersects) {
+          intersect.object.getWorldPosition(markerWorldPosition);
+          markerViewVector.copy(camera.position).sub(markerWorldPosition);
+          markerWorldPosition.normalize();
+          markerViewVector.normalize();
+          if (markerWorldPosition.dot(markerViewVector) > 0.08) {
+            return intersect.object.userData.locationPoint ?? null;
+          }
+        }
+        return null;
+      };
+
+      const onDocumentPointerDown = event => {
+        if (event.target !== renderer.domElement && !popupElement.contains(event.target)) {
+          hideLocationPopup();
+        }
+      };
 
       const setDragMode = nextMode => {
         dragMode = nextMode;
         modeButton.textContent = '拖拽旋转：' + (nextMode === 'earth' ? '地球' : '视角');
         modeButton.classList.toggle('mode-camera', nextMode === 'camera');
+        if (nextMode !== 'earth') {
+          hideLocationPopup();
+        }
       };
 
       const pickPointerMode = event => {
@@ -742,9 +840,13 @@
         pointerState.active = true;
         pointerState.pointerId = event.pointerId;
         pointerState.mode = pickPointerMode(event);
+        pointerState.startX = event.clientX;
+        pointerState.startY = event.clientY;
+        pointerState.moved = false;
         pointerState.lastVector.copy(toTrackballVector(event.clientX, event.clientY, renderer.domElement));
         renderer.domElement.setPointerCapture(event.pointerId);
         renderer.domElement.style.cursor = 'grabbing';
+        hideLocationPopup();
       };
 
       const onPointerMove = event => {
@@ -752,12 +854,23 @@
           return;
         }
 
+        if (!pointerState.moved && (Math.abs(event.clientX - pointerState.startX) > 4 || Math.abs(event.clientY - pointerState.startY) > 4)) {
+          pointerState.moved = true;
+        }
+
         const currentVector = toTrackballVector(event.clientX, event.clientY, renderer.domElement);
         const similarity = clamp(pointerState.lastVector.dot(currentVector), -1, 1);
         if (similarity < 0.999999) {
           deltaQuaternion.setFromUnitVectors(pointerState.lastVector, currentVector);
-          const target = pointerState.mode === 'earth' ? earthSpinGroup : worldRotationGroup;
-          target.quaternion.premultiply(deltaQuaternion);
+          if (pointerState.mode === 'earth') {
+            earthSpinGroup.parent.getWorldQuaternion(parentWorldQuaternion);
+            cameraAlignedQuaternion.copy(deltaQuaternion);
+            inverseParentQuaternion.copy(parentWorldQuaternion).invert();
+            cameraAlignedQuaternion.premultiply(inverseParentQuaternion).multiply(parentWorldQuaternion);
+            earthSpinGroup.quaternion.premultiply(cameraAlignedQuaternion);
+          } else {
+            worldRotationGroup.quaternion.premultiply(deltaQuaternion);
+          }
         }
         pointerState.lastVector.copy(currentVector);
       };
@@ -765,6 +878,12 @@
       const onPointerUp = event => {
         if (event.pointerId === pointerState.pointerId) {
           renderer.domElement.releasePointerCapture(event.pointerId);
+        }
+        if (!pointerState.moved && pointerState.mode === 'earth' && dragMode === 'earth') {
+          const point = pickLocationMarker(event);
+          if (point) {
+            showLocationPopup(point, event.clientX, event.clientY);
+          }
         }
         pointerState.active = false;
         pointerState.pointerId = -1;
@@ -775,6 +894,7 @@
         event.preventDefault();
         cameraState.radius = clamp(cameraState.radius + event.deltaY * 0.0045, CAMERA_MIN_RADIUS, CAMERA_MAX_RADIUS);
         updateCameraPosition();
+        hideLocationPopup();
       };
 
       modeButton.addEventListener('click', () => {
@@ -793,6 +913,7 @@
       renderer.domElement.addEventListener('pointerup', onPointerUp);
       renderer.domElement.addEventListener('pointercancel', onPointerUp);
       renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+      document.addEventListener('pointerdown', onDocumentPointerDown, true);
 
       const resizeRenderer = () => {
         const width = Math.max(globeStage.clientWidth, 1);
@@ -809,7 +930,7 @@
         window.addEventListener('resize', resizeRenderer);
       }
 
-      setDragMode('camera');
+      setDragMode('earth');
       updateCameraPosition();
       resizeRenderer();
 
@@ -831,6 +952,11 @@
         sunCore.rotation.y += deltaTime * 0.12;
         sunCorona.rotation.y -= deltaTime * 0.18;
         sunHaloSprite.rotation += deltaTime * 0.1;
+        const markerScale = MathUtils.lerp(0.048, 0.1, clamp((cameraState.radius - CAMERA_MIN_RADIUS) / (CAMERA_MAX_RADIUS - CAMERA_MIN_RADIUS), 0, 1));
+        locationMarkers.forEach((marker, index) => {
+          const pulse = 1 + Math.sin(clock.elapsedTime * 2.6 + index * 0.72) * 0.14;
+          marker.scale.set(markerScale * pulse, markerScale * pulse, 1);
+        });
 
         renderer.render(scene, camera);
         rafId = window.requestAnimationFrame(renderFrame);
@@ -860,6 +986,7 @@
         renderer.domElement.removeEventListener('pointerup', onPointerUp);
         renderer.domElement.removeEventListener('pointercancel', onPointerUp);
         renderer.domElement.removeEventListener('wheel', onWheel);
+        document.removeEventListener('pointerdown', onDocumentPointerDown, true);
 
         removePagehideListener();
 
@@ -878,6 +1005,7 @@
         earthMaterial.dispose();
         cloudMaterial.dispose();
         atmosphereMaterial.dispose();
+        markerMaterial.dispose();
         nebulaMaterial.dispose();
         sunCoreMaterial.dispose();
         sunCoronaMaterial.dispose();
@@ -885,6 +1013,7 @@
 
         earthTexture.dispose();
         cloudTexture.dispose();
+        markerTexture.dispose();
         nebulaTexture.dispose();
         sunHaloTexture.dispose();
 
@@ -1083,6 +1212,51 @@
       color: #ffd5d5;
     }
 
+    .location-popup {
+      position: absolute;
+      z-index: 4;
+      min-width: 124px;
+      max-width: min(240px, calc(100% - 16px));
+      border: 1px solid rgba(82, 242, 255, 0.9);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #eaffff;
+      background:
+        linear-gradient(135deg, rgba(4, 22, 38, 0.7), rgba(5, 49, 72, 0.7)),
+        repeating-linear-gradient(0deg, rgba(93, 241, 255, 0.08) 0 1px, rgba(0, 0, 0, 0) 1px 6px);
+      box-shadow: 0 0 0 1px rgba(83, 246, 255, 0.24) inset, 0 0 22px rgba(35, 212, 255, 0.32);
+      font-size: 14px;
+      line-height: 1.35;
+      pointer-events: auto;
+      clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+    }
+
+    .location-popup::before,
+    .location-popup::after {
+      content: '';
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .location-popup::before {
+      inset: 3px;
+      border: 1px solid rgba(146, 255, 255, 0.28);
+      clip-path: polygon(0 0, 46px 0, 46px 1px, 1px 1px, 1px 46px, 0 46px);
+    }
+
+    .location-popup::after {
+      right: 9px;
+      bottom: 7px;
+      width: 34px;
+      height: 1px;
+      background: rgba(120, 253, 255, 0.75);
+      box-shadow: -12px -4px 0 rgba(120, 253, 255, 0.32);
+    }
+
+    .location-popup[hidden] {
+      display: none;
+    }
+
     .tip-text {
       margin: 0;
       font-size: 12px;
@@ -1124,7 +1298,7 @@
 <body>
   <section class="cosmos-panel">
     <div class="cosmos-controls">
-      <button id="drag-mode-btn" type="button" class="control-btn mode-camera">拖拽旋转：视角</button>
+      <button id="drag-mode-btn" type="button" class="control-btn">拖拽旋转：地球</button>
       <label class="zoom-control" for="zoom-range">
         <span>视角远近</span>
         <input id="zoom-range" type="range" min="1.18" max="8.4" step="0.02" value="4.3" />
@@ -1132,6 +1306,6 @@
       </label>
     </div>
     <div id="globe-stage" class="globe-stage"></div>
-    <p class="tip-text">默认是“视角模式”：拖拽会同步转动地球、星空和太阳；切到“地球模式”则只旋转地球。滚轮或滑条可调节远近。</p>
+    <p class="tip-text">默认是“地球模式”：拖拽方向会直接带动地球，点击蓝色赛点可查看标记；切到“视角模式”则同步转动地球、星空和太阳。</p>
   </section>
 </body>
