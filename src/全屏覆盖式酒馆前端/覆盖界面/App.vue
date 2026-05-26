@@ -169,6 +169,15 @@
         </header>
 
         <section v-if="activePage === 'info'" class="page-view info-view">
+          <div class="info-date-toolbar">
+            <div class="info-date-status">
+              <span class="calendar-kicker">当前剧情日期</span>
+              <strong>{{ storyDate.display_text }}</strong>
+              <span>{{ storyDate.iso_date }} · {{ storyTimePeriodText }} · {{ storyDateLastSyncedText }}</span>
+            </div>
+            <button type="button" class="action-btn" @click="reloadStoryDateFromVariables">重新读取日期</button>
+          </div>
+
           <section ref="chatScrollRef" class="chat-box">
             <article
               v-for="message in chatMessages"
@@ -1602,6 +1611,12 @@ function refreshStoryDateState() {
   syncBattlePromptState();
 }
 
+function reloadStoryDateFromVariables() {
+  refreshStoryDateState();
+  jumpCalendarToStoryDate();
+  toastr.success(`已重新读取日期：${storyDate.value.display_text}`, '剧情日期');
+}
+
 function goToBattleArenaFromPrompt() {
   battlePromptOpen.value = false;
   battlePromptSessionId.value = '';
@@ -2710,8 +2725,41 @@ onBeforeUnmount(() => {
 .info-view {
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
+}
+
+.info-date-toolbar {
+  border: 1px solid var(--line-color);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.info-date-toolbar .action-btn {
+  white-space: nowrap;
+}
+
+.info-date-status {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.info-date-status strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.info-date-status span:last-child {
+  color: var(--sub-color);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .simple-view {

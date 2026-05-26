@@ -154,11 +154,14 @@ const ModelActionSchema = z
     action: z.enum(['keep', 'advance_days', 'set_date', 'uncertain']),
     days: z.union([z.coerce.number(), z.null()]).optional(),
     target_date: z
-      .object({
-        year: z.coerce.number().int(),
-        month: z.coerce.number().int(),
-        day: z.coerce.number().int(),
-      })
+      .union([
+        z.object({
+          year: z.coerce.number().int(),
+          month: z.coerce.number().int(),
+          day: z.coerce.number().int(),
+        }),
+        z.null(),
+      ])
       .optional(),
     time_period: TimePeriodSchema.optional(),
     confidence: z.coerce.number().prefault(0).transform(value => _.clamp(value, 0, 1)),
