@@ -352,6 +352,7 @@ function writeSyncSnapshot(snapshot: SyncSnapshot) {
     _.set(variables, STORY_TRAINING_STATE_KEY, normalizedTrainingState);
     _.set(variables, BATTLE_ROSTER_STORAGE_KEY, snapshot.battleRosterState);
     _.set(variables, STORY_BATTLE_STATE_KEY, normalizedBattleState);
+    return variables;
   }, { type: 'chat' });
 }
 
@@ -438,8 +439,49 @@ function extractTextContent(value: unknown): string {
 
 function stripJsonFence(text: string): string {
   const trimmed = text.trim();
-  const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return fencedMatch ? fencedMatch[1].trim() : trimmed;
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch) {
+    return fencedMatch[1].trim();
+  }
+
+  const jsonStart = trimmed.indexOf('{');
+  if (jsonStart < 0) {
+    return trimmed;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = jsonStart; index < trimmed.length; index += 1) {
+    const char = trimmed[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return trimmed.slice(jsonStart, index + 1);
+      }
+    }
+  }
+
+  return trimmed;
 }
 
 function parseModelAction(rawContent: string): ModelAction {
@@ -595,7 +637,7 @@ async function requestModelAction(
         model: settings.model,
         temperature: 0,
         stream: false,
-        max_tokens: 360,
+        max_tokens: 4096,
         messages: [
           {
             role: 'system',
