@@ -23,6 +23,7 @@
     let Raycaster;
     let RepeatWrapping;
     let SRGBColorSpace;
+    let SRGBEncoding;
     let Scene;
     let SphereGeometry;
     let Sprite;
@@ -40,6 +41,12 @@
     const CAMERA_DEFAULT_RADIUS = 4.3;
     const CAMERA_MIN_RADIUS = 1.18;
     const CAMERA_MAX_RADIUS = 8.4;
+    const XIJIE_FINAL_CONTINENT = {
+      lon: -146,
+      lat: 8,
+      radiusLon: 16,
+      radiusLat: 14,
+    };
     const CYBER_BLUE_POINTS = [
       { id: 'district', lon: 98.8, lat: 34.4, label: '区级赛地点' },
       { id: 'county', lon: 100.4, lat: 34.4, label: '县级赛地点' },
@@ -47,7 +54,7 @@
       { id: 'province', lon: 106.7, lat: 36.2, label: '省级赛地点' },
       { id: 'south', lon: 103.9, lat: 22.0, label: '南部赛区赛' },
       { id: 'nation', lon: 101.7, lat: 54.5, label: '全国赛地点' },
-      { id: 'final', lon: 126.4, lat: 42.6, label: '息界决赛赛点' },
+      { id: 'final', lon: XIJIE_FINAL_CONTINENT.lon, lat: XIJIE_FINAL_CONTINENT.lat, label: '息界决赛赛点' },
     ];
 
     function setRuntimeMessage(message, isError = false) {
@@ -127,7 +134,8 @@
       Quaternion = three.Quaternion;
       Raycaster = three.Raycaster;
       RepeatWrapping = three.RepeatWrapping;
-      SRGBColorSpace = three.SRGBColorSpace ?? three.sRGBEncoding;
+      SRGBColorSpace = three.SRGBColorSpace;
+      SRGBEncoding = three.sRGBEncoding;
       Scene = three.Scene;
       SphereGeometry = three.SphereGeometry;
       Sprite = three.Sprite;
@@ -138,24 +146,24 @@
     }
 
     function applySrgbToTexture(texture) {
-      if (!SRGBColorSpace) {
+      if (!SRGBColorSpace && !SRGBEncoding) {
         return;
       }
-      if ('colorSpace' in texture) {
+      if ('colorSpace' in texture && SRGBColorSpace) {
         texture.colorSpace = SRGBColorSpace;
-      } else {
-        texture.encoding = SRGBColorSpace;
+      } else if ('encoding' in texture && SRGBEncoding) {
+        texture.encoding = SRGBEncoding;
       }
     }
 
     function applySrgbToRenderer(renderer) {
-      if (!SRGBColorSpace) {
+      if (!SRGBColorSpace && !SRGBEncoding) {
         return;
       }
-      if ('outputColorSpace' in renderer) {
+      if ('outputColorSpace' in renderer && SRGBColorSpace) {
         renderer.outputColorSpace = SRGBColorSpace;
-      } else {
-        renderer.outputEncoding = SRGBColorSpace;
+      } else if ('outputEncoding' in renderer && SRGBEncoding) {
+        renderer.outputEncoding = SRGBEncoding;
       }
     }
 
@@ -191,6 +199,13 @@
         ctx.strokeStyle = strokeStyle;
         ctx.stroke();
       }
+    }
+
+    function createCircularContinentPoints({ lon, lat, radiusLon, radiusLat }, segments = 96) {
+      return Array.from({ length: segments }, (_, index) => {
+        const angle = (index / segments) * Math.PI * 2;
+        return [lon + Math.cos(angle) * radiusLon, lat + Math.sin(angle) * radiusLat];
+      });
     }
 
     function toTrackballVector(clientX, clientY, element) {
@@ -249,7 +264,7 @@
 
       const continentColors = ['#3f7345', '#4c7544', '#5d7f4b', '#4e7245', '#5a7f50'];
       const continents = [
-        [[-168, 72], [-150, 72], [-128, 69], [-111, 61], [-95, 54], [-84, 50], [-82, 42], [-93, 30], [-107, 23], [-124, 18], [-141, 22], [-159, 38]],
+        [[-168, 76], [-150, 76], [-126, 73], [-108, 66], [-90, 60], [-77, 55], [-74, 47], [-87, 39], [-104, 34], [-123, 31], [-144, 35], [-161, 50]],
         [[-98, 24], [-90, 22], [-84, 17], [-86, 10], [-95, 14]],
         [[-81, 12], [-74, 7], [-70, -6], [-64, -18], [-59, -33], [-62, -51], [-72, -55], [-80, -33]],
         [[-55, 82], [-40, 81], [-20, 74], [-33, 60], [-50, 63]],
@@ -258,6 +273,7 @@
         [[35, 33], [52, 30], [60, 23], [56, 16], [47, 16], [40, 23]],
         [[112, -11], [129, -14], [151, -25], [146, -41], [126, -44], [113, -30]],
         [[-180, -63], [-120, -66], [-40, -67], [40, -66], [120, -64], [180, -63], [180, -90], [-180, -90]],
+        createCircularContinentPoints(XIJIE_FINAL_CONTINENT),
       ];
 
       continents.forEach((polygon, index) => {

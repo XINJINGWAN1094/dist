@@ -266,9 +266,20 @@
           <BattleArena mode="training" />
         </section>
 
-        <section v-else-if="activePage === 'map'" class="page-view map-view">
+        <section v-else-if="activePage === 'map'" class="page-view map-view" :class="{ 'is-expanded': mapExpanded }">
+          <button
+            type="button"
+            class="map-expand-btn"
+            :aria-pressed="mapExpanded"
+            :aria-label="mapExpanded ? '复原息界地图' : '放大息界地图'"
+            :title="mapExpanded ? '复原息界地图' : '放大息界地图'"
+            @click="toggleMapExpanded"
+          >
+            {{ mapExpanded ? '复原' : '放大' }}
+          </button>
           <iframe
             v-if="mapLoaded"
+            ref="mapFrameRef"
             class="map-frame"
             title="息界地图"
             :srcdoc="earthPageHtml"
@@ -713,6 +724,8 @@ const surfaceStyle = ref<OverlaySurfaceStyle>('black');
 const glowStyle = ref<OverlayGlowStyle>('cyber_blue');
 const activePage = ref<OverlayPage>('info');
 const mapLoaded = ref(false);
+const mapExpanded = ref(false);
+const mapFrameRef = ref<HTMLIFrameElement | null>(null);
 const chatMessages = ref<RenderableMessage[]>([]);
 const chatScrollRef = ref<HTMLElement | null>(null);
 const nativeMessagesHidden = ref(true);
@@ -1298,16 +1311,31 @@ function setGlowStyle(next: OverlayGlowStyle) {
 
 function handleMapFrameLoad(event: Event) {
   const frame = event.target as HTMLIFrameElement | null;
-  frame?.contentWindow?.dispatchEvent(new Event('resize'));
+  mapFrameRef.value = frame;
+  notifyMapFrameResize();
+}
+
+function notifyMapFrameResize() {
+  window.dispatchEvent(new Event('resize'));
+  mapFrameRef.value?.contentWindow?.dispatchEvent(new Event('resize'));
+}
+
+function toggleMapExpanded() {
+  mapExpanded.value = !mapExpanded.value;
+  calendarOpen.value = false;
+  void nextTick(() => notifyMapFrameResize());
 }
 
 function switchPage(next: OverlayPage) {
   activePage.value = next;
   calendarOpen.value = false;
+  if (next !== 'map') {
+    mapExpanded.value = false;
+  }
   if (next === 'map') {
     mapLoaded.value = true;
     void nextTick(() => {
-      window.dispatchEvent(new Event('resize'));
+      notifyMapFrameResize();
     });
   }
   if (next === 'settings') {
@@ -2702,11 +2730,38 @@ onBeforeUnmount(() => {
 }
 
 .map-view {
+  position: relative;
   min-height: 0;
   overflow: hidden;
   border: 1px solid var(--line-color);
   border-radius: 14px;
   background: #020611;
+}
+
+.map-view.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  border-radius: 0;
+}
+
+.map-expand-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  border: 1px solid rgba(147, 213, 255, 0.58);
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: #dff7ff;
+  background: linear-gradient(120deg, rgba(8, 31, 53, 0.88), rgba(17, 47, 76, 0.9));
+  box-shadow: 0 0 0 1px rgba(69, 243, 255, 0.18), 0 8px 22px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.map-expand-btn:hover {
+  filter: brightness(1.08);
 }
 
 .map-frame {
