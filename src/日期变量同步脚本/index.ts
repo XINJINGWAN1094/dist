@@ -32,6 +32,7 @@ const STATUS_BAR_ID = 'th-story-date-sync-bar';
 const STORY_DATE_KEY = 'story_date';
 const STORY_DATE_SETTINGS_KEY = 'story_date_settings';
 const DEFAULT_TIMEOUT_MS = 30_000;
+const MODEL_REQUEST_RETRY_DELAYS_MS = [1_500, 4_000, 8_000] as const;
 const INITIAL_DATE = { year: 3197, month: 5, day: 29 } as const;
 const INITIAL_TIME_PERIOD = 'unknown' as const;
 
@@ -163,7 +164,7 @@ const ModelActionSchema = z
         z.null(),
       ])
       .optional(),
-    time_period: TimePeriodSchema.optional(),
+    time_period: z.union([TimePeriodSchema, z.null()]).optional(),
     confidence: z.coerce.number().prefault(0).transform(value => _.clamp(value, 0, 1)),
     reason: z.string().prefault(''),
     training_today: ModelTrainingSchema.prefault({}),
@@ -210,6 +211,17 @@ class StaleSyncError extends Error {
   constructor() {
     super('story-date sync task is stale');
     this.name = 'StaleSyncError';
+  }
+}
+
+class ModelRequestError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly responseText: string,
+  ) {
+    super(message);
+    this.name = 'ModelRequestError';
   }
 }
 
@@ -604,6 +616,35 @@ async function requestModelAction(
   settings: StoryDateSettings,
   revision: number,
 ): Promise<ModelAction> {
+  for (let attempt = 0; attempt <= MODEL_REQUEST_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await requestModelActionOnce(message, current, currentBattleState, settings, revision);
+    } catch (error) {
+      if (error instanceof StaleSyncError || !shouldRetryModelRequest(error) || attempt >= MODEL_REQUEST_RETRY_DELAYS_MS.length) {
+        throw error;
+      }
+
+      const delayMs = MODEL_REQUEST_RETRY_DELAYS_MS[attempt];
+      debugLog(`model request retry after ${delayMs}ms`, {
+        message_id: message.message_id,
+        attempt: attempt + 1,
+        status: error instanceof ModelRequestError ? error.status : null,
+      });
+      await delay(delayMs);
+      throwIfStale(revision);
+    }
+  }
+
+  throw new Error('外接 AI 请求失败：重试结束但没有返回结果');
+}
+
+async function requestModelActionOnce(
+  message: ChatMessage,
+  current: StoryDate,
+  currentBattleState: StoryBattleState,
+  settings: StoryDateSettings,
+  revision: number,
+): Promise<ModelAction> {
   const normalizedMessage = normalizeMessageText(message.message);
   if (!normalizedMessage) {
     return ModelActionSchema.parse({
@@ -657,7 +698,11 @@ async function requestModelAction(
 
     const responseText = await response.text();
     if (!response.ok) {
-      throw new Error(`外接 AI 请求失败 (${response.status})：${responseText.slice(0, 400)}`);
+      throw new ModelRequestError(
+        `外接 AI 请求失败 (${response.status})：${responseText.slice(0, 400)}`,
+        response.status,
+        responseText,
+      );
     }
 
     const payload = JSON.parse(responseText) as unknown;
@@ -681,6 +726,19 @@ async function requestModelAction(
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+function shouldRetryModelRequest(error: unknown): boolean {
+  if (!(error instanceof ModelRequestError)) {
+    return false;
+  }
+  return error.status === 408 || error.status === 429 || error.status >= 500;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function applyModelAction(current: StoryDate, action: ModelAction, message: ChatMessage): StoryDate {
@@ -942,9 +1000,9 @@ async function runFullRecalculation(revision: number): Promise<number> {
     const action = await requestModelAction(message, nextSnapshot.storyDate, nextSnapshot.battleState, settings, revision);
     throwIfStale(revision);
     nextSnapshot = applyModelActionToSnapshot(nextSnapshot, action, message);
+    writeSyncSnapshot(nextSnapshot);
   }
 
-  writeSyncSnapshot(nextSnapshot);
   setRuntimeStatus('synced', messages.length > 0 ? `已重算 ${messages.length} 条 AI 回复。` : '当前聊天还没有 AI 回复，已保留初始日期。');
   return messages.length;
 }

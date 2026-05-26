@@ -15,8 +15,7 @@ const OVERLAY_ROOT_ID = 'th-fullscreen-overlay-root';
 const OVERLAY_LAUNCHER_ID = 'th-fullscreen-overlay-launcher';
 const DEFAULT_HIDE_NATIVE_UI = true;
 const OVERLAY_FRAME_Z_INDEX = 2147483001;
-const OVERLAY_LAUNCHER_FRONT_Z_INDEX = 2147483002;
-const OVERLAY_LAUNCHER_BACK_Z_INDEX = 2147483000;
+const OVERLAY_LAUNCHER_Z_INDEX = 2147483002;
 const OVERLAY_LAUNCHER_MARGIN = 18;
 
 function resolveHostWindow(): Window {
@@ -124,7 +123,7 @@ function mountFullscreenOverlayHost() {
       position: 'fixed',
       right: `${OVERLAY_LAUNCHER_MARGIN}px`,
       bottom: `${OVERLAY_LAUNCHER_MARGIN}px`,
-      zIndex: String(OVERLAY_LAUNCHER_BACK_Z_INDEX),
+      zIndex: String(OVERLAY_LAUNCHER_Z_INDEX),
       border: '1px solid rgba(115, 210, 255, 0.7)',
       borderRadius: '999px',
       padding: '8px 14px',
@@ -208,10 +207,6 @@ function mountFullscreenOverlayHost() {
     $launcher.text(overlayVisible ? '关闭覆盖页' : '打开覆盖页');
   };
 
-  const updateLauncherLayer = () => {
-    $launcher.css('zIndex', String(overlayVisible ? OVERLAY_LAUNCHER_BACK_Z_INDEX : OVERLAY_LAUNCHER_FRONT_Z_INDEX));
-  };
-
   const clampLauncherPosition = (left: number, top: number) => {
     const launcherWidth = $launcher.outerWidth() ?? 0;
     const launcherHeight = $launcher.outerHeight() ?? 0;
@@ -246,7 +241,6 @@ function mountFullscreenOverlayHost() {
     $frame.toggle(visible);
     syncOverlayFrameViewportSoon();
     updateLauncherText();
-    updateLauncherLayer();
     void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, { visible, source } satisfies OverlayVisibilityPayload);
   };
 
@@ -385,7 +379,6 @@ function mountFullscreenOverlayHost() {
     source: 'script',
   } satisfies NativeMessageVisibilityPayload);
   updateLauncherText();
-  updateLauncherLayer();
 
   console.info('[全屏覆盖式酒馆前端] 已挂载到顶层 body 的全屏 iframe。');
   console.info('[全屏覆盖式酒馆前端] 原生聊天 UI 默认隐藏（保留开场白可见）。');

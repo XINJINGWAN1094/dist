@@ -26,6 +26,9 @@
             <button type="button" class="date-trigger" :aria-expanded="calendarOpen" @click="toggleCalendarOpen">
               <strong>{{ storyDate.display_text }}</strong>
             </button>
+            <button type="button" class="action-btn toolbar-reload-btn" @click="reloadStoryDateFromVariables">
+              重新读取日期
+            </button>
             <span class="toolbar-clock" :title="liveClockDateText">{{ liveClockTimeText }}</span>
             <button type="button" class="close-btn" @click="closeOverlay">关闭覆盖页</button>
           </div>
@@ -169,15 +172,6 @@
         </header>
 
         <section v-if="activePage === 'info'" class="page-view info-view">
-          <div class="info-date-toolbar">
-            <div class="info-date-status">
-              <span class="calendar-kicker">当前剧情日期</span>
-              <strong>{{ storyDate.display_text }}</strong>
-              <span>{{ storyDate.iso_date }} · {{ storyTimePeriodText }} · {{ storyDateLastSyncedText }}</span>
-            </div>
-            <button type="button" class="action-btn" @click="reloadStoryDateFromVariables">重新读取日期</button>
-          </div>
-
           <section ref="chatScrollRef" class="chat-box">
             <article
               v-for="message in chatMessages"
@@ -2361,8 +2355,8 @@ onBeforeUnmount(() => {
 }
 
 .toolbar-strip {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
 }
@@ -2375,6 +2369,7 @@ onBeforeUnmount(() => {
 }
 
 .toolbar-clock {
+  min-width: 0;
   color: var(--sub-color);
   font-size: 13px;
   letter-spacing: 0.04em;
@@ -2404,6 +2399,10 @@ onBeforeUnmount(() => {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
+}
+
+.toolbar-reload-btn {
+  white-space: nowrap;
 }
 
 .calendar-popover {
@@ -2709,6 +2708,11 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.close-btn {
+  justify-self: end;
+  white-space: nowrap;
+}
+
 .action-btn:disabled {
   opacity: 0.52;
   cursor: not-allowed;
@@ -2725,41 +2729,8 @@ onBeforeUnmount(() => {
 .info-view {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 12px;
-}
-
-.info-date-toolbar {
-  border: 1px solid var(--line-color);
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.info-date-toolbar .action-btn {
-  white-space: nowrap;
-}
-
-.info-date-status {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.info-date-status strong {
-  font-size: 16px;
-  line-height: 1.2;
-}
-
-.info-date-status span:last-child {
-  color: var(--sub-color);
-  font-size: 12px;
-  line-height: 1.4;
 }
 
 .simple-view {
@@ -3243,12 +3214,28 @@ onBeforeUnmount(() => {
 
   .toolbar-strip {
     width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
   }
 
-  .toolbar-story-label,
   .toolbar-clock {
-    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .toolbar-story-label {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .close-btn {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .date-trigger,
+  .toolbar-reload-btn {
+    grid-column: 1 / -1;
   }
 
   .composer-row,
