@@ -17,6 +17,9 @@ const DEFAULT_HIDE_NATIVE_UI = true;
 const OVERLAY_FRAME_Z_INDEX = 2147483001;
 const OVERLAY_LAUNCHER_Z_INDEX = 2147483002;
 const OVERLAY_LAUNCHER_MARGIN = 18;
+const OVERLAY_LAUNCHER_EDGE_MARGIN = 8;
+const OVERLAY_LAUNCHER_MOBILE_BOTTOM_RESERVE = 72;
+const OVERLAY_LAUNCHER_MOBILE_WIDTH = 768;
 
 function resolveHostWindow(): Window {
   try {
@@ -75,6 +78,7 @@ function mountFullscreenOverlayHost() {
   const $hostWindow = $(hostWindow);
   const $hostDocument = $(hostDocument);
   const $hostBody = $(hostDocument.body);
+  const hostVisualViewport = hostWindow.visualViewport;
 
   const syncBridge = registerCoreEventSync();
   const nativeSendBridge = registerNativeSendBridge();
@@ -121,8 +125,8 @@ function mountFullscreenOverlayHost() {
     })
     .css({
       position: 'fixed',
-      right: `${OVERLAY_LAUNCHER_MARGIN}px`,
-      bottom: `${OVERLAY_LAUNCHER_MARGIN}px`,
+      left: `${OVERLAY_LAUNCHER_MARGIN}px`,
+      top: `${OVERLAY_LAUNCHER_MARGIN}px`,
       zIndex: String(OVERLAY_LAUNCHER_Z_INDEX),
       border: '1px solid rgba(115, 210, 255, 0.7)',
       borderRadius: '999px',
@@ -135,8 +139,22 @@ function mountFullscreenOverlayHost() {
       cursor: 'grab',
       touchAction: 'none',
       userSelect: 'none',
+      maxWidth: `calc(100vw - ${OVERLAY_LAUNCHER_EDGE_MARGIN * 2}px)`,
+      whiteSpace: 'nowrap',
     })
     .appendTo(hostDocument.body);
+
+  const getLauncherViewportSize = () => {
+    const width = Math.max(
+      Math.floor(hostVisualViewport?.width ?? hostWindow.innerWidth ?? hostDocument.documentElement.clientWidth),
+      1,
+    );
+    const height = Math.max(
+      Math.floor(hostVisualViewport?.height ?? hostWindow.innerHeight ?? hostDocument.documentElement.clientHeight),
+      1,
+    );
+    return { width, height };
+  };
 
   const syncOverlayFrameViewport = () => {
     const width = Math.max(hostWindow.innerWidth, hostDocument.documentElement.clientWidth, 1);
@@ -210,10 +228,11 @@ function mountFullscreenOverlayHost() {
   const clampLauncherPosition = (left: number, top: number) => {
     const launcherWidth = $launcher.outerWidth() ?? 0;
     const launcherHeight = $launcher.outerHeight() ?? 0;
+    const viewport = getLauncherViewportSize();
 
     return {
-      left: _.clamp(left, 8, Math.max(8, hostWindow.innerWidth - launcherWidth - 8)),
-      top: _.clamp(top, 8, Math.max(8, hostWindow.innerHeight - launcherHeight - 8)),
+      left: _.clamp(left, OVERLAY_LAUNCHER_EDGE_MARGIN, Math.max(OVERLAY_LAUNCHER_EDGE_MARGIN, viewport.width - launcherWidth - OVERLAY_LAUNCHER_EDGE_MARGIN)),
+      top: _.clamp(top, OVERLAY_LAUNCHER_EDGE_MARGIN, Math.max(OVERLAY_LAUNCHER_EDGE_MARGIN, viewport.height - launcherHeight - OVERLAY_LAUNCHER_EDGE_MARGIN)),
     };
   };
 
@@ -225,6 +244,29 @@ function mountFullscreenOverlayHost() {
       right: 'auto',
       bottom: 'auto',
     });
+  };
+
+  const syncLauncherInsideViewport = () => {
+    const rect = $launcher[0].getBoundingClientRect();
+    setLauncherPosition(rect.left, rect.top);
+  };
+
+  const syncLauncherInsideViewportSoon = () => {
+    syncLauncherInsideViewport();
+    hostWindow.requestAnimationFrame(syncLauncherInsideViewport);
+    _.delay(syncLauncherInsideViewport, 80);
+  };
+
+  const placeLauncherAtDefaultPosition = () => {
+    const launcherWidth = $launcher.outerWidth() ?? 0;
+    const launcherHeight = $launcher.outerHeight() ?? 0;
+    const viewport = getLauncherViewportSize();
+    const isMobileViewport = viewport.width <= OVERLAY_LAUNCHER_MOBILE_WIDTH;
+    const bottomReserve = isMobileViewport ? OVERLAY_LAUNCHER_MOBILE_BOTTOM_RESERVE : 0;
+    setLauncherPosition(
+      viewport.width - launcherWidth - OVERLAY_LAUNCHER_MARGIN,
+      viewport.height - launcherHeight - OVERLAY_LAUNCHER_MARGIN - bottomReserve,
+    );
   };
 
   const stopLauncherDrag = () => {
@@ -241,6 +283,7 @@ function mountFullscreenOverlayHost() {
     $frame.toggle(visible);
     syncOverlayFrameViewportSoon();
     updateLauncherText();
+    syncLauncherInsideViewportSoon();
     void eventEmit(OVERLAY_EVENTS.OVERLAY_VISIBILITY_CHANGED, { visible, source } satisfies OverlayVisibilityPayload);
   };
 
@@ -360,11 +403,10 @@ function mountFullscreenOverlayHost() {
 
   $hostWindow.on(`resize${PAGE_SCOPE}`, () => {
     syncOverlayFrameViewportSoon();
-    const rect = $launcher[0].getBoundingClientRect();
-    if ($launcher.css('left') !== 'auto') {
-      setLauncherPosition(rect.left, rect.top);
-    }
+    syncLauncherInsideViewportSoon();
   });
+  hostVisualViewport?.addEventListener('resize', syncLauncherInsideViewportSoon);
+  hostVisualViewport?.addEventListener('scroll', syncLauncherInsideViewportSoon);
 
   $frame.on(`load${PAGE_SCOPE}`, mountVueOnFrame);
   syncOverlayFrameViewportSoon();
@@ -379,6 +421,7 @@ function mountFullscreenOverlayHost() {
     source: 'script',
   } satisfies NativeMessageVisibilityPayload);
   updateLauncherText();
+  placeLauncherAtDefaultPosition();
 
   console.info('[全屏覆盖式酒馆前端] 已挂载到顶层 body 的全屏 iframe。');
   console.info('[全屏覆盖式酒馆前端] 原生聊天 UI 默认隐藏（保留开场白可见）。');
@@ -402,6 +445,8 @@ function mountFullscreenOverlayHost() {
     $frame.off(PAGE_SCOPE);
     $frame.remove();
     $hostWindow.off(PAGE_SCOPE);
+    hostVisualViewport?.removeEventListener('resize', syncLauncherInsideViewportSoon);
+    hostVisualViewport?.removeEventListener('scroll', syncLauncherInsideViewportSoon);
     $(window).off(PAGE_SCOPE);
   };
 
