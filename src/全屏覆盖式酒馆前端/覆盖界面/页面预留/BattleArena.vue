@@ -286,8 +286,14 @@
       @click.self="closeBattleLogPanel"
     >
       <article class="battle-drawer log-panel">
-        <header class="drawer-head">
-          <h3 id="battle-log-title">战斗日志</h3>
+        <header class="drawer-head log-panel-head">
+          <div class="log-title-wrap">
+            <h3 id="battle-log-title">战斗日志</h3>
+            <label class="log-input-toggle">
+              <input :checked="battleLogInputEnabled" type="checkbox" @change="toggleBattleLogInputEnabled" />
+              <span>结束后写入输入框</span>
+            </label>
+          </div>
           <button type="button" class="modal-close-btn" @click="closeBattleLogPanel">关闭</button>
         </header>
         <div class="log-list">
@@ -335,12 +341,26 @@ const props = withDefaults(
   defineProps<{
     mode?: 'story' | 'training';
     ignoredStoryBattleSessionId?: string | null;
+    autoFillBattleLogToInput?: boolean;
   }>(),
   {
     mode: 'story',
     ignoredStoryBattleSessionId: null,
+    autoFillBattleLogToInput: true,
   },
 );
+
+const emit = defineEmits<{
+  (
+    event: 'battle-log-input-ready',
+    payload: {
+      mode: 'story' | 'training';
+      text: string;
+      logCount: number;
+    },
+  ): void;
+  (event: 'update:autoFillBattleLogToInput', value: boolean): void;
+}>();
 
 type FormationSlot = 'top' | 'left' | 'right' | 'bottom';
 type BattleLogKind = 'info' | 'turn' | 'action' | 'result' | 'warn';
@@ -956,6 +976,7 @@ let magicCircleAnchorFrame: number | null = null;
 const fighterCardElements = new Map<string, HTMLElement>();
 
 const isTrainingMode = computed(() => props.mode === 'training');
+const battleLogInputEnabled = computed(() => props.autoFillBattleLogToInput);
 const enemyStatPercent = computed(() => enemyStatSettings.value.percent);
 const enemyDifficultyRemark = computed(() => getEnemyDifficultyRemark(enemyStatPercent.value));
 const enemyStatDraftPercent = computed(() => parseEnemyStatPercent(enemyStatDraft.value));
@@ -1888,6 +1909,7 @@ function syncStoryBattleState() {
 function stopBattle(reason: string) {
   battleToken.value += 1;
   resolvePendingManualAction(null);
+  const wasRunning = isRunning.value;
   if (isRunning.value) {
     appendLog(reason, 'warn');
   }
@@ -1896,6 +1918,9 @@ function stopBattle(reason: string) {
   selectedSkillId.value = null;
   clearBattleEffects();
   pendingRoundHeals = [];
+  if (wasRunning) {
+    emitBattleLogInputDraft();
+  }
 }
 
 async function startBattle(source: 'story' | 'training' = 'story') {
@@ -3075,6 +3100,41 @@ function finishBattle(text: string) {
   winnerText.value = text;
   turnHint.value = text;
   appendLog(text, 'result');
+  emitBattleLogInputDraft();
+}
+
+function normalizeBattleLogTextForInput(text: string) {
+  return text.trim().replace(/[，,。.!！?？；;]+$/u, '');
+}
+
+function buildBattleLogInputText() {
+  const entries = battleLogs.value
+    .slice()
+    .reverse()
+    .map(entry => normalizeBattleLogTextForInput(entry.text))
+    .filter(Boolean);
+
+  return {
+    entries,
+    text: entries.join('，'),
+  };
+}
+
+function emitBattleLogInputDraft() {
+  if (!battleLogInputEnabled.value) {
+    return;
+  }
+
+  const payload = buildBattleLogInputText();
+  if (!payload.text) {
+    return;
+  }
+
+  emit('battle-log-input-ready', {
+    mode: props.mode,
+    text: payload.text,
+    logCount: payload.entries.length,
+  });
 }
 
 function onFighterCardClicked(fighter: BattleFighter) {
@@ -3221,6 +3281,11 @@ function appendLog(text: string, kind: BattleLogKind) {
   if (battleLogs.value.length > 120) {
     battleLogs.value.length = 120;
   }
+}
+
+function toggleBattleLogInputEnabled(event: Event) {
+  const input = event.currentTarget as HTMLInputElement | null;
+  emit('update:autoFillBattleLogToInput', input?.checked === true);
 }
 
 function appendEffectLogIfEnemy(source: BattleFighter, affected: BattleFighter, text: string) {
@@ -4366,6 +4431,29 @@ onBeforeUnmount(() => {
 .drawer-head h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.log-title-wrap {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.log-input-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sub-color);
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.log-input-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .library-drawer {

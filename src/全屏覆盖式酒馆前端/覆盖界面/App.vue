@@ -172,7 +172,12 @@
         </header>
 
         <section v-if="activePage === 'info'" class="page-view info-view">
-          <section ref="chatScrollRef" class="chat-box">
+          <section
+            ref="chatScrollRef"
+            class="chat-box"
+            :class="{ 'has-wallpaper': wallpaperObjectUrl }"
+            :style="chatWallpaperStyle"
+          >
             <article
               v-for="message in chatMessages"
               :key="message.message_id"
@@ -262,11 +267,20 @@
         </section>
 
         <section v-else-if="activePage === 'battle'" class="page-view simple-view battle-view">
-          <BattleArena mode="story" :ignored-story-battle-session-id="ignoredStoryBattleSessionId" />
+          <BattleArena
+            v-model:auto-fill-battle-log-to-input="autoFillBattleLogToInput"
+            mode="story"
+            :ignored-story-battle-session-id="ignoredStoryBattleSessionId"
+            @battle-log-input-ready="handleBattleLogInputReady"
+          />
         </section>
 
         <section v-else-if="activePage === 'training'" class="page-view simple-view battle-view">
-          <BattleArena mode="training" />
+          <BattleArena
+            v-model:auto-fill-battle-log-to-input="autoFillBattleLogToInput"
+            mode="training"
+            @battle-log-input-ready="handleBattleLogInputReady"
+          />
         </section>
 
         <section v-else-if="activePage === 'map'" class="page-view map-view" :class="{ 'is-expanded': mapExpanded }">
@@ -365,6 +379,44 @@
                 {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
               </button>
             </div>
+          </article>
+
+          <article class="settings-card">
+            <div class="settings-heading">
+              <div>
+                <h2>聊天壁纸</h2>
+                <p class="settings-note">上传一张图片作为信息页聊天框背景；只保存当前这一张，刷新后仍会保留。</p>
+              </div>
+              <span class="status-chip" :data-state="wallpaperObjectUrl ? 'ready' : 'missing'">
+                {{ wallpaperObjectUrl ? '已设置' : '未设置' }}
+              </span>
+            </div>
+
+            <div class="wallpaper-settings">
+              <label class="wallpaper-upload-btn">
+                选择图片
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" @change="handleWallpaperFileChange" />
+              </label>
+              <button type="button" class="action-btn danger" :disabled="!wallpaperObjectUrl" @click="clearChatWallpaper">
+                清除壁纸
+              </button>
+              <div v-if="wallpaperObjectUrl" class="wallpaper-preview" :style="wallpaperPreviewStyle" aria-label="聊天壁纸预览"></div>
+            </div>
+
+            <p class="file-hint">{{ wallpaperStatusText }}</p>
+          </article>
+
+          <article class="settings-card">
+            <div class="settings-heading">
+              <div>
+                <h2>战斗日志</h2>
+                <p class="settings-note">战斗结束后，把本场日志自动填入输入框；只填入，不自动发送。</p>
+              </div>
+            </div>
+            <label class="settings-toggle">
+              <span>发送日志到用户输入框</span>
+              <input v-model="autoFillBattleLogToInput" type="checkbox" />
+            </label>
           </article>
 
           <article class="settings-card">
@@ -492,6 +544,22 @@ type OverlayStoredSettings = {
   nativeMessagesHidden: boolean;
   surfaceStyle: OverlaySurfaceStyle;
   glowStyle: OverlayGlowStyle;
+  autoFillBattleLogToInput: boolean;
+};
+
+type StoredWallpaper = {
+  key: string;
+  blob: Blob;
+  fileName: string;
+  type: string;
+  size: number;
+  updatedAt: string;
+};
+
+type BattleLogInputPayload = {
+  mode: 'story' | 'training';
+  text: string;
+  logCount: number;
 };
 
 type OverlayScheduleItem = {
@@ -568,6 +636,14 @@ const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
 const OVERLAY_SETTINGS_VERSION = 1;
 const OVERLAY_CHAT_STATE_KEY = 'th_fullscreen_overlay_chat_state_v1';
 const OVERLAY_CHAT_STATE_VERSION = 1;
+const WALLPAPER_DB_NAME = 'th_fullscreen_overlay_wallpaper';
+const WALLPAPER_DB_VERSION = 1;
+const WALLPAPER_STORE_NAME = 'wallpapers';
+const WALLPAPER_RECORD_KEY = 'info_chat_wallpaper';
+const WALLPAPER_MAX_FILE_SIZE = 5 * 1024 * 1024;
+const WALLPAPER_DEFAULT_HINT = '支持 PNG、JPG、WebP、GIF，单张不超过 5 MB；推荐用 WebP 或 JPG。';
+const SUPPORTED_WALLPAPER_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const SUPPORTED_WALLPAPER_FILE_PATTERN = /\.(?:png|jpe?g|webp|gif)$/i;
 const DATE_SYNC_BUTTON_NAME = '重算日期';
 const DATE_SYNC_SCRIPT_NAME = '日期变量同步脚本';
 const DATE_SYNC_SETTINGS_KEY = 'story_date_settings';
@@ -732,6 +808,9 @@ const mapFrameRef = ref<HTMLIFrameElement | null>(null);
 const chatMessages = ref<RenderableMessage[]>([]);
 const chatScrollRef = ref<HTMLElement | null>(null);
 const nativeMessagesHidden = ref(true);
+const autoFillBattleLogToInput = ref(true);
+const wallpaperObjectUrl = ref('');
+const wallpaperStatusText = ref(WALLPAPER_DEFAULT_HINT);
 const editingMessageId = ref<number | null>(null);
 const editingMessageText = ref('');
 const busyMessageId = ref<number | null>(null);
@@ -834,6 +913,20 @@ const dateSyncHintText = computed(() => {
   }
   return '设置会写回日期同步脚本自己的 script 变量；story_date 与 story_date_settings 的键结构保持不变。';
 });
+const chatWallpaperStyle = computed(() =>
+  wallpaperObjectUrl.value
+    ? {
+        '--chat-wallpaper-url': `url("${wallpaperObjectUrl.value}")`,
+      }
+    : {},
+);
+const wallpaperPreviewStyle = computed(() =>
+  wallpaperObjectUrl.value
+    ? {
+        backgroundImage: `url("${wallpaperObjectUrl.value}")`,
+      }
+    : {},
+);
 
 const persistSettingsDebounced = _.debounce(() => {
   persistSettingsToVariables();
@@ -849,6 +942,7 @@ function createDefaultStoredSettings(): OverlayStoredSettings {
     nativeMessagesHidden: true,
     surfaceStyle: 'black',
     glowStyle: 'cyber_blue',
+    autoFillBattleLogToInput: true,
   };
 }
 
@@ -880,6 +974,205 @@ function coerceBoolean(value: unknown, fallback: boolean): boolean {
     }
   }
   return fallback;
+}
+
+function openWallpaperDatabase(): Promise<IDBDatabase> {
+  if (!window.indexedDB) {
+    return Promise.reject(new Error('当前浏览器不支持 IndexedDB，无法保存上传壁纸。'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open(WALLPAPER_DB_NAME, WALLPAPER_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(WALLPAPER_STORE_NAME)) {
+        database.createObjectStore(WALLPAPER_STORE_NAME, { keyPath: 'key' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('打开壁纸数据库失败。'));
+    request.onblocked = () => reject(new Error('壁纸数据库正在被其他页面占用，请关闭其他酒馆页面后重试。'));
+  });
+}
+
+function normalizeStoredWallpaper(value: unknown): StoredWallpaper | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const blob = record.blob;
+  if (!(blob instanceof Blob)) {
+    return null;
+  }
+
+  return {
+    key: WALLPAPER_RECORD_KEY,
+    blob,
+    fileName: normalizeString(record.fileName, '聊天壁纸'),
+    type: normalizeString(record.type, blob.type || 'image/*'),
+    size: typeof record.size === 'number' && Number.isFinite(record.size) ? record.size : blob.size,
+    updatedAt: normalizeString(record.updatedAt, new Date().toISOString()),
+  };
+}
+
+async function readStoredWallpaper(): Promise<StoredWallpaper | null> {
+  const database = await openWallpaperDatabase();
+  return await new Promise((resolve, reject) => {
+    const transaction = database.transaction(WALLPAPER_STORE_NAME, 'readonly');
+    const store = transaction.objectStore(WALLPAPER_STORE_NAME);
+    const request = store.get(WALLPAPER_RECORD_KEY);
+
+    request.onsuccess = () => resolve(normalizeStoredWallpaper(request.result));
+    request.onerror = () => reject(request.error ?? new Error('读取壁纸失败。'));
+    transaction.oncomplete = () => database.close();
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error ?? new Error('读取壁纸事务已中止。'));
+    };
+    transaction.onerror = () => reject(transaction.error ?? new Error('读取壁纸事务失败。'));
+  });
+}
+
+async function writeStoredWallpaper(record: StoredWallpaper): Promise<void> {
+  const database = await openWallpaperDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(WALLPAPER_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(WALLPAPER_STORE_NAME);
+
+    store.put(record);
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error ?? new Error('保存壁纸事务已中止。'));
+    };
+    transaction.onerror = () => reject(transaction.error ?? new Error('保存壁纸事务失败。'));
+  });
+}
+
+async function deleteStoredWallpaper(): Promise<void> {
+  const database = await openWallpaperDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = database.transaction(WALLPAPER_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(WALLPAPER_STORE_NAME);
+
+    store.delete(WALLPAPER_RECORD_KEY);
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onabort = () => {
+      database.close();
+      reject(transaction.error ?? new Error('清除壁纸事务已中止。'));
+    };
+    transaction.onerror = () => reject(transaction.error ?? new Error('清除壁纸事务失败。'));
+  });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${Math.ceil(bytes / 1024)} KB`;
+  }
+  return `${bytes} B`;
+}
+
+function isSupportedWallpaperFile(file: File): boolean {
+  return SUPPORTED_WALLPAPER_TYPES.has(file.type.toLowerCase()) || SUPPORTED_WALLPAPER_FILE_PATTERN.test(file.name);
+}
+
+function revokeWallpaperObjectUrl() {
+  if (!wallpaperObjectUrl.value) {
+    return;
+  }
+
+  URL.revokeObjectURL(wallpaperObjectUrl.value);
+  wallpaperObjectUrl.value = '';
+}
+
+function applyStoredWallpaper(record: StoredWallpaper | null) {
+  revokeWallpaperObjectUrl();
+  if (!record) {
+    wallpaperStatusText.value = WALLPAPER_DEFAULT_HINT;
+    return;
+  }
+
+  wallpaperObjectUrl.value = URL.createObjectURL(record.blob);
+  wallpaperStatusText.value = `当前壁纸：${record.fileName} · ${formatFileSize(record.size)}。`;
+}
+
+async function loadChatWallpaper() {
+  try {
+    applyStoredWallpaper(await readStoredWallpaper());
+  } catch (error) {
+    console.error('[全屏覆盖式酒馆前端] 读取聊天壁纸失败。', error);
+    wallpaperStatusText.value = '读取已保存壁纸失败，可以重新上传一张图片覆盖。';
+  }
+}
+
+async function saveChatWallpaper(file: File) {
+  const record: StoredWallpaper = {
+    key: WALLPAPER_RECORD_KEY,
+    blob: file.slice(0, file.size, file.type),
+    fileName: file.name || '聊天壁纸',
+    type: file.type || 'image/*',
+    size: file.size,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await writeStoredWallpaper(record);
+  applyStoredWallpaper(record);
+}
+
+async function handleWallpaperFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0] ?? null;
+  if (input) {
+    input.value = '';
+  }
+  if (!file) {
+    return;
+  }
+
+  if (!isSupportedWallpaperFile(file)) {
+    toastr.warning('请选择 PNG、JPG、WebP 或 GIF 图片。', '聊天壁纸');
+    return;
+  }
+  if (file.size <= 0) {
+    toastr.warning('图片文件为空，无法作为壁纸。', '聊天壁纸');
+    return;
+  }
+  if (file.size > WALLPAPER_MAX_FILE_SIZE) {
+    toastr.warning(`图片不能超过 ${formatFileSize(WALLPAPER_MAX_FILE_SIZE)}。`, '聊天壁纸');
+    return;
+  }
+
+  wallpaperStatusText.value = '正在保存壁纸…';
+  try {
+    await saveChatWallpaper(file);
+    toastr.success('聊天壁纸已保存。', '聊天壁纸');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    wallpaperStatusText.value = '保存壁纸失败，请稍后重试。';
+    toastr.error(detail, '聊天壁纸');
+  }
+}
+
+async function clearChatWallpaper() {
+  try {
+    await deleteStoredWallpaper();
+    applyStoredWallpaper(null);
+    toastr.success('聊天壁纸已清除。', '聊天壁纸');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    toastr.error(detail, '聊天壁纸');
+  }
 }
 
 function coerceInteger(value: unknown, fallback: number): number {
@@ -1231,6 +1524,7 @@ function parseStoredSettings(raw: unknown): OverlayStoredSettings {
       ? record.surfaceStyle
       : (legacyTheme?.surfaceStyle ?? defaults.surfaceStyle),
     glowStyle: isOverlayGlowStyle(record.glowStyle) ? record.glowStyle : (legacyTheme?.glowStyle ?? defaults.glowStyle),
+    autoFillBattleLogToInput: coerceBoolean(record.autoFillBattleLogToInput, defaults.autoFillBattleLogToInput),
   };
 }
 
@@ -1253,6 +1547,7 @@ function loadSettingsFromVariables() {
   nativeMessagesHidden.value = parsed.nativeMessagesHidden;
   surfaceStyle.value = parsed.surfaceStyle;
   glowStyle.value = parsed.glowStyle;
+  autoFillBattleLogToInput.value = parsed.autoFillBattleLogToInput;
 }
 
 function loadChatStateFromVariables() {
@@ -1274,6 +1569,7 @@ function persistSettingsToVariables() {
     nativeMessagesHidden: nativeMessagesHidden.value,
     surfaceStyle: surfaceStyle.value,
     glowStyle: glowStyle.value,
+    autoFillBattleLogToInput: autoFillBattleLogToInput.value,
   };
 
   _.set(variables, OVERLAY_SETTINGS_KEY, payload);
@@ -1490,6 +1786,38 @@ function maybeApplyArrivedSchedules() {
   );
   persistChatStateToVariables();
   toastr.info(`已把 ${dueSchedules.length} 条行程内容填入输入框。`, '行程提醒');
+}
+
+function appendTextToDraftIfMissing(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (!draft.value.trim()) {
+    draft.value = trimmed;
+    return true;
+  }
+  if (draft.value.includes(trimmed)) {
+    return false;
+  }
+
+  draft.value = `${draft.value.trimEnd()}\n\n${trimmed}`;
+  return true;
+}
+
+function handleBattleLogInputReady(payload: BattleLogInputPayload) {
+  if (!autoFillBattleLogToInput.value) {
+    return;
+  }
+
+  const hasAppended = appendTextToDraftIfMissing(payload.text);
+  if (!hasAppended) {
+    return;
+  }
+
+  const title = payload.mode === 'training' ? '训练日志' : '战斗日志';
+  toastr.info(`已把 ${payload.logCount} 条${title}填入输入框。`, title);
 }
 
 function flattenScriptTrees(nodes: ScriptTreeNode[]): ScriptTreeScriptNode[] {
@@ -2044,6 +2372,7 @@ async function regenerateAssistantMessage(message: RenderableMessage) {
 onMounted(() => {
   loadSettingsFromVariables();
   loadChatStateFromVariables();
+  void loadChatWallpaper();
   locateDateSyncScriptId(true);
   loadDateSyncSettings(true);
   refreshStoryDateState();
@@ -2133,7 +2462,7 @@ watch(
 );
 
 watch(
-  [nativeMessagesHidden, surfaceStyle, glowStyle],
+  [nativeMessagesHidden, surfaceStyle, glowStyle, autoFillBattleLogToInput],
   () => {
     persistSettingsDebounced();
   },
@@ -2150,6 +2479,7 @@ onBeforeUnmount(() => {
     window.clearInterval(storyDateTimer);
     storyDateTimer = null;
   }
+  revokeWallpaperObjectUrl();
   stops.forEach(handle => handle.stop());
 });
 </script>
@@ -2852,6 +3182,42 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
+.wallpaper-settings {
+  display: grid;
+  grid-template-columns: auto auto minmax(140px, 1fr);
+  align-items: stretch;
+  gap: 10px;
+}
+
+.wallpaper-upload-btn {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-color);
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
+  text-align: center;
+  cursor: pointer;
+}
+
+.wallpaper-upload-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.wallpaper-preview {
+  min-height: 52px;
+  border: 1px solid var(--line-color);
+  border-radius: 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 0 0 1px var(--accent-soft) inset;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2969,6 +3335,7 @@ onBeforeUnmount(() => {
 }
 
 .chat-box {
+  position: relative;
   min-height: 0;
   overflow: auto;
   border-radius: 14px;
@@ -2978,6 +3345,20 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 10px;
   background: var(--shell-bg);
+}
+
+.chat-box.has-wallpaper {
+  background:
+    linear-gradient(rgba(2, 5, 12, 0.42), rgba(2, 5, 12, 0.42)),
+    var(--chat-wallpaper-url) center / cover no-repeat,
+    var(--shell-bg);
+}
+
+.overlay-root[data-surface='silver'] .chat-box.has-wallpaper {
+  background:
+    linear-gradient(rgba(244, 247, 252, 0.34), rgba(244, 247, 252, 0.34)),
+    var(--chat-wallpaper-url) center / cover no-repeat,
+    var(--shell-bg);
 }
 
 .message-row {
@@ -3187,6 +3568,10 @@ onBeforeUnmount(() => {
   }
 
   .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wallpaper-settings {
     grid-template-columns: 1fr;
   }
 }
