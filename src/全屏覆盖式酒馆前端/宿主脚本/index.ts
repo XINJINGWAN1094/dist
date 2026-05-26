@@ -19,6 +19,27 @@ const OVERLAY_LAUNCHER_FRONT_Z_INDEX = 2147483002;
 const OVERLAY_LAUNCHER_BACK_Z_INDEX = 2147483000;
 const OVERLAY_LAUNCHER_MARGIN = 18;
 
+function resolveHostWindow(): Window {
+  try {
+    const ownerWindow = window.frameElement?.ownerDocument.defaultView;
+    if (ownerWindow) {
+      return ownerWindow;
+    }
+  } catch {
+    // Fall back below when parent access is unavailable.
+  }
+
+  try {
+    if (window.parent && window.parent !== window) {
+      return window.parent;
+    }
+  } catch {
+    // Fall back below when parent access is unavailable.
+  }
+
+  return window;
+}
+
 function normalizeVisibilityPayload(payload: unknown): OverlayVisibilityPayload {
   if (!payload || typeof payload !== 'object') {
     return { visible: true, source: 'unknown' };
@@ -50,11 +71,18 @@ function normalizeNativeMessageVisibilityPayload(payload: unknown): NativeMessag
 }
 
 function mountFullscreenOverlayHost() {
+  const hostWindow = resolveHostWindow();
+  const hostDocument = hostWindow.document;
+  const $hostWindow = $(hostWindow);
+  const $hostDocument = $(hostDocument);
+  const $hostBody = $(hostDocument.body);
+
   const syncBridge = registerCoreEventSync();
   const nativeSendBridge = registerNativeSendBridge();
 
   let app: VueApp<Element> | null = null;
   let destroyStyleTeleport: (() => void) | null = null;
+  let cleanedUp = false;
   let overlayVisible = true;
   let nativeUiHidden = DEFAULT_HIDE_NATIVE_UI;
   let suppressLauncherClick = false;
@@ -83,9 +111,9 @@ function mountFullscreenOverlayHost() {
       display: 'block',
       background: 'transparent',
     })
-    .appendTo('body');
+    .appendTo(hostDocument.body);
 
-  const $launcher = $('<button>')
+  const $launcher = $(hostDocument.createElement('button'))
     .attr({
       id: OVERLAY_LAUNCHER_ID,
       type: 'button',
@@ -109,11 +137,11 @@ function mountFullscreenOverlayHost() {
       touchAction: 'none',
       userSelect: 'none',
     })
-    .appendTo('body');
+    .appendTo(hostDocument.body);
 
   const syncOverlayFrameViewport = () => {
-    const width = Math.max(window.innerWidth, document.documentElement.clientWidth, 1);
-    const height = Math.max(window.innerHeight, document.documentElement.clientHeight, 1);
+    const width = Math.max(hostWindow.innerWidth, hostDocument.documentElement.clientWidth, 1);
+    const height = Math.max(hostWindow.innerHeight, hostDocument.documentElement.clientHeight, 1);
 
     $frame.css({
       position: 'fixed',
@@ -143,7 +171,7 @@ function mountFullscreenOverlayHost() {
 
   const syncOverlayFrameViewportSoon = () => {
     syncOverlayFrameViewport();
-    window.requestAnimationFrame(syncOverlayFrameViewport);
+    hostWindow.requestAnimationFrame(syncOverlayFrameViewport);
     _.delay(syncOverlayFrameViewport, 80);
   };
 
@@ -189,8 +217,8 @@ function mountFullscreenOverlayHost() {
     const launcherHeight = $launcher.outerHeight() ?? 0;
 
     return {
-      left: _.clamp(left, 8, Math.max(8, window.innerWidth - launcherWidth - 8)),
-      top: _.clamp(top, 8, Math.max(8, window.innerHeight - launcherHeight - 8)),
+      left: _.clamp(left, 8, Math.max(8, hostWindow.innerWidth - launcherWidth - 8)),
+      top: _.clamp(top, 8, Math.max(8, hostWindow.innerHeight - launcherHeight - 8)),
     };
   };
 
@@ -207,10 +235,10 @@ function mountFullscreenOverlayHost() {
   const stopLauncherDrag = () => {
     launcherDragState = null;
     $launcher.css('cursor', 'grab');
-    $('body').css('userSelect', '');
-    $(document).off(`pointermove${PAGE_SCOPE}`);
-    $(document).off(`pointerup${PAGE_SCOPE}`);
-    $(document).off(`pointercancel${PAGE_SCOPE}`);
+    $hostBody.css('userSelect', '');
+    $hostDocument.off(`pointermove${PAGE_SCOPE}`);
+    $hostDocument.off(`pointerup${PAGE_SCOPE}`);
+    $hostDocument.off(`pointercancel${PAGE_SCOPE}`);
   };
 
   const setOverlayVisible = (visible: boolean, source: OverlayVisibilityPayload['source']) => {
@@ -223,7 +251,7 @@ function mountFullscreenOverlayHost() {
   };
 
   const applyNativeMessageVisibility = () => {
-    $('#chat > .mes').each((_, element) => {
+    $('#chat > .mes', hostDocument).each((_, element) => {
       const $messageFloor = $(element);
       const messageId = Number($messageFloor.attr('mesid'));
       const shouldShow = !nativeUiHidden || messageId === 0;
@@ -293,10 +321,10 @@ function mountFullscreenOverlayHost() {
     };
     setLauncherPosition(rect.left, rect.top);
     $launcher.css('cursor', 'grabbing');
-    $('body').css('userSelect', 'none');
+    $hostBody.css('userSelect', 'none');
     $launcher[0].setPointerCapture?.(pointer.pointerId);
 
-    $(document).on(`pointermove${PAGE_SCOPE}`, moveEvent => {
+    $hostDocument.on(`pointermove${PAGE_SCOPE}`, moveEvent => {
       const movePointer = moveEvent.originalEvent as PointerEvent | undefined;
       if (!movePointer || !launcherDragState) {
         return;
@@ -311,7 +339,7 @@ function mountFullscreenOverlayHost() {
       setLauncherPosition(launcherDragState.originLeft + deltaX, launcherDragState.originTop + deltaY);
     });
 
-    $(document).on(`pointerup${PAGE_SCOPE}`, upEvent => {
+    $hostDocument.on(`pointerup${PAGE_SCOPE}`, upEvent => {
       const upPointer = upEvent.originalEvent as PointerEvent | undefined;
       if (launcherDragState?.moved) {
         suppressLauncherClick = true;
@@ -322,7 +350,7 @@ function mountFullscreenOverlayHost() {
       stopLauncherDrag();
     });
 
-    $(document).on(`pointercancel${PAGE_SCOPE}`, () => {
+    $hostDocument.on(`pointercancel${PAGE_SCOPE}`, () => {
       stopLauncherDrag();
     });
   });
@@ -336,7 +364,7 @@ function mountFullscreenOverlayHost() {
     setOverlayVisible(!overlayVisible, 'launcher');
   });
 
-  $(window).on(`resize${PAGE_SCOPE}`, () => {
+  $hostWindow.on(`resize${PAGE_SCOPE}`, () => {
     syncOverlayFrameViewportSoon();
     const rect = $launcher[0].getBoundingClientRect();
     if ($launcher.css('left') !== 'auto') {
@@ -362,7 +390,11 @@ function mountFullscreenOverlayHost() {
   console.info('[全屏覆盖式酒馆前端] 已挂载到顶层 body 的全屏 iframe。');
   console.info('[全屏覆盖式酒馆前端] 原生聊天 UI 默认隐藏（保留开场白可见）。');
 
-  $(window).on(`pagehide${PAGE_SCOPE}`, () => {
+  const cleanup = () => {
+    if (cleanedUp) {
+      return;
+    }
+    cleanedUp = true;
     nativeUiHidden = false;
     applyNativeUiVisibility();
     app?.unmount();
@@ -371,13 +403,19 @@ function mountFullscreenOverlayHost() {
     syncBridge.stop();
     nativeSendBridge.stop();
     stopLauncherDrag();
-    $(document).off(PAGE_SCOPE);
+    $hostDocument.off(PAGE_SCOPE);
     $launcher.off(PAGE_SCOPE);
     $launcher.remove();
     $frame.off(PAGE_SCOPE);
     $frame.remove();
+    $hostWindow.off(PAGE_SCOPE);
     $(window).off(PAGE_SCOPE);
-  });
+  };
+
+  $hostWindow.on(`pagehide${PAGE_SCOPE}`, cleanup);
+  if (hostWindow !== window) {
+    $(window).on(`pagehide${PAGE_SCOPE}`, cleanup);
+  }
 }
 
 $(() => {
