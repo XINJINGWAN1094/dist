@@ -5,6 +5,7 @@ const SCRIPT_BUTTON_NAME = '同步日期世界书';
 const SETTINGS_KEY = 'story_date_worldbook_controller';
 const STATUS_KEY = 'story_date_worldbook_controller_status';
 const STORY_DATE_KEY = 'story_date';
+const DEFAULT_WORLDBOOK_NAME = '息与梦进行曲';
 const INITIAL_DATE = { year: 3197, month: 5, day: 29 } as const;
 const DEFAULT_SYNC_DELAYS_MS = [300, 2_000, 5_000, 10_000, 30_000] as const;
 
@@ -220,7 +221,10 @@ function normalizeSettings(value: unknown): ControllerSettings {
 
   return {
     enabled: coerceBoolean(record.enabled, true),
-    worldbook: typeof record.worldbook === 'string' ? record.worldbook.trim() : '',
+    worldbook:
+      typeof record.worldbook === 'string' && record.worldbook.trim()
+        ? record.worldbook.trim()
+        : DEFAULT_WORLDBOOK_NAME,
     render: normalizeRenderMode(record.render),
     debug: coerceBoolean(record.debug, false),
     entries,
