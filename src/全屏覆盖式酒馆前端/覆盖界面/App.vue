@@ -371,9 +371,21 @@
             <div class="settings-heading">
               <div>
                 <h2>显示选项</h2>
-                <p class="settings-note">原生消息的显示切换移动到设置页里，方便在覆盖层和酒馆原生楼层之间来回调试。</p>
+                <p class="settings-note">信息页只读取并显示最近若干楼；更早的楼层不会进入覆盖页前端状态。</p>
               </div>
             </div>
+            <label class="settings-field message-window-field">
+              <span>信息页显示楼数</span>
+              <input
+                v-model.number="chatMessageWindowSize"
+                type="number"
+                class="rule-input message-window-input"
+                :min="CHAT_MESSAGE_WINDOW_MIN"
+                :max="CHAT_MESSAGE_WINDOW_MAX"
+                step="1"
+                @change="normalizeChatMessageWindowSize"
+              />
+            </label>
             <div class="settings-actions">
               <button type="button" class="action-btn" @click="toggleNativeMessageVisibility">
                 {{ nativeMessagesHidden ? '显示原生消息' : '隐藏原生消息' }}
@@ -545,6 +557,7 @@ type OverlayStoredSettings = {
   surfaceStyle: OverlaySurfaceStyle;
   glowStyle: OverlayGlowStyle;
   autoFillBattleLogToInput: boolean;
+  chatMessageWindowSize: number;
 };
 
 type StoredWallpaper = {
@@ -636,6 +649,9 @@ const OVERLAY_SETTINGS_KEY = 'th_fullscreen_overlay.settings.v1';
 const OVERLAY_SETTINGS_VERSION = 1;
 const OVERLAY_CHAT_STATE_KEY = 'th_fullscreen_overlay_chat_state_v1';
 const OVERLAY_CHAT_STATE_VERSION = 1;
+const CHAT_MESSAGE_WINDOW_DEFAULT = 10;
+const CHAT_MESSAGE_WINDOW_MIN = 6;
+const CHAT_MESSAGE_WINDOW_MAX = 20;
 const WALLPAPER_DB_NAME = 'th_fullscreen_overlay_wallpaper';
 const WALLPAPER_DB_VERSION = 1;
 const WALLPAPER_STORE_NAME = 'wallpapers';
@@ -808,6 +824,7 @@ const mapFrameRef = ref<HTMLIFrameElement | null>(null);
 const chatMessages = ref<RenderableMessage[]>([]);
 const chatScrollRef = ref<HTMLElement | null>(null);
 const nativeMessagesHidden = ref(true);
+const chatMessageWindowSize = ref(CHAT_MESSAGE_WINDOW_DEFAULT);
 const autoFillBattleLogToInput = ref(true);
 const wallpaperObjectUrl = ref('');
 const wallpaperStatusText = ref(WALLPAPER_DEFAULT_HINT);
@@ -943,6 +960,7 @@ function createDefaultStoredSettings(): OverlayStoredSettings {
     surfaceStyle: 'black',
     glowStyle: 'cyber_blue',
     autoFillBattleLogToInput: true,
+    chatMessageWindowSize: CHAT_MESSAGE_WINDOW_DEFAULT,
   };
 }
 
@@ -974,6 +992,10 @@ function coerceBoolean(value: unknown, fallback: boolean): boolean {
     }
   }
   return fallback;
+}
+
+function normalizeChatMessageWindowSizeValue(value: unknown): number {
+  return _.clamp(coerceInteger(value, CHAT_MESSAGE_WINDOW_DEFAULT), CHAT_MESSAGE_WINDOW_MIN, CHAT_MESSAGE_WINDOW_MAX);
 }
 
 function openWallpaperDatabase(): Promise<IDBDatabase> {
@@ -1525,6 +1547,7 @@ function parseStoredSettings(raw: unknown): OverlayStoredSettings {
       : (legacyTheme?.surfaceStyle ?? defaults.surfaceStyle),
     glowStyle: isOverlayGlowStyle(record.glowStyle) ? record.glowStyle : (legacyTheme?.glowStyle ?? defaults.glowStyle),
     autoFillBattleLogToInput: coerceBoolean(record.autoFillBattleLogToInput, defaults.autoFillBattleLogToInput),
+    chatMessageWindowSize: normalizeChatMessageWindowSizeValue(record.chatMessageWindowSize),
   };
 }
 
@@ -1548,6 +1571,7 @@ function loadSettingsFromVariables() {
   surfaceStyle.value = parsed.surfaceStyle;
   glowStyle.value = parsed.glowStyle;
   autoFillBattleLogToInput.value = parsed.autoFillBattleLogToInput;
+  chatMessageWindowSize.value = parsed.chatMessageWindowSize;
 }
 
 function loadChatStateFromVariables() {
@@ -1570,6 +1594,7 @@ function persistSettingsToVariables() {
     surfaceStyle: surfaceStyle.value,
     glowStyle: glowStyle.value,
     autoFillBattleLogToInput: autoFillBattleLogToInput.value,
+    chatMessageWindowSize: normalizeChatMessageWindowSizeValue(chatMessageWindowSize.value),
   };
 
   _.set(variables, OVERLAY_SETTINGS_KEY, payload);
@@ -1606,6 +1631,11 @@ function setSurfaceStyle(next: OverlaySurfaceStyle) {
 
 function setGlowStyle(next: OverlayGlowStyle) {
   glowStyle.value = next;
+}
+
+function normalizeChatMessageWindowSize() {
+  chatMessageWindowSize.value = normalizeChatMessageWindowSizeValue(chatMessageWindowSize.value);
+  refreshChatMessages();
 }
 
 function handleMapFrameLoad(event: Event) {
@@ -2170,29 +2200,12 @@ function refreshChatMessages() {
   let rawMessages: ChatMessage[] = [];
 
   try {
-    rawMessages = withTavernHelper('读取消息区间 0-lastMessageId', [], helper =>
-      helper.getChatMessages(`0-${lastMessageId}`, chatMessageQueryOptions),
+    const firstMessageId = Math.max(0, lastMessageId - normalizeChatMessageWindowSizeValue(chatMessageWindowSize.value) + 1);
+    rawMessages = withTavernHelper('读取最近消息区间', [], helper =>
+      helper.getChatMessages(`${firstMessageId}-${lastMessageId}`, chatMessageQueryOptions),
     );
   } catch {
     rawMessages = [];
-  }
-
-  if (rawMessages.length === 0) {
-    try {
-      rawMessages = withTavernHelper('读取消息区间 0-{{lastMessageId}}', [], helper =>
-        helper.getChatMessages('0-{{lastMessageId}}', chatMessageQueryOptions),
-      );
-    } catch {
-      rawMessages = [];
-    }
-  }
-
-  if (rawMessages.length === 0) {
-    try {
-      rawMessages = withTavernHelper('读取消息区间 0-', [], helper => helper.getChatMessages('0-', chatMessageQueryOptions));
-    } catch {
-      rawMessages = [];
-    }
   }
 
   chatMessages.value = rawMessages
@@ -2462,7 +2475,7 @@ watch(
 );
 
 watch(
-  [nativeMessagesHidden, surfaceStyle, glowStyle, autoFillBattleLogToInput],
+  [nativeMessagesHidden, surfaceStyle, glowStyle, autoFillBattleLogToInput, chatMessageWindowSize],
   () => {
     persistSettingsDebounced();
   },
