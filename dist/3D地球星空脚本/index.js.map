@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","mappings":"AAAAA,EAAE,KACAC,QAAQC,KAAK","sources":["src://tavern_helper_template/src/3D地球星空脚本/index.ts"],"sourcesContent":["$(() => {\n  console.info('[3D地球星空脚本] 独立打开按钮已停用，请从全屏覆盖式酒馆前端的“息界地图”进入。');\n});\n"],"names":["$","console","info"],"sourceRoot":""}
