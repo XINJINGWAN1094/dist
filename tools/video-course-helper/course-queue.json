@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "settings": {
+    "autoPlayWhenArrived": true,
+    "autoOpenNext": true,
+    "keepNormalPlaybackRate": true,
+    "pollIntervalMs": 1000,
+    "selectors": {
+      "video": "video",
+      "nextButton": "",
+      "catalogItem": "",
+      "catalogTitle": "",
+      "catalogUrl": "a",
+      "blockers": [
+        "input[name*='captcha' i]",
+        "[id*='captcha' i]",
+        "[class*='captcha' i]",
+        "[id*='quiz' i]",
+        "[class*='quiz' i]",
+        "[id*='exam' i]",
+        "[class*='exam' i]"
+      ]
+    }
+  },
+  "chapters": []
+}

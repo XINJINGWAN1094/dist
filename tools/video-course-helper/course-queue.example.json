@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "settings": {
+    "autoPlayWhenArrived": true,
+    "autoOpenNext": true,
+    "keepNormalPlaybackRate": true,
+    "pollIntervalMs": 1000,
+    "selectors": {
+      "video": "video",
+      "nextButton": "",
+      "catalogItem": "",
+      "catalogTitle": "",
+      "catalogUrl": "a",
+      "blockers": [
+        "input[name*='captcha' i]",
+        "[id*='captcha' i]",
+        "[class*='captcha' i]",
+        "[id*='quiz' i]",
+        "[class*='quiz' i]",
+        "[id*='exam' i]",
+        "[class*='exam' i]"
+      ]
+    }
+  },
+  "chapters": [
+    {
+      "id": "web-001",
+      "title": "示例网页课程 1",
+      "type": "web",
+      "url": "https://example.com/course/lesson-1",
+      "selectors": {
+        "video": "video"
+      }
+    },
+    {
+      "id": "web-002",
+      "title": "示例网页课程 2",
+      "type": "web",
+      "url": "https://example.com/course/lesson-2",
+      "selectors": {
+        "video": "video"
+      }
+    },
+    {
+      "id": "web-003",
+      "title": "示例网页课程 3",
+      "type": "web",
+      "url": "https://example.com/course/lesson-3",
+      "selectors": {
+        "video": "video"
+      }
+    },
+    {
+      "id": "app-001",
+      "title": "示例客户端课程 1",
+      "type": "app",
+      "appLaunch": "C:\\Path\\To\\CourseApp.exe",
+      "windowTitle": "Course App",
+      "hotkeys": {
+        "playPause": "{Space}",
+        "next": "^n"
+      },
+      "click": {
+        "x": 960,
+        "y": 540
+      },
+      "durationSeconds": 1800
+    }
+  ]
+}
