@@ -6,7 +6,6 @@ import { SCRIPT_BUTTON_NAME } from './types';
 import {
   clearSyncTimers,
   disableScriptEntriesInWorldbook,
-  primeMvuInitialization,
   queueSync,
   queueSyncSeries,
   resetSyncContextForCurrentChat,
@@ -50,7 +49,6 @@ function getCurrentChatIdSafely() {
 function mountXinjingwanStoryDirector() {
   appendInexistentScriptButtons([{ name: SCRIPT_BUTTON_NAME, visible: true }]);
   readState(true);
-  primeMvuInitialization();
 
   const hostWindow = resolveHostWindow();
   const hostDocument = hostWindow.document;
@@ -108,7 +106,7 @@ function mountXinjingwanStoryDirector() {
     });
 
     const frameDocument = $frame[0].contentDocument;
-    if (!frameDocument) {
+    if (!frameDocument?.documentElement || !frameDocument.body) {
       return;
     }
     frameDocument.documentElement.style.width = '100%';
@@ -127,9 +125,15 @@ function mountXinjingwanStoryDirector() {
     _.delay(syncFrameLayout, 80);
   };
 
+  const syncFrameLayoutForEditing = () => {
+    syncFrameLayoutSoon();
+    _.delay(syncFrameLayout, 280);
+    _.delay(syncFrameLayout, 640);
+  };
+
   const mountVueOnFrame = () => {
     const frameDocument = $frame[0].contentDocument;
-    if (!frameDocument) {
+    if (!frameDocument?.documentElement || !frameDocument.body) {
       return;
     }
 
@@ -158,6 +162,10 @@ function mountXinjingwanStoryDirector() {
       toastr.error('剧情指导界面运行出错，请查看控制台。', '剧情指导');
     };
     app.mount(rootElement);
+    $(frameDocument)
+      .off(PAGE_SCOPE)
+      .on(`focusin${PAGE_SCOPE}`, 'textarea,input', syncFrameLayoutForEditing)
+      .on(`focusout${PAGE_SCOPE}`, 'textarea,input', syncFrameLayoutForEditing);
     syncFrameLayoutSoon();
   };
 

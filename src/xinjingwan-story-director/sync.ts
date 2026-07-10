@@ -1,11 +1,13 @@
 import {
   ENTRY_SOURCE,
+  type OutlineProgressReport,
   type StoryDirectorEntryType,
   type StoryDirectorMode,
   type StoryDirectorState,
   type TimedActiveRange,
 } from './types';
 import {
+  createOutlineProgressReport,
   getEnabledOutlinePage,
   getNonEmptyNodes,
   normalizeState,
@@ -16,6 +18,8 @@ import {
 
 const SYNC_DELAYS_MS = [250, 1_500, 4_000, 9_000] as const;
 const TIMED_COUNTER_EXTRA_KEY = 'xinjingwan_end_counter';
+const OUTLINE_STATE_EXTRA_KEY = 'xinjingwan_outline_state';
+const OUTLINE_STATE_TAG = 'XJWSD_STATE';
 
 const ENTRY_SPECS: Record<
   StoryDirectorEntryType,
@@ -23,7 +27,7 @@ const ENTRY_SPECS: Record<
 > = {
   outlineContent: { name: '[XINJINGWAN-2026] 大纲内容', order: 9997, mode: 'outline' },
   outlineRule: { name: '[XINJINGWAN-2026] 大纲准则', order: 9998, mode: 'outline' },
-  outlineProgress: { name: '[XINJINGWAN-2026] 大纲进度规则', order: 9999, mode: 'outline' },
+  outlineProgress: { name: '[XINJINGWAN-2026] 大纲状态协议', order: 9999, mode: 'outline' },
   endingReference: { name: '[XINJINGWAN-2026] 结局参考', order: 9999, mode: 'endingReference' },
   timedEnding: { name: '[XINJINGWAN-2026] 限时结局', order: 9999, mode: 'timedEnding' },
 };
@@ -102,6 +106,159 @@ function trimBlock(text: string) {
   return text.trim().replace(/\n{3,}/g, '\n\n');
 }
 
+function createOutlineStateBlockPattern() {
+  return new RegExp(`<${OUTLINE_STATE_TAG}>\\s*([\\s\\S]*?)\\s*</${OUTLINE_STATE_TAG}>`, 'gi');
+}
+
+function createOutlineRunId() {
+  return `XJW_OUTLINE_2026-${localDateStamp()}-${Date.now().toString(36)}`;
+}
+
+function toRecord(value: unknown): Record<string, unknown> | null {
+  return !!value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function coerceInteger(value: unknown, fallback: number, min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER) {
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+  return Math.min(Math.max(Math.trunc(numberValue), min), max);
+}
+
+function coerceNullableInteger(value: unknown, min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER) {
+  if (value == null || value === '') {
+    return null;
+  }
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+  return Math.min(Math.max(Math.trunc(numberValue), min), max);
+}
+
+function coerceString(value: unknown) {
+  return typeof value === 'string' ? value : '';
+}
+
+function getOutlineCurrentNode(state: StoryDirectorState) {
+  return Math.max(1, Math.trunc(state.outline.progress.nextNode || 1));
+}
+
+function getOutlineCompletedNodesLabel(currentNode: number) {
+  return currentNode > 1 ? `节点1~节点${currentNode - 1}` : '无';
+}
+
+function extractLastOutlineStatePayload(message: string) {
+  const pattern = createOutlineStateBlockPattern();
+  let payload: string | null = null;
+  let match: RegExpExecArray | null = null;
+  while ((match = pattern.exec(message)) != null) {
+    payload = match[1]?.trim() ?? null;
+  }
+  return payload;
+}
+
+function stripOutlineStateBlocks(message: string) {
+  return message
+    .replace(createOutlineStateBlockPattern(), '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+function normalizeJsonPayload(payload: string) {
+  return payload
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+}
+
+function parseOutlineProgressPayload(
+  payload: string,
+  state: StoryDirectorState,
+  messageId: number,
+): OutlineProgressReport | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(normalizeJsonPayload(payload));
+  } catch (error) {
+    console.warn('[xinjingwan-story-director] unable to parse outline state block:', error);
+    return null;
+  }
+
+  const record = toRecord(parsed);
+  if (!record) {
+    return null;
+  }
+
+  const runId = coerceString(record.runId).trim();
+  if (!state.outline.runId || runId !== state.outline.runId) {
+    return null;
+  }
+
+  const page = getEnabledOutlinePage(state);
+  const totalNodes = page ? getNonEmptyNodes(page).length : 0;
+  const maxNode = Math.max(totalNodes + 1, 1);
+  const previousNode = getOutlineCurrentNode(state);
+  const currentNode = coerceInteger(record.currentNode, previousNode, 1, maxNode);
+  const completed = typeof record.completed === 'boolean'
+    ? record.completed
+    : coerceString(record.nodeStatus).toLowerCase() === 'complete';
+  const nextNodeFallback = completed ? currentNode + 1 : currentNode;
+  const nextNode = coerceInteger(record.nextNode, nextNodeFallback, 1, maxNode);
+  const completedNode = coerceNullableInteger(record.completedNode, 1, maxNode)
+    ?? (nextNode > currentNode ? currentNode : null);
+  const status = (
+    coerceString(record.status) ||
+    coerceString(record.summary) ||
+    coerceString(record.reason)
+  ).trim().slice(0, 500);
+  const confidence = (
+    coerceString(record.confidence) ||
+    coerceString(record.nodeStatus) ||
+    (nextNode > currentNode ? 'complete' : 'partial')
+  ).trim().slice(0, 80);
+
+  return {
+    runId,
+    currentNode,
+    nextNode,
+    completedNode,
+    completed: completed || nextNode > currentNode,
+    status,
+    confidence,
+    messageId,
+    updatedAt: nowIsoString(),
+  };
+}
+
+function normalizeStoredOutlineProgress(
+  value: unknown,
+  state: StoryDirectorState,
+  messageId: number,
+): OutlineProgressReport | null {
+  const record = toRecord(value);
+  if (!record || !state.outline.runId || coerceString(record.runId).trim() !== state.outline.runId) {
+    return null;
+  }
+
+  const currentNode = coerceInteger(record.currentNode, getOutlineCurrentNode(state), 1, 1000);
+  const nextNode = coerceInteger(record.nextNode, currentNode, 1, 1000);
+  return {
+    runId: state.outline.runId,
+    currentNode,
+    nextNode,
+    completedNode: coerceNullableInteger(record.completedNode, 1, 1000),
+    completed: typeof record.completed === 'boolean' ? record.completed : nextNode > currentNode,
+    status: coerceString(record.status).trim().slice(0, 500),
+    confidence: coerceString(record.confidence).trim().slice(0, 80),
+    messageId: coerceNullableInteger(record.messageId, 0) ?? messageId,
+    updatedAt: coerceString(record.updatedAt).trim(),
+  };
+}
+
 function safeLastMessageId() {
   try {
     return Math.max(getLastMessageId(), 0);
@@ -136,6 +293,7 @@ function openTimedRange(state: StoryDirectorState) {
 function deactivateOtherModes(state: StoryDirectorState, keepMode: StoryDirectorMode) {
   if (keepMode !== 'outline') {
     state.outline.enabledPageId = null;
+    state.outline.runId = null;
   }
   if (keepMode !== 'endingReference') {
     state.endingReference.enabled = false;
@@ -219,55 +377,24 @@ async function assertWorldbookReady(entryTypes: StoryDirectorEntryType[], contex
   return worldbookName;
 }
 
-function readOutlineRuntime(): { currentNode: number; mvuAvailable: boolean } {
-  try {
-    const mvu = (window as unknown as { Mvu?: typeof Mvu }).Mvu;
-    const data =
-      typeof mvu?.getMvuData === 'function'
-        ? mvu.getMvuData({ type: 'message', message_id: 'latest' })
-        : getVariables({ type: 'message', message_id: 'latest' });
-    const rawValue = _.get(data, 'stat_data.剧情指导.大纲当前节点');
-    const currentNode = Number(rawValue);
-    if (Number.isFinite(currentNode) && currentNode >= 1) {
-      return { currentNode: Math.trunc(currentNode), mvuAvailable: true };
-    }
-  } catch (error) {
-    console.info('[xinjingwan-story-director] outline MVU current node is not available:', error);
-  }
-
-  return { currentNode: 1, mvuAvailable: false };
-}
-
-export function primeMvuInitialization() {
-  const waitGlobal = (window as unknown as { waitGlobalInitialized?: (name: string) => Promise<void> })
-    .waitGlobalInitialized;
-  if (typeof waitGlobal !== 'function') {
-    return;
-  }
-  void waitGlobal('Mvu').catch(error => {
-    console.info('[xinjingwan-story-director] MVU framework was not initialized yet:', error);
-  });
-}
-
-function applyOutlineCompletion(state: StoryDirectorState, runtime: { currentNode: number; mvuAvailable: boolean }) {
+function applyOutlineCompletion(state: StoryDirectorState) {
   const page = getEnabledOutlinePage(state);
   if (!page) {
     return false;
   }
 
-  if (runtime.mvuAvailable) {
-    page.lastKnownNode = runtime.currentNode;
-  }
-
+  const currentNode = getOutlineCurrentNode(state);
+  page.lastKnownNode = currentNode;
   const totalNodes = getNonEmptyNodes(page).length;
-  if (!runtime.mvuAvailable || totalNodes <= 0 || runtime.currentNode <= totalNodes) {
+  if (totalNodes <= 0 || currentNode <= totalNodes) {
     return false;
   }
 
   state.activeMode = null;
   state.outline.enabledPageId = null;
+  state.outline.runId = null;
   page.completed = true;
-  page.lastKnownNode = runtime.currentNode;
+  page.lastKnownNode = currentNode;
   toastr.success('该页大纲演绎结束', '剧情指导');
   return true;
 }
@@ -317,7 +444,7 @@ function buildBlueEntry(
   };
 }
 
-function buildOutlineContent(state: StoryDirectorState, runtime: { currentNode: number; mvuAvailable: boolean }) {
+function buildOutlineContent(state: StoryDirectorState) {
   const page = getEnabledOutlinePage(state);
   if (!page) {
     return null;
@@ -329,17 +456,25 @@ function buildOutlineContent(state: StoryDirectorState, runtime: { currentNode: 
   }
 
   const pageIndex = state.outline.pages.findIndex(candidate => candidate.id === page.id) + 1;
-  const currentNode = runtime.mvuAvailable ? runtime.currentNode : 1;
-  const completedNodes = currentNode > 1 ? `节点1~节点${currentNode - 1}` : '无';
+  const currentNode = getOutlineCurrentNode(state);
+  const completedNodes = getOutlineCompletedNodesLabel(currentNode);
+  const progress = state.outline.progress;
+  const lastReport = progress.status
+    ? `上次 AI 进度回报：${progress.status}`
+    : '上次 AI 进度回报：暂无';
+  const reportSource = progress.messageId != null ? `状态来源：第${progress.messageId}楼` : '状态来源：脚本初始状态';
   const nodeContent = nodes.map((node, index) => `节点${index + 1}：${node}。`).join('\n\n---\n');
 
   return trimBlock(`
 <XINJINGWAN-2026-大纲状态>
 当前启用页：第${pageIndex}页
+大纲运行ID：${state.outline.runId ?? '未开始'}
 当前应演绎节点：节点${currentNode}
 已完成节点：${completedNodes}
 总节点数：${nodes.length}
-本页完成条件：大纲当前节点 > ${nodes.length}
+${lastReport}
+${reportSource}
+本页完成条件：状态块 nextNode > ${nodes.length}
 </XINJINGWAN-2026-大纲状态>
 
 <XINJINGWAN-2026-大纲>
@@ -360,20 +495,30 @@ function buildOutlineRule() {
 
 演绎顺序：
 节点1>节点2>节点3>节点4>节点5>……；依次类推。
+
+当前回复应优先围绕“当前应演绎节点”推进；后续节点只作为方向参考，不得提前完成、揭示或让角色预知。若当前节点只完成一部分，不要更新到下一个节点。
 `);
 }
 
-function buildOutlineProgressRule() {
+function buildOutlineProgressRule(state: StoryDirectorState) {
   return trimBlock(`
-当你确认已经完整演绎完当前节点后，必须更新 MVU 路径：
-stat_data.剧情指导.大纲当前节点
+每次回复末尾必须输出一次脚本状态块，用于让剧情指导脚本判断下一次应演绎哪个节点。状态块不是正文内容，不能被角色感知，不能在正文中解释、复述或提及。
 
-该变量表示“当前应演绎节点”。节点 1 完成后更新为 2，节点 2 完成后更新为 3，依此类推。
+状态块必须严格使用以下标签和 JSON 格式，不要放进 Markdown 代码块：
+<${OUTLINE_STATE_TAG}>
+{"runId":"${state.outline.runId ?? ''}","currentNode":1,"completed":false,"nextNode":1,"completedNode":null,"status":"用一句话说明当前节点的完成情况","confidence":"partial"}
+</${OUTLINE_STATE_TAG}>
 
-更新示例：
-_.set('剧情指导.大纲当前节点', 2); // 节点1已完成，下一次应演绎节点2
+字段规则：
+- runId：必须原样填写为“${state.outline.runId ?? ''}”。
+- currentNode：本次回复实际正在演绎或判断的节点编号。
+- completed：只有当 currentNode 的核心剧情已经完整演绎完，才填 true；只铺垫、只部分推进、用户打断或剧情未到位时填 false。
+- nextNode：下一次应演绎的节点编号。completed 为 false 时保持 currentNode；completed 为 true 时通常填 currentNode + 1。
+- completedNode：若 completed 为 true，填已完成的节点编号；否则填 null。
+- status：面向脚本前端的一句话进度说明，不要包含幕后标签或指令。
+- confidence：填 partial、complete 或 uncertain。
 
-只有在节点的核心剧情已经完成后才更新，不得提前跳过节点。变量更新命令只用于后台状态维护，不得在正文叙述中提及这些规则。
+只有在节点的核心剧情已经完成后才允许把 nextNode 推进到下一个节点，不得提前跳过节点。状态块只用于后台状态维护，脚本会将它从用户可见正文中隐藏，但会把整理后的状态继续提供给后续 AI 请求。
 `);
 }
 
@@ -452,17 +597,16 @@ function buildTimedEndingContent(state: StoryDirectorState) {
 
 function buildDesiredEntries(
   state: StoryDirectorState,
-  runtime: { currentNode: number; mvuAvailable: boolean },
   chatId: string,
 ): Map<StoryDirectorEntryType, PartialDeep<WorldbookEntry>> {
   const desired = new Map<StoryDirectorEntryType, PartialDeep<WorldbookEntry>>();
 
   if (state.activeMode === 'outline' && state.outline.enabledPageId) {
-    const outlineContent = buildOutlineContent(state, runtime);
+    const outlineContent = buildOutlineContent(state);
     if (outlineContent) {
       desired.set('outlineContent', buildBlueEntry('outlineContent', outlineContent, true, chatId));
       desired.set('outlineRule', buildBlueEntry('outlineRule', buildOutlineRule(), true, chatId));
-      desired.set('outlineProgress', buildBlueEntry('outlineProgress', buildOutlineProgressRule(), true, chatId));
+      desired.set('outlineProgress', buildBlueEntry('outlineProgress', buildOutlineProgressRule(state), true, chatId));
     }
   }
 
@@ -529,6 +673,92 @@ async function disableOwnEntriesInWorldbook(worldbookName: string, chatId?: stri
 
 export async function disableScriptEntriesInWorldbook(worldbookName: string, chatId?: string) {
   await disableOwnEntriesInWorldbook(worldbookName, chatId);
+}
+
+async function refreshOutlineProgressMessages(context: SyncContext) {
+  throwIfStale(context);
+  let state = readState(true);
+  if (state.activeMode !== 'outline' || !state.outline.enabledPageId || !state.outline.runId) {
+    return null;
+  }
+
+  let selectedAssistantMessages: ChatMessage[] = [];
+  try {
+    selectedAssistantMessages = getChatMessages('0-{{lastMessageId}}', {
+      role: 'assistant',
+      hide_state: 'unhidden',
+    });
+  } catch (error) {
+    console.warn('[xinjingwan-story-director] unable to scan chat messages for outline progress:', error);
+  }
+
+  const updates: Array<{ message_id: number; message: string; extra: Record<string, unknown> }> = [];
+  let latestProgress: OutlineProgressReport | null = null;
+
+  for (const message of selectedAssistantMessages) {
+    const storedProgress = normalizeStoredOutlineProgress(
+      message.extra?.[OUTLINE_STATE_EXTRA_KEY],
+      state,
+      message.message_id,
+    );
+    if (storedProgress) {
+      latestProgress = storedProgress;
+    }
+
+    const payload = extractLastOutlineStatePayload(message.message);
+    if (payload == null) {
+      continue;
+    }
+
+    const parsedProgress = parseOutlineProgressPayload(payload, state, message.message_id);
+    const strippedMessage = stripOutlineStateBlocks(message.message);
+    const nextExtra = parsedProgress
+      ? {
+          ...message.extra,
+          [OUTLINE_STATE_EXTRA_KEY]: parsedProgress,
+        }
+      : message.extra;
+
+    updates.push({
+      message_id: message.message_id,
+      message: strippedMessage,
+      extra: nextExtra,
+    });
+
+    if (parsedProgress) {
+      latestProgress = parsedProgress;
+      state = {
+        ...state,
+        outline: {
+          ...state.outline,
+          progress: parsedProgress,
+        },
+      };
+    }
+  }
+
+  if (updates.length > 0) {
+    throwIfStale(context);
+    await setChatMessages(updates, { refresh: 'affected' });
+    throwIfStale(context);
+  }
+
+  if (!latestProgress) {
+    return null;
+  }
+
+  throwIfStale(context);
+  patchState(stateToUpdate => {
+    if (stateToUpdate.activeMode !== 'outline' || stateToUpdate.outline.runId !== latestProgress.runId) {
+      return;
+    }
+    stateToUpdate.outline.progress = latestProgress;
+    const page = getEnabledOutlinePage(stateToUpdate);
+    if (page) {
+      page.lastKnownNode = latestProgress.nextNode;
+    }
+  }, false);
+  return latestProgress;
 }
 
 function messageInRanges(messageId: number, ranges: TimedActiveRange[]) {
@@ -656,10 +886,11 @@ export async function syncNow(reason: string, manual = false, context = captureS
   let changedEntries = 0;
   throwIfStale(context);
   let state = normalizeState(readState(true));
-  const outlineRuntime = readOutlineRuntime();
+  await refreshOutlineProgressMessages(context);
+  state = normalizeState(readState(true));
   throwIfStale(context);
 
-  const completedOutline = state.activeMode === 'outline' && applyOutlineCompletion(state, outlineRuntime);
+  const completedOutline = state.activeMode === 'outline' && applyOutlineCompletion(state);
   if (completedOutline) {
     warnings.push('当前页大纲已完成，已自动关闭大纲条目。');
     state = writeState(state);
@@ -694,8 +925,8 @@ export async function syncNow(reason: string, manual = false, context = captureS
       targetWorldbookName: null,
       changedEntries: 0,
       warnings,
-      outlineCurrentNode: outlineRuntime.currentNode,
-      outlineMvuAvailable: outlineRuntime.mvuAvailable,
+      outlineCurrentNode: getOutlineCurrentNode(state),
+      outlineMvuAvailable: Boolean(state.outline.runId),
       timedCompletedReplyCount: state.timedEnding.completedReplyCount,
       timedNextReplyIndex: state.timedEnding.nextReplyIndex,
       lastSyncedAt: nowIsoString(),
@@ -708,7 +939,7 @@ export async function syncNow(reason: string, manual = false, context = captureS
     return state.status;
   }
 
-  const desiredEntries = buildDesiredEntries(state, outlineRuntime, context.chatId);
+  const desiredEntries = buildDesiredEntries(state, context.chatId);
   try {
     changedEntries = await applyDesiredEntries(worldbookName, desiredEntries, warnings, context);
   } catch (error) {
@@ -729,8 +960,8 @@ export async function syncNow(reason: string, manual = false, context = captureS
     targetWorldbookName: worldbookName,
     changedEntries,
     warnings,
-    outlineCurrentNode: outlineRuntime.currentNode,
-    outlineMvuAvailable: outlineRuntime.mvuAvailable,
+    outlineCurrentNode: getOutlineCurrentNode(state),
+    outlineMvuAvailable: Boolean(state.outline.runId),
     timedCompletedReplyCount: state.timedEnding.completedReplyCount,
     timedNextReplyIndex: state.timedEnding.nextReplyIndex,
     lastSyncedAt: nowIsoString(),
@@ -810,13 +1041,17 @@ export async function enableOutlinePage(pageId: string) {
 
   patchState(stateToUpdate => {
     deactivateOtherModes(stateToUpdate, 'outline');
+    const runId = createOutlineRunId();
     stateToUpdate.activeMode = 'outline';
     stateToUpdate.ui.tab = 'outline';
     stateToUpdate.outline.selectedPageId = pageId;
     stateToUpdate.outline.enabledPageId = pageId;
+    stateToUpdate.outline.runId = runId;
+    stateToUpdate.outline.progress = createOutlineProgressReport(runId, 1);
     const targetPage = stateToUpdate.outline.pages.find(candidate => candidate.id === pageId);
     if (targetPage) {
       targetPage.completed = false;
+      targetPage.lastKnownNode = 1;
     }
   });
   await syncNow('启用大纲模式', true, context);
@@ -833,6 +1068,7 @@ export async function closeOutlinePage() {
       page.completed = true;
     }
     state.outline.enabledPageId = null;
+    state.outline.runId = null;
   });
   await syncNow('关闭当前大纲页', true, context);
 }

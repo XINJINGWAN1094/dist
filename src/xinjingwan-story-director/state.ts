@@ -1,6 +1,7 @@
 import {
   CHAT_STATE_KEY,
   type OutlinePage,
+  type OutlineProgressReport,
   type StateListener,
   type StoryDirectorMode,
   type StoryDirectorState,
@@ -54,6 +55,17 @@ function coerceInteger(value: unknown, fallback: number, min = Number.MIN_SAFE_I
   return Math.min(Math.max(Math.trunc(numberValue), min), max);
 }
 
+function coerceNullableInteger(value: unknown, min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER) {
+  if (value == null || value === '') {
+    return null;
+  }
+  const numberValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return null;
+  }
+  return Math.min(Math.max(Math.trunc(numberValue), min), max);
+}
+
 function coerceString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
@@ -79,6 +91,23 @@ function createDefaultPage(): OutlinePage {
   };
 }
 
+export function createOutlineProgressReport(
+  runId: string | null = null,
+  currentNode = 1,
+): OutlineProgressReport {
+  return {
+    runId,
+    currentNode,
+    nextNode: currentNode,
+    completedNode: null,
+    completed: false,
+    status: '',
+    confidence: '',
+    messageId: null,
+    updatedAt: '',
+  };
+}
+
 function normalizePage(value: unknown): OutlinePage | null {
   if (!isRecord(value)) {
     return null;
@@ -93,6 +122,30 @@ function normalizePage(value: unknown): OutlinePage | null {
     nodes: nodes.length > 0 ? nodes : [''],
     completed: coerceBoolean(value.completed, false),
     lastKnownNode: coerceInteger(value.lastKnownNode, 1, 1),
+  };
+}
+
+function normalizeOutlineProgress(
+  value: unknown,
+  fallbackRunId: string | null,
+  fallbackCurrentNode: number,
+): OutlineProgressReport {
+  if (!isRecord(value)) {
+    return createOutlineProgressReport(fallbackRunId, fallbackCurrentNode);
+  }
+
+  const currentNode = coerceInteger(value.currentNode, fallbackCurrentNode, 1, 1000);
+  const nextNode = coerceInteger(value.nextNode, currentNode, 1, 1000);
+  return {
+    runId: coerceString(value.runId).trim() || fallbackRunId,
+    currentNode,
+    nextNode,
+    completedNode: coerceNullableInteger(value.completedNode, 1, 1000),
+    completed: coerceBoolean(value.completed, false),
+    status: coerceString(value.status).trim().slice(0, 500),
+    confidence: coerceString(value.confidence).trim().slice(0, 80),
+    messageId: coerceNullableInteger(value.messageId, 0),
+    updatedAt: coerceString(value.updatedAt).trim(),
   };
 }
 
@@ -130,6 +183,14 @@ export function normalizeState(value: unknown): StoryDirectorState {
   const enabledPageId = pages.some(page => page.id === outlineRecord.enabledPageId)
     ? String(outlineRecord.enabledPageId)
     : null;
+  const enabledPage = enabledPageId ? pages.find(page => page.id === enabledPageId) : null;
+  const progressRecord = isRecord(outlineRecord.progress) ? outlineRecord.progress : {};
+  const outlineRunId = coerceString(outlineRecord.runId).trim() || coerceString(progressRecord.runId).trim() || null;
+  const outlineProgress = normalizeOutlineProgress(
+    progressRecord,
+    outlineRunId,
+    enabledPage?.lastKnownNode ?? 1,
+  );
 
   const endingRecord = isRecord(record.endingReference) ? record.endingReference : {};
   const timedRecord = isRecord(record.timedEnding) ? record.timedEnding : {};
@@ -150,6 +211,8 @@ export function normalizeState(value: unknown): StoryDirectorState {
       pages,
       selectedPageId,
       enabledPageId,
+      runId: outlineRunId,
+      progress: outlineProgress,
     },
     endingReference: {
       text: coerceString(endingRecord.text),

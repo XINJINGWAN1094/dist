@@ -1,5 +1,5 @@
 <template>
-  <div class="director-shell">
+  <div class="director-shell" @focusin="keepFocusedFieldVisible">
     <header class="titlebar">
       <div class="title-main">
         <span class="title">新景湾剧情指导</span>
@@ -18,8 +18,8 @@
         </div>
         <div>
           <span class="status-label">大纲节点</span>
-          <strong>{{ state.status.outlineCurrentNode || 1 }}</strong>
-          <span v-if="!state.status.outlineMvuAvailable" class="muted">需要 MVU 支持</span>
+          <strong>{{ outlineStatusNode }}</strong>
+          <span class="muted">{{ outlineStatusHint }}</span>
         </div>
         <div>
           <span class="status-label">限时计数</span>
@@ -54,7 +54,10 @@
             v-for="(page, index) in state.outline.pages"
             :key="page.id"
             type="button"
-            :class="{ active: page.id === state.outline.selectedPageId, enabled: page.id === state.outline.enabledPageId }"
+            :class="{
+              active: page.id === state.outline.selectedPageId,
+              enabled: page.id === state.outline.enabledPageId,
+            }"
             @click="selectPage(page.id)"
           >
             第{{ index + 1 }}页
@@ -65,9 +68,19 @@
           <div class="row-between">
             <span class="muted">
               非空节点 {{ selectedNonEmptyNodes.length }} 个
+              <template v-if="selectedPageIsEnabled"> · 启用中</template>
               <template v-if="selectedPage.completed"> · 已完成</template>
             </span>
             <button type="button" class="secondary-button" @click="clearPage(selectedPage.id)">清空本页</button>
+          </div>
+
+          <div class="progress-box">
+            <div class="row-between">
+              <span class="status-label">{{ selectedPageProgressTitle }}</span>
+              <strong>{{ selectedPageProgressLabel }}</strong>
+            </div>
+            <p>{{ selectedPageProgressStatus }}</p>
+            <span v-if="selectedPageProgressMeta" class="muted">{{ selectedPageProgressMeta }}</span>
           </div>
 
           <div class="node-list">
@@ -113,10 +126,10 @@
             <button
               type="button"
               class="secondary-button"
-              :disabled="busy || state.activeMode !== 'outline'"
-              @click="runAction('关闭当前大纲页', closeOutlinePage)"
+              :disabled="busy || !selectedPageIsEnabled"
+              @click="runAction('关闭本页大纲', closeSelectedOutlinePage)"
             >
-              标记本页完成 / 关闭当前页
+              标记本页完成 / 关闭本页
             </button>
           </div>
         </div>
@@ -242,6 +255,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
   addOutlinePage,
+  createOutlineProgressReport,
   getNonEmptyNodes,
   getSelectedOutlinePage,
   onStateChanged,
@@ -275,6 +289,79 @@ let stopStateListener: (() => void) | null = null;
 
 const selectedPage = computed(() => getSelectedOutlinePage(state.value));
 const selectedNonEmptyNodes = computed(() => getNonEmptyNodes(selectedPage.value));
+const outlineProgress = computed(() => state.value.outline.progress);
+const outlineNextNode = computed(() => outlineProgress.value.nextNode || 1);
+const outlineProgressStatus = computed(() => outlineProgress.value.status || '等待 AI 在回复后回报当前节点状态。');
+const outlineProgressMeta = computed(() => {
+  const progress = outlineProgress.value;
+  const parts: string[] = [];
+  if (progress.messageId != null) {
+    parts.push(`第${progress.messageId}楼`);
+  }
+  if (progress.confidence) {
+    parts.push(progress.confidence);
+  }
+  if (progress.completedNode != null) {
+    parts.push(`完成节点${progress.completedNode}`);
+  }
+  return parts.join(' · ');
+});
+const enabledPage = computed(() => {
+  const pageId = state.value.outline.enabledPageId;
+  return pageId ? (state.value.outline.pages.find(page => page.id === pageId) ?? null) : null;
+});
+const enabledPageIndex = computed(() => {
+  if (!enabledPage.value) {
+    return null;
+  }
+  const index = state.value.outline.pages.findIndex(page => page.id === enabledPage.value?.id);
+  return index >= 0 ? index + 1 : null;
+});
+const selectedPageIsEnabled = computed(() => selectedPage.value.id === state.value.outline.enabledPageId);
+const selectedPageLastKnownNode = computed(() => Math.max(1, Math.trunc(selectedPage.value.lastKnownNode || 1)));
+const selectedPageProgressTitle = computed(() => (selectedPageIsEnabled.value ? 'AI 进度回报' : '本页状态'));
+const selectedPageProgressLabel = computed(() => {
+  if (selectedPageIsEnabled.value) {
+    return `下一节点 ${outlineNextNode.value}`;
+  }
+  if (selectedPage.value.completed) {
+    return '本页已完成';
+  }
+  return `记录节点 ${selectedPageLastKnownNode.value}`;
+});
+const selectedPageProgressStatus = computed(() => {
+  if (selectedPageIsEnabled.value) {
+    return outlineProgressStatus.value;
+  }
+  if (selectedPage.value.completed) {
+    return '该页已标记完成，当前不会继续同步到世界书。';
+  }
+  return '该页未启用。启用本页后，AI 才会按这一页的大纲推进。';
+});
+const selectedPageProgressMeta = computed(() => {
+  if (selectedPageIsEnabled.value) {
+    return outlineProgressMeta.value;
+  }
+  if (enabledPageIndex.value != null) {
+    return `当前启用：第${enabledPageIndex.value}页`;
+  }
+  return '';
+});
+const outlineStatusNode = computed(() => {
+  if (selectedPageIsEnabled.value || state.value.activeMode === 'outline') {
+    return state.value.status.outlineCurrentNode || outlineNextNode.value || 1;
+  }
+  return selectedPageLastKnownNode.value;
+});
+const outlineStatusHint = computed(() => {
+  if (selectedPageIsEnabled.value) {
+    return outlineProgress.value.status ? '脚本状态' : '等待回报';
+  }
+  if (enabledPageIndex.value != null) {
+    return `启用第${enabledPageIndex.value}页`;
+  }
+  return selectedPage.value.completed ? '已完成' : '未启用';
+});
 const modeLabel = computed(() => {
   if (state.value.activeMode === 'outline') {
     return '大纲启用中';
@@ -336,6 +423,9 @@ function clearPage(pageId: string) {
     page.nodes = [''];
     page.completed = false;
     page.lastKnownNode = 1;
+    if (stateToUpdate.outline.enabledPageId === pageId) {
+      stateToUpdate.outline.progress = createOutlineProgressReport(stateToUpdate.outline.runId, 1);
+    }
   });
   queueIfOutlinePageEnabled(pageId, '清空大纲页');
 }
@@ -440,6 +530,38 @@ async function runAction(label: string, action: () => Promise<void>) {
     busy.value = false;
   }
 }
+
+async function closeSelectedOutlinePage() {
+  if (!selectedPageIsEnabled.value) {
+    throw new Error('当前选中的大纲页未启用，不能关闭。');
+  }
+  await closeOutlinePage();
+}
+
+function scrollFocusedFieldIntoView(element: HTMLElement, delay = 0) {
+  const ownerWindow = element.ownerDocument.defaultView ?? window;
+  const run = () => {
+    element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: delay === 0 ? 'smooth' : 'auto' });
+  };
+
+  if (delay > 0) {
+    ownerWindow.setTimeout(run, delay);
+    return;
+  }
+
+  ownerWindow.requestAnimationFrame(run);
+}
+
+function keepFocusedFieldVisible(event: FocusEvent) {
+  const element = event.target as HTMLElement | null;
+  if (!element || (element.tagName !== 'TEXTAREA' && element.tagName !== 'INPUT')) {
+    return;
+  }
+
+  scrollFocusedFieldIntoView(element);
+  scrollFocusedFieldIntoView(element, 280);
+  scrollFocusedFieldIntoView(element, 640);
+}
 </script>
 
 <style scoped>
@@ -448,8 +570,11 @@ async function runAction(label: string, action: () => Promise<void>) {
 }
 
 .director-shell {
+  display: flex;
   width: 100%;
   height: 100%;
+  min-height: 0;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(64, 117, 96, 0.28);
   border-radius: 8px;
@@ -457,7 +582,14 @@ async function runAction(label: string, action: () => Promise<void>) {
   background: #f7faf8;
   box-shadow: 0 18px 46px rgba(27, 50, 42, 0.22);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'Microsoft YaHei',
+    sans-serif;
 }
 
 .titlebar {
@@ -465,6 +597,7 @@ async function runAction(label: string, action: () => Promise<void>) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex: 0 0 58px;
   height: 58px;
   padding: 10px 12px 10px 16px;
   border-bottom: 1px solid rgba(64, 117, 96, 0.18);
@@ -503,12 +636,16 @@ async function runAction(label: string, action: () => Promise<void>) {
 
 .content {
   display: flex;
-  height: calc(100% - 58px);
+  height: auto;
   min-height: 0;
+  flex: 1;
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .status-strip {
@@ -518,7 +655,8 @@ async function runAction(label: string, action: () => Promise<void>) {
 }
 
 .status-strip > div,
-.session-box {
+.session-box,
+.progress-box {
   min-width: 0;
   padding: 8px 10px;
   border: 1px solid rgba(64, 117, 96, 0.16);
@@ -534,7 +672,8 @@ async function runAction(label: string, action: () => Promise<void>) {
 }
 
 .status-strip strong,
-.session-box strong {
+.session-box strong,
+.progress-box strong {
   display: block;
   overflow: hidden;
   color: #1f302a;
@@ -555,6 +694,9 @@ async function runAction(label: string, action: () => Promise<void>) {
 .tabs button,
 .page-tabs button,
 button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 32px;
   border: 0;
   border-radius: 7px;
@@ -562,6 +704,9 @@ button {
   background: transparent;
   cursor: pointer;
   font: inherit;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .tabs button.active,
@@ -608,12 +753,18 @@ p {
 
 .page-tabs {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+  min-height: 38px;
+  overflow-y: hidden;
 }
 
 .page-tabs button {
-  padding: 0 10px;
+  min-width: 56px;
+  min-height: 34px;
+  flex: 0 0 auto;
+  padding: 0 12px;
   border: 1px solid rgba(64, 117, 96, 0.16);
   background: #f8fbf9;
 }
@@ -631,13 +782,20 @@ p {
   gap: 10px;
 }
 
+.outline-editor {
+  flex: 1;
+}
+
 .row-between {
   justify-content: space-between;
 }
 
 .node-list {
+  flex: 1;
   overflow: auto;
   padding-right: 2px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .node-row {
@@ -658,15 +816,19 @@ p {
 textarea,
 input {
   width: 100%;
+  min-width: 0;
   border: 1px solid rgba(64, 117, 96, 0.26);
   border-radius: 8px;
   color: #1f302a;
   background: #fbfdfc;
   font: inherit;
   outline: none;
+  scroll-margin-top: 96px;
+  scroll-margin-bottom: 32px;
 }
 
 textarea {
+  display: block;
   min-height: 78px;
   padding: 9px 10px;
   resize: vertical;
@@ -761,6 +923,11 @@ button {
   color: #705322;
 }
 
+.progress-box p {
+  margin: 4px 0 2px;
+  color: #30453c;
+}
+
 @media (max-width: 560px) {
   .director-shell {
     border-radius: 7px;
@@ -768,6 +935,7 @@ button {
   }
 
   .titlebar {
+    flex-basis: 52px;
     height: 52px;
     gap: 8px;
     padding: 8px 9px 8px 12px;
@@ -787,9 +955,9 @@ button {
   }
 
   .content {
-    height: calc(100% - 52px);
+    height: auto;
     gap: 8px;
-    padding: 8px;
+    padding: 8px 8px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .status-strip,
@@ -800,6 +968,7 @@ button {
 
   .status-strip > div,
   .session-box,
+  .progress-box,
   .panel,
   .messages {
     border-radius: 7px;
@@ -817,7 +986,10 @@ button {
   }
 
   .panel {
+    min-height: auto;
+    flex: 0 0 auto;
     gap: 10px;
+    overflow: visible;
     padding: 10px;
   }
 
@@ -834,17 +1006,38 @@ button {
   .page-tabs {
     flex-wrap: nowrap;
     margin: 0 -2px;
-    padding: 0 2px 2px;
+    min-height: 42px;
+    padding: 2px 2px 4px;
     overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
   }
 
   .page-tabs button {
-    flex: 0 0 auto;
+    min-width: 64px;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .outline-editor,
+  .node-list {
+    min-height: auto;
+    flex: none;
+  }
+
+  .node-list {
+    overflow: visible;
   }
 
   textarea {
-    min-height: 96px;
+    min-height: 112px;
     padding: 8px 9px;
+  }
+
+  textarea,
+  input {
+    font-size: 16px;
   }
 
   .node-row {
@@ -858,6 +1051,7 @@ button {
 
   .small-button {
     flex: 1;
+    min-height: 36px;
   }
 
   .action-row {

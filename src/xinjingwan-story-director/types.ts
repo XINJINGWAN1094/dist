@@ -19,6 +19,18 @@ export type OutlinePage = {
   lastKnownNode: number;
 };
 
+export type OutlineProgressReport = {
+  runId: string | null;
+  currentNode: number;
+  nextNode: number;
+  completedNode: number | null;
+  completed: boolean;
+  status: string;
+  confidence: string;
+  messageId: number | null;
+  updatedAt: string;
+};
+
 export type TimedActiveRange = {
   startMessageId: number;
   endMessageId: number | null;
@@ -49,6 +61,8 @@ export type StoryDirectorState = {
     pages: OutlinePage[];
     selectedPageId: string;
     enabledPageId: string | null;
+    runId: string | null;
+    progress: OutlineProgressReport;
   };
   endingReference: {
     text: string;
