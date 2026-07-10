@@ -956,14 +956,47 @@ button {
 
   .content {
     height: auto;
-    gap: 8px;
+    gap: 6px;
     padding: 8px 8px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  .status-strip,
+  .status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
   .number-grid {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+
+  .status-strip > div {
+    display: flex;
+    min-height: 46px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    padding: 5px 6px;
+  }
+
+  .status-strip .status-label {
+    margin-bottom: 0;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .status-strip strong {
+    font-size: 12px;
+    line-height: 1.15;
+  }
+
+  .status-strip .muted {
+    display: block;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .status-strip > div,
@@ -988,7 +1021,7 @@ button {
   .panel {
     min-height: auto;
     flex: 0 0 auto;
-    gap: 10px;
+    gap: 8px;
     overflow: visible;
     padding: 10px;
   }
