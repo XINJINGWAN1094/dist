@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart CNC Positioning Automatic Drilling Machine</title>
+    <meta
+      name="description"
+      content="English product detail page for a smart CNC positioning automatic drilling machine with servo screw drive, pneumatic clamping and closed-loop precision control."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f7fbff;
+        --muted: rgba(228, 239, 247, 0.78);
+        --line: rgba(255, 255, 255, 0.18);
+        --panel: rgba(6, 12, 18, 0.62);
+        --panel-strong: rgba(8, 14, 20, 0.78);
+        --cyan: #66d9ff;
+        --red: #ff4a3d;
+        --steel: #c7d5de;
+        --shadow: rgba(0, 0, 0, 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+        background: #080d12;
+      }
+
+      body {
+        min-height: 100%;
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+        background: #080d12;
+        color: var(--ink);
+      }
+
+      button,
+      input,
+      table {
+        font: inherit;
+      }
+
+      .product-page {
+        position: relative;
+        min-height: 100svh;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .carousel {
+        position: fixed;
+        inset: 0;
+        z-index: -3;
+        overflow: hidden;
+        background: #080d12;
+        touch-action: pan-y;
+        user-select: none;
+      }
+
+      .slides {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        transform: translate3d(calc(var(--active-index, 0) * -100%), 0, 0);
+        transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .slide {
+        position: relative;
+        flex: 0 0 100%;
+        height: 100%;
+      }
+
+      .slide img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+        transform: scale(1.02);
+      }
+
+      .slide::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(2, 7, 12, 0.52) 0%, rgba(2, 7, 12, 0.18) 38%, rgba(2, 7, 12, 0.72) 100%),
+          linear-gradient(0deg, rgba(2, 6, 10, 0.66) 0%, rgba(2, 6, 10, 0.05) 42%, rgba(2, 6, 10, 0.35) 100%);
+        pointer-events: none;
+      }
+
+      .stage-glow {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background:
+          linear-gradient(120deg, rgba(0, 0, 0, 0.54), transparent 32%),
+          linear-gradient(290deg, rgba(3, 8, 12, 0.72), rgba(3, 8, 12, 0.22) 48%, rgba(3, 8, 12, 0.68));
+        pointer-events: none;
+      }
+
+      .page-shell {
+        width: min(1540px, calc(100% - 48px));
+        min-height: 100svh;
+        margin: 0 auto;
+        padding: 34px 0 40px;
+        display: grid;
+        grid-template-columns: minmax(280px, 0.86fr) minmax(460px, 0.9fr);
+        gap: clamp(24px, 4vw, 76px);
+        align-items: center;
+      }
+
+      .brand-column {
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: min(820px, calc(100svh - 74px));
+        padding: 10px 0 6px;
+      }
+
+      .product-kicker {
+        width: max-content;
+        max-width: 100%;
+        padding: 9px 12px;
+        border: 1px solid rgba(102, 217, 255, 0.45);
+        background: rgba(4, 17, 24, 0.42);
+        box-shadow: 0 14px 32px var(--shadow);
+        color: #dbf6ff;
+        font-size: clamp(0.74rem, 1vw, 0.84rem);
+        font-weight: 700;
+        line-height: 1.2;
+        text-transform: uppercase;
+        letter-spacing: 0;
+        backdrop-filter: blur(14px);
+      }
+
+      .headline-block {
+        max-width: 700px;
+        text-shadow: 0 18px 40px rgba(0, 0, 0, 0.56);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.35rem, 5.1vw, 6.4rem);
+        line-height: 0.96;
+        letter-spacing: 0;
+        font-weight: 800;
+      }
+
+      .headline-block p {
+        width: min(570px, 100%);
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: clamp(1rem, 1.32vw, 1.3rem);
+        line-height: 1.58;
+      }
+
+      .metric-strip {
+        width: min(650px, 100%);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 14px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(4, 12, 18, 0.5);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(16px);
+      }
+
+      .metric strong {
+        display: block;
+        color: var(--ink);
+        font-size: clamp(1.05rem, 1.6vw, 1.55rem);
+        line-height: 1.1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.35;
+      }
+
+      .detail-panel {
+        max-height: calc(100svh - 76px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(102, 217, 255, 0.6) rgba(255, 255, 255, 0.08);
+        padding: clamp(24px, 3vw, 38px);
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(150deg, rgba(9, 17, 24, 0.86), rgba(9, 17, 24, 0.58)),
+          var(--panel);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+        backdrop-filter: blur(22px) saturate(1.18);
+      }
+
+      .detail-panel::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .detail-panel::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .detail-panel::-webkit-scrollbar-thumb {
+        background: rgba(102, 217, 255, 0.56);
+        border: 2px solid rgba(7, 14, 20, 0.72);
+      }
+
+      .detail-panel > section + section {
+        margin-top: 30px;
+      }
+
+      .section-label {
+        margin: 0 0 12px;
+        color: var(--cyan);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 14px;
+        color: #ffffff;
+        font-size: clamp(1.2rem, 1.65vw, 1.8rem);
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin: 0 0 7px;
+        color: #ffffff;
+        font-size: 1rem;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.68;
+      }
+
+      p + p {
+        margin-top: 14px;
+      }
+
+      .feature-list {
+        display: grid;
+        gap: 14px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .feature-list li {
+        position: relative;
+        padding: 16px 18px 16px 52px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .feature-list li::before {
+        content: attr(data-count);
+        position: absolute;
+        top: 16px;
+        left: 17px;
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(255, 74, 61, 0.72);
+        background: rgba(255, 74, 61, 0.18);
+        color: #ffd5d0;
+        font-size: 0.76rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(0, 0, 0, 0.22);
+      }
+
+      table {
+        width: 100%;
+        min-width: 580px;
+        border-collapse: collapse;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      th,
+      td {
+        padding: 11px 14px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: #ffffff;
+        background: rgba(102, 217, 255, 0.13);
+        font-weight: 800;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .tag-list li,
+      .keyword-list span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--steel);
+        line-height: 1.25;
+      }
+
+      .keyword-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .controls {
+        position: fixed;
+        right: 34px;
+        bottom: 30px;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(4, 10, 15, 0.55);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(18px);
+      }
+
+      .icon-button {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        cursor: pointer;
+        transition:
+          transform 160ms ease,
+          background 160ms ease,
+          border-color 160ms ease;
+      }
+
+      .icon-button:hover,
+      .icon-button:focus-visible {
+        border-color: rgba(102, 217, 255, 0.72);
+        background: rgba(102, 217, 255, 0.18);
+        transform: translateY(-1px);
+        outline: none;
+      }
+
+      .icon-button svg {
+        width: 19px;
+        height: 19px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .dots {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 3px;
+      }
+
+      .dot {
+        width: 31px;
+        height: 18px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .dot::before {
+        content: "";
+        display: block;
+        width: 100%;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.34);
+        transition:
+          height 160ms ease,
+          background 160ms ease,
+          transform 160ms ease;
+      }
+
+      .dot:hover::before,
+      .dot:focus-visible::before {
+        background: rgba(102, 217, 255, 0.78);
+        outline: none;
+      }
+
+      .dot.is-active::before {
+        height: 5px;
+        background: linear-gradient(90deg, var(--cyan), var(--red));
+        transform: translateY(-1px);
+      }
+
+      .progress {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 3;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .progress span {
+        display: block;
+        width: 100%;
+        height: 100%;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, var(--cyan), var(--red));
+      }
+
+      .product-page.is-playing .progress span {
+        animation: autoplay-progress var(--delay, 6500ms) linear infinite;
+      }
+
+      @keyframes autoplay-progress {
+        from {
+          transform: translateX(-100%);
+        }
+
+        to {
+          transform: translateX(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .slides,
+        .icon-button,
+        .dot::before {
+          transition: none;
+        }
+
+        .product-page.is-playing .progress span {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 1120px) {
+        .page-shell {
+          grid-template-columns: 1fr;
+          align-items: start;
+          gap: 24px;
+          padding-top: 28px;
+        }
+
+        .brand-column {
+          min-height: auto;
+          gap: 26px;
+        }
+
+        .metric-strip {
+          max-width: none;
+        }
+
+        .detail-panel {
+          max-height: none;
+          margin-bottom: 86px;
+        }
+
+        .slide::after {
+          background:
+            linear-gradient(180deg, rgba(2, 7, 12, 0.72) 0%, rgba(2, 7, 12, 0.24) 38%, rgba(2, 7, 12, 0.78) 100%),
+            linear-gradient(90deg, rgba(2, 6, 10, 0.54), rgba(2, 6, 10, 0.2));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .product-page {
+          overflow: visible;
+        }
+
+        .page-shell {
+          width: min(100% - 28px, 680px);
+          padding: 18px 0 102px;
+        }
+
+        .product-kicker {
+          font-size: 0.68rem;
+          white-space: normal;
+        }
+
+        h1 {
+          font-size: clamp(2rem, 11vw, 3.8rem);
+          line-height: 1;
+        }
+
+        .headline-block p {
+          font-size: 0.98rem;
+          line-height: 1.55;
+        }
+
+        .metric-strip {
+          grid-template-columns: 1fr;
+          gap: 9px;
+        }
+
+        .metric {
+          padding: 11px 13px;
+        }
+
+        .detail-panel {
+          padding: 20px 15px;
+          border-left: 0;
+          border-right: 0;
+        }
+
+        .feature-list li {
+          padding: 14px 14px 14px 46px;
+        }
+
+        .feature-list li::before {
+          left: 13px;
+        }
+
+        table {
+          min-width: 520px;
+          font-size: 0.86rem;
+        }
+
+        .controls {
+          left: 14px;
+          right: 14px;
+          bottom: 18px;
+          justify-content: space-between;
+        }
+
+        .dots {
+          flex: 1;
+          justify-content: center;
+        }
+
+        .dot {
+          width: 24px;
+        }
+
+        .icon-button {
+          width: 39px;
+          height: 39px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="product-page is-playing" data-carousel>
+      <div class="carousel" data-swipe-area aria-hidden="true">
+        <div class="slides">
+          <figure class="slide">
+            <img src="images/drilling-precision-closeup-1.png" alt="" />
+          </figure>
+          <figure class="slide">
+            <img src="images/drilling-cnc-guard-2.png" alt="" />
+          </figure>
+          <figure class="slide">
+            <img src="images/drilling-vision-laser-3.png" alt="" />
+          </figure>
+          <figure class="slide">
+            <img src="images/drilling-spark-process-4.png" alt="" />
+          </figure>
+        </div>
+      </div>
+      <div class="stage-glow" aria-hidden="true"></div>
+
+      <div class="page-shell">
+        <div class="brand-column">
+          <div class="product-kicker">Smart CNC Drilling Equipment</div>
+
+          <header class="headline-block">
+            <h1>Smart CNC Positioning Automatic Drilling Machine</h1>
+            <p>
+              Servo screw drive, pneumatic clamping and closed-loop precision control for accurate,
+              stable and efficient drilling in modern workshops.
+            </p>
+          </header>
+
+          <div class="metric-strip" aria-label="Core performance metrics">
+            <div class="metric">
+              <strong>&plusmn;0.02 mm</strong>
+              <span>Repeat positioning accuracy</span>
+            </div>
+            <div class="metric">
+              <strong>&plusmn;0.03 mm</strong>
+              <span>Hole diameter tolerance</span>
+            </div>
+            <div class="metric">
+              <strong>CNC / PLC</strong>
+              <span>Program control system</span>
+            </div>
+          </div>
+        </div>
+
+        <article class="detail-panel" aria-label="Product detail content">
+          <section>
+            <p class="section-label">Product Title</p>
+            <h2>
+              Smart CNC Positioning Automatic Drilling Machine with Servo Screw Drive,
+              Pneumatic Clamping and Closed-Loop Precision Control
+            </h2>
+          </section>
+
+          <section>
+            <p class="section-label">Key Features</p>
+            <ul class="feature-list">
+              <li data-count="01">
+                <h3>Stable Mechanical Positioning Structure</h3>
+                <p>
+                  Built with a servo screw drive system and precision linear guide rails, this
+                  smart drilling machine ensures smooth movement and stable positioning during the
+                  drilling process. The multi-point limit structure and pneumatic clamping fixture
+                  keep the workpiece firmly fixed to reduce displacement and processing errors.
+                </p>
+              </li>
+              <li data-count="02">
+                <h3>High-Precision Drilling Performance</h3>
+                <p>
+                  The machine adopts a closed-loop servo control system with a grating ruler for
+                  real-time deviation correction. It can achieve repeat positioning accuracy up to
+                  &plusmn;0.02 mm and hole diameter tolerance up to &plusmn;0.03 mm, helping maintain
+                  consistent hole quality in batch production.
+                </p>
+              </li>
+              <li data-count="03">
+                <h3>Automatic Positioning, Clamping and Drilling</h3>
+                <p>
+                  The equipment can automatically complete positioning, clamping, drilling and
+                  unloading processes. It supports continuous production and reduces manual
+                  operation, making it suitable for factories that need efficient and repeatable
+                  drilling work.
+                </p>
+              </li>
+              <li data-count="04">
+                <h3>Smart CNC Program Storage</h3>
+                <p>
+                  Multiple CNC processing programs can be stored in the control system. Operators
+                  can switch drilling parameters with one click, which improves production
+                  flexibility and makes the machine suitable for different materials, hole patterns
+                  and batch sizes.
+                </p>
+              </li>
+              <li data-count="05">
+                <h3>Lower Scrap Rate and Labor Cost</h3>
+                <p>
+                  Compared with traditional manual drilling, this smart positioning drilling
+                  machine helps reduce manual marking errors, improve drilling consistency, lower
+                  the scrap rate and reduce labor costs. The high-precision spindle also improves
+                  drilling verticality and produces smoother hole walls, reducing the need for
+                  secondary polishing.
+                </p>
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <p class="section-label">Product Description</p>
+            <p>
+              The Smart CNC Positioning Automatic Drilling Machine is designed for modern workshops
+              and manufacturing factories that require accurate, stable and efficient drilling
+              operations. It combines servo screw transmission, precision linear guide rails,
+              pneumatic clamping and closed-loop servo control to solve common production problems
+              such as inaccurate hole positioning, unstable clamping, high scrap rate and rising
+              labor cost.
+            </p>
+            <p>
+              With real-time deviation correction from the grating ruler system, the machine can
+              maintain high positioning accuracy during repeated production. The automatic clamping
+              fixture keeps the workpiece stable throughout the drilling process, while the
+              high-precision spindle helps ensure drilling verticality and smooth hole quality.
+            </p>
+            <p>
+              The machine supports automatic positioning, clamping, drilling and unloading,
+              allowing continuous production with less manual intervention. Multiple CNC programs
+              can be stored and quickly switched, making it suitable for different materials,
+              customized hole patterns and batch processing tasks. An optional vision positioning
+              system can also be added for irregular workpieces and more complex processing needs.
+            </p>
+            <p>
+              This equipment is suitable for metal plates, aluminum profiles, wooden boards, plastic
+              panels, hardware components, furniture parts and mechanical parts processing. It is an
+              ideal solution for small and medium-sized factories looking to improve drilling
+              accuracy, reduce waste and upgrade production efficiency.
+            </p>
+          </section>
+
+          <section>
+            <p class="section-label">Technical Parameters</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Item</th>
+                    <th scope="col">Specification</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Product Name</td>
+                    <td>Smart CNC Positioning Automatic Drilling Machine</td>
+                  </tr>
+                  <tr>
+                    <td>Positioning Structure</td>
+                    <td>Servo Screw Drive + Precision Linear Guide Rail</td>
+                  </tr>
+                  <tr>
+                    <td>Control System</td>
+                    <td>CNC / PLC Control System</td>
+                  </tr>
+                  <tr>
+                    <td>Positioning System</td>
+                    <td>Closed-Loop Servo System + Grating Ruler Correction</td>
+                  </tr>
+                  <tr>
+                    <td>Clamping Method</td>
+                    <td>Pneumatic Automatic Clamping Fixture</td>
+                  </tr>
+                  <tr>
+                    <td>Repeat Positioning Accuracy</td>
+                    <td>&plusmn;0.02 mm</td>
+                  </tr>
+                  <tr>
+                    <td>Hole Diameter Tolerance</td>
+                    <td>&plusmn;0.03 mm</td>
+                  </tr>
+                  <tr>
+                    <td>Spindle Type</td>
+                    <td>High-Precision Drilling Spindle</td>
+                  </tr>
+                  <tr>
+                    <td>Processing Functions</td>
+                    <td>Automatic Positioning, Clamping, Drilling and Unloading</td>
+                  </tr>
+                  <tr>
+                    <td>Program Function</td>
+                    <td>Multiple CNC Programs Storage and One-Click Parameter Switching</td>
+                  </tr>
+                  <tr>
+                    <td>Optional Function</td>
+                    <td>Vision Positioning System</td>
+                  </tr>
+                  <tr>
+                    <td>Safety / Management Function</td>
+                    <td>Fault Alarm and Production Statistics</td>
+                  </tr>
+                  <tr>
+                    <td>Applicable Materials</td>
+                    <td>Metal Plate, Aluminum Profile, Wood Board, Plastic Panel, Hardware Parts</td>
+                  </tr>
+                  <tr>
+                    <td>Application Fields</td>
+                    <td>
+                      Hardware Processing, Furniture Manufacturing, Mechanical Parts Production,
+                      Industrial Workshops
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section>
+            <p class="section-label">Application Scenarios</p>
+            <ul class="tag-list">
+              <li>Metal plate drilling</li>
+              <li>Aluminum profile processing</li>
+              <li>Furniture and wood panel manufacturing</li>
+              <li>Hardware parts production</li>
+              <li>Mechanical component processing</li>
+              <li>Customized batch drilling</li>
+              <li>Small and medium-sized factory production lines</li>
+            </ul>
+          </section>
+
+          <section>
+            <p class="section-label">Why Choose This Machine</p>
+            <p>
+              This smart positioning drilling machine upgrades traditional manual drilling into an
+              automated and intelligent production process. By combining accurate mechanical
+              positioning, automatic clamping, CNC program control and real-time deviation
+              correction, it helps factories improve hole accuracy, reduce defective products, save
+              labor costs and increase production capacity.
+            </p>
+          </section>
+
+          <section>
+            <p class="section-label">Search Keywords</p>
+            <div class="keyword-list" aria-label="Search keywords">
+              <span>smart drilling machine</span>
+              <span>CNC drilling machine</span>
+              <span>automatic drilling machine</span>
+              <span>precision positioning drilling equipment</span>
+              <span>servo drilling machine</span>
+              <span>pneumatic clamping drilling machine</span>
+              <span>industrial drilling machine</span>
+              <span>metal drilling machine</span>
+              <span>aluminum profile drilling machine</span>
+              <span>automatic hole drilling machine</span>
+            </div>
+          </section>
+        </article>
+      </div>
+
+      <nav class="controls" aria-label="Image carousel controls">
+        <button class="icon-button" type="button" data-prev aria-label="Previous image">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <div class="dots" role="tablist" aria-label="Choose background image">
+          <button class="dot is-active" type="button" data-dot="0" aria-label="Image 1"></button>
+          <button class="dot" type="button" data-dot="1" aria-label="Image 2"></button>
+          <button class="dot" type="button" data-dot="2" aria-label="Image 3"></button>
+          <button class="dot" type="button" data-dot="3" aria-label="Image 4"></button>
+        </div>
+        <button class="icon-button" type="button" data-next aria-label="Next image">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </button>
+      </nav>
+
+      <div class="progress" aria-hidden="true"><span></span></div>
+    </main>
+
+    <script>
+      (() => {
+        const root = document.querySelector("[data-carousel]");
+        const slides = Array.from(document.querySelectorAll(".slide"));
+        const dots = Array.from(document.querySelectorAll("[data-dot]"));
+        const prevButton = document.querySelector("[data-prev]");
+        const nextButton = document.querySelector("[data-next]");
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const delay = 6500;
+
+        let activeIndex = 0;
+        let timer = null;
+        let pointerStartX = 0;
+        let pointerStartY = 0;
+        let isPointerDown = false;
+
+        root.style.setProperty("--delay", `${delay}ms`);
+
+        const wrapIndex = index => (index + slides.length) % slides.length;
+        const shouldIgnoreSwipe = target => Boolean(target.closest(".detail-panel, .controls, button, a, input, textarea, select, table"));
+
+        const stopAutoplay = () => {
+          root.classList.remove("is-playing");
+          if (timer) {
+            window.clearInterval(timer);
+            timer = null;
+          }
+        };
+
+        const startAutoplay = () => {
+          if (prefersReducedMotion) {
+            stopAutoplay();
+            return;
+          }
+
+          stopAutoplay();
+          root.classList.add("is-playing");
+          timer = window.setInterval(() => {
+            setActive(activeIndex + 1, false);
+          }, delay);
+        };
+
+        const restartAutoplay = () => {
+          startAutoplay();
+        };
+
+        const setActive = (index, shouldRestart = true) => {
+          activeIndex = wrapIndex(index);
+          root.style.setProperty("--active-index", String(activeIndex));
+          dots.forEach((dot, dotIndex) => {
+            dot.classList.toggle("is-active", dotIndex === activeIndex);
+            dot.setAttribute("aria-selected", dotIndex === activeIndex ? "true" : "false");
+          });
+
+          if (shouldRestart) {
+            restartAutoplay();
+          }
+        };
+
+        prevButton.addEventListener("click", () => setActive(activeIndex - 1));
+        nextButton.addEventListener("click", () => setActive(activeIndex + 1));
+
+        dots.forEach(dot => {
+          dot.addEventListener("click", () => {
+            const nextIndex = Number(dot.dataset.dot);
+            setActive(nextIndex);
+          });
+        });
+
+        document.addEventListener("keydown", event => {
+          if (event.key === "ArrowLeft") {
+            setActive(activeIndex - 1);
+          }
+
+          if (event.key === "ArrowRight") {
+            setActive(activeIndex + 1);
+          }
+        });
+
+        root.addEventListener("pointerdown", event => {
+          if (shouldIgnoreSwipe(event.target)) {
+            return;
+          }
+
+          isPointerDown = true;
+          pointerStartX = event.clientX;
+          pointerStartY = event.clientY;
+          root.setPointerCapture(event.pointerId);
+          stopAutoplay();
+        });
+
+        root.addEventListener("pointerup", event => {
+          if (!isPointerDown) {
+            return;
+          }
+
+          isPointerDown = false;
+          const deltaX = event.clientX - pointerStartX;
+          const deltaY = event.clientY - pointerStartY;
+          const hasHorizontalIntent = Math.abs(deltaX) > 56 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25;
+
+          if (hasHorizontalIntent) {
+            setActive(deltaX < 0 ? activeIndex + 1 : activeIndex - 1);
+          } else {
+            restartAutoplay();
+          }
+        });
+
+        root.addEventListener("pointercancel", () => {
+          isPointerDown = false;
+          restartAutoplay();
+        });
+
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            stopAutoplay();
+          } else {
+            startAutoplay();
+          }
+        });
+
+        setActive(0, false);
+        startAutoplay();
+      })();
+    </script>
+  </body>
+</html>
