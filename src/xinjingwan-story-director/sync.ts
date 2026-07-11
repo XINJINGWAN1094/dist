@@ -675,6 +675,11 @@ export async function disableScriptEntriesInWorldbook(worldbookName: string, cha
   await disableOwnEntriesInWorldbook(worldbookName, chatId);
 }
 
+function getVisibleAssistantMessages() {
+  return getChatMessages('0-{{lastMessageId}}', { role: 'assistant' })
+    .filter(message => message.is_hidden !== true);
+}
+
 async function refreshOutlineProgressMessages(context: SyncContext) {
   throwIfStale(context);
   let state = readState(true);
@@ -684,10 +689,7 @@ async function refreshOutlineProgressMessages(context: SyncContext) {
 
   let selectedAssistantMessages: ChatMessage[] = [];
   try {
-    selectedAssistantMessages = getChatMessages('0-{{lastMessageId}}', {
-      role: 'assistant',
-      hide_state: 'unhidden',
-    });
+    selectedAssistantMessages = getVisibleAssistantMessages();
   } catch (error) {
     console.warn('[xinjingwan-story-director] unable to scan chat messages for outline progress:', error);
   }
@@ -778,10 +780,7 @@ async function refreshTimedCounterMessages(context: SyncContext) {
 
   let selectedAssistantMessages: ChatMessage[] = [];
   try {
-    selectedAssistantMessages = getChatMessages('0-{{lastMessageId}}', {
-      role: 'assistant',
-      hide_state: 'unhidden',
-    });
+    selectedAssistantMessages = getVisibleAssistantMessages();
   } catch (error) {
     console.warn('[xinjingwan-story-director] unable to scan chat messages for timed counter:', error);
   }
