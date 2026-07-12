@@ -13,13 +13,14 @@
     <main class="content">
       <section class="status-strip">
         <div>
-          <span class="status-label">世界书</span>
-          <strong>{{ state.status.targetWorldbookName || '未绑定' }}</strong>
+          <span class="status-label">运行提示</span>
+          <strong>{{ runtimePromptStatus }}</strong>
+          <span class="muted">{{ runtimeModeStatus }}</span>
         </div>
         <div>
-          <span class="status-label">大纲节点</span>
-          <strong>{{ outlineStatusNode }}</strong>
-          <span class="muted">{{ outlineStatusHint }}</span>
+          <span class="status-label">runId / 节点</span>
+          <strong>{{ outlineRuntimeLabel }}</strong>
+          <span class="muted">{{ outlineRuntimeHint }}</span>
         </div>
         <div>
           <span class="status-label">限时计数</span>
@@ -44,7 +45,7 @@
         <div class="panel-head">
           <div>
             <h2>大纲模式</h2>
-            <p>只同步启用页；未启用页只保存在当前聊天变量。</p>
+            <p>启用页会注入为本聊天运行提示；未启用页只保存在当前聊天变量。</p>
           </div>
           <button type="button" class="secondary-button" @click="addPage">新增页</button>
         </div>
@@ -139,7 +140,7 @@
         <div class="panel-head">
           <div>
             <h2>弱结局参考</h2>
-            <p>作为弱参考同步，不强推剧情，不让角色知晓幕后目标。</p>
+            <p>作为弱参考注入，不强推剧情，不让角色知晓幕后目标。</p>
           </div>
         </div>
 
@@ -272,6 +273,7 @@ import {
   enableOutlinePage,
   pauseTimedGoal,
   queueSync,
+  refreshRuntimePromptStatus,
   startNewTimedGoal,
 } from './sync';
 
@@ -334,7 +336,7 @@ const selectedPageProgressStatus = computed(() => {
     return outlineProgressStatus.value;
   }
   if (selectedPage.value.completed) {
-    return '该页已标记完成，当前不会继续同步到世界书。';
+    return '该页已标记完成，当前不会继续注入为运行提示。';
   }
   return '该页未启用。启用本页后，AI 才会按这一页的大纲推进。';
 });
@@ -374,6 +376,20 @@ const modeLabel = computed(() => {
   }
   return '未启用';
 });
+const runtimePromptStatus = computed(() => (state.value.status.runtimePromptInjected ? '已注入' : '未注入'));
+const runtimeModeStatus = computed(() => modeLabel.value);
+const outlineRuntimeLabel = computed(() => {
+  if (state.value.activeMode !== 'outline' || !state.value.outline.runId) {
+    return '无运行ID';
+  }
+  return `节点 ${outlineStatusNode.value}`;
+});
+const outlineRuntimeHint = computed(() => {
+  if (state.value.activeMode === 'outline' && state.value.outline.runId) {
+    return state.value.outline.runId;
+  }
+  return outlineStatusHint.value;
+});
 
 onMounted(() => {
   stopStateListener = onStateChanged(nextState => {
@@ -399,6 +415,7 @@ function closeWindow() {
 
 function queueIfOutlinePageEnabled(pageId: string, reason: string) {
   if (state.value.activeMode === 'outline' && state.value.outline.enabledPageId === pageId) {
+    refreshRuntimePromptStatus(reason);
     queueSync(reason, false, 450);
   }
 }
@@ -485,6 +502,7 @@ function updateEndingReference(value: string) {
     stateToUpdate.endingReference.text = value;
   });
   if (state.value.activeMode === 'endingReference') {
+    refreshRuntimePromptStatus('编辑弱结局参考');
     queueSync('编辑弱结局参考', false, 450);
   }
 }
@@ -498,6 +516,7 @@ function updateTimedGoal(value: string) {
     stateToUpdate.timedEnding.goalText = value;
   });
   if (state.value.activeMode === 'timedEnding') {
+    refreshRuntimePromptStatus('编辑限时结局目标');
     queueSync('编辑限时结局目标', false, 450);
   }
 }
@@ -512,6 +531,7 @@ function updateTimedTarget(value: string) {
     stateToUpdate.timedEnding.targetReplyIndex = targetReplyIndex;
   });
   if (state.value.activeMode === 'timedEnding') {
+    refreshRuntimePromptStatus('修改限时结局序号');
     queueSync('修改限时结局序号', false, 450);
   }
 }
@@ -602,6 +622,8 @@ function keepFocusedFieldVisible(event: FocusEvent) {
   padding: 10px 12px 10px 16px;
   border-bottom: 1px solid rgba(64, 117, 96, 0.18);
   background: #edf6f1;
+  cursor: move;
+  user-select: none;
 }
 
 .title-main {

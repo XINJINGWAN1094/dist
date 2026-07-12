@@ -14,6 +14,7 @@ const DEFAULT_STATUS = {
   activeMode: null,
   targetWorldbookName: null,
   changedEntries: 0,
+  runtimePromptInjected: false,
   warnings: [],
   outlineCurrentNode: 1,
   outlineMvuAvailable: false,
@@ -204,7 +205,7 @@ export function normalizeState(value: unknown): StoryDirectorState {
     activeMode,
     targetWorldbookName,
     ui: {
-      visible: coerceBoolean(uiRecord.visible, true),
+      visible: coerceBoolean(uiRecord.visible, false),
       tab: normalizeTab(uiRecord.tab),
     },
     outline: {
@@ -233,6 +234,7 @@ export function normalizeState(value: unknown): StoryDirectorState {
       activeMode: isMode(statusRecord.activeMode) ? statusRecord.activeMode : activeMode,
       targetWorldbookName: coerceString(statusRecord.targetWorldbookName).trim() || targetWorldbookName,
       changedEntries: coerceInteger(statusRecord.changedEntries, 0, 0),
+      runtimePromptInjected: coerceBoolean(statusRecord.runtimePromptInjected, false),
       warnings: Array.isArray(statusRecord.warnings) ? statusRecord.warnings.map(coerceString).filter(Boolean) : [],
       outlineCurrentNode: coerceInteger(statusRecord.outlineCurrentNode, 1, 1),
       outlineMvuAvailable: coerceBoolean(statusRecord.outlineMvuAvailable, false),

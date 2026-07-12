@@ -5,13 +5,6 @@ export const SCRIPT_BUTTON_NAME = '打开剧情指导';
 export type StoryDirectorMode = 'outline' | 'endingReference' | 'timedEnding';
 export type UiTab = StoryDirectorMode;
 
-export type StoryDirectorEntryType =
-  | 'outlineContent'
-  | 'outlineRule'
-  | 'outlineProgress'
-  | 'endingReference'
-  | 'timedEnding';
-
 export type OutlinePage = {
   id: string;
   nodes: string[];
@@ -41,6 +34,7 @@ export type SyncStatus = {
   activeMode: StoryDirectorMode | null;
   targetWorldbookName: string | null;
   changedEntries: number;
+  runtimePromptInjected: boolean;
   warnings: string[];
   outlineCurrentNode: number;
   outlineMvuAvailable: boolean;

@@ -5,9 +5,11 @@ import { emitStateChanged, onStateChanged, patchState, readState } from './state
 import { SCRIPT_BUTTON_NAME } from './types';
 import {
   clearSyncTimers,
-  disableScriptEntriesInWorldbook,
+  cleanupLegacyRuntimeWorldbookEntries,
   queueSync,
   queueSyncSeries,
+  refreshRuntimePromptStatus,
+  RUNTIME_PROMPT_ID,
   resetSyncContextForCurrentChat,
 } from './sync';
 
@@ -16,6 +18,28 @@ const FRAME_ID = 'xinjingwan-story-director-frame';
 const ROOT_ID = 'xinjingwan-story-director-root';
 const FRAME_Z_INDEX = 2147483021;
 const MOBILE_BREAKPOINT = 640;
+const DESKTOP_FRAME_MARGIN = 8;
+const DEFAULT_DESKTOP_WIDTH = 760;
+const DEFAULT_DESKTOP_HEIGHT = 720;
+const MIN_DESKTOP_WIDTH = 280;
+const MIN_DESKTOP_HEIGHT = 58;
+
+type FramePosition = {
+  left: number;
+  top: number;
+};
+
+type FrameSize = {
+  width: number;
+  height: number;
+};
+
+type DragState = {
+  startScreenX: number;
+  startScreenY: number;
+  startLeft: number;
+  startTop: number;
+};
 
 function resolveHostWindow(): Window {
   try {
@@ -48,7 +72,9 @@ function getCurrentChatIdSafely() {
 
 function mountXinjingwanStoryDirector() {
   appendInexistentScriptButtons([{ name: SCRIPT_BUTTON_NAME, visible: true }]);
-  readState(true);
+  patchState(state => {
+    state.ui.visible = false;
+  }, false);
 
   const hostWindow = resolveHostWindow();
   const hostDocument = hostWindow.document;
@@ -59,7 +85,10 @@ function mountXinjingwanStoryDirector() {
   let destroyStyleTeleport: (() => void) | null = null;
   let cleanedUp = false;
   let currentChatId = getCurrentChatIdSafely();
-  let lastTargetWorldbookName = readState(false).targetWorldbookName;
+  let chatEventRevision = 0;
+  let lastLegacyWorldbookName = readState(false).targetWorldbookName;
+  let draggedFramePosition: FramePosition | null = null;
+  let dragState: DragState | null = null;
 
   const $frame = createScriptIdIframe()
     .attr({
@@ -70,8 +99,8 @@ function mountXinjingwanStoryDirector() {
       position: 'fixed',
       right: '20px',
       bottom: '74px',
-      width: '760px',
-      height: '720px',
+      width: `${DEFAULT_DESKTOP_WIDTH}px`,
+      height: `${DEFAULT_DESKTOP_HEIGHT}px`,
       maxWidth: 'calc(100vw - 40px)',
       maxHeight: 'calc(100vh - 96px)',
       border: '0',
@@ -81,26 +110,127 @@ function mountXinjingwanStoryDirector() {
     })
     .appendTo(hostDocument.body);
 
+  const getViewportMetrics = () => ({
+    width: Math.max(hostVisualViewport?.width ?? hostWindow.innerWidth, 1),
+    height: Math.max(hostVisualViewport?.height ?? hostWindow.innerHeight, 1),
+    offsetLeft: hostVisualViewport?.offsetLeft ?? 0,
+    offsetTop: hostVisualViewport?.offsetTop ?? 0,
+  });
+
+  const getFrameSize = (): FrameSize => {
+    const metrics = getViewportMetrics();
+    const mobile = metrics.width <= MOBILE_BREAKPOINT;
+    return {
+      width: mobile
+        ? Math.max(metrics.width - 16, 1)
+        : Math.max(Math.min(DEFAULT_DESKTOP_WIDTH, metrics.width - 40), MIN_DESKTOP_WIDTH),
+      height: mobile
+        ? Math.max(metrics.height - 16, 1)
+        : Math.max(Math.min(DEFAULT_DESKTOP_HEIGHT, metrics.height - 96), MIN_DESKTOP_HEIGHT),
+    };
+  };
+
+  const clampFramePosition = (position: FramePosition, size = getFrameSize()): FramePosition => {
+    const metrics = getViewportMetrics();
+    const minLeft = metrics.offsetLeft + DESKTOP_FRAME_MARGIN;
+    const minTop = metrics.offsetTop + DESKTOP_FRAME_MARGIN;
+    const maxLeft = Math.max(minLeft, metrics.offsetLeft + metrics.width - size.width - DESKTOP_FRAME_MARGIN);
+    const maxTop = Math.max(minTop, metrics.offsetTop + metrics.height - size.height - DESKTOP_FRAME_MARGIN);
+
+    return {
+      left: Math.min(Math.max(position.left, minLeft), maxLeft),
+      top: Math.min(Math.max(position.top, minTop), maxTop),
+    };
+  };
+
+  const applyDraggedFramePosition = (position: FramePosition) => {
+    draggedFramePosition = clampFramePosition(position);
+    $frame.css({
+      left: `${draggedFramePosition.left}px`,
+      top: `${draggedFramePosition.top}px`,
+      right: 'auto',
+      bottom: 'auto',
+    });
+  };
+
+  const endFrameDrag = () => {
+    dragState = null;
+    $frame.css('pointer-events', '');
+    $(hostDocument).off(`pointermove${PAGE_SCOPE} pointerup${PAGE_SCOPE} pointercancel${PAGE_SCOPE}`);
+    $(hostDocument.body).css({
+      cursor: '',
+      userSelect: '',
+    });
+  };
+
+  const updateFrameDrag = (event: JQuery.TriggeredEvent) => {
+    if (!dragState) {
+      return;
+    }
+
+    const pointerEvent = event.originalEvent as PointerEvent | undefined;
+    if (!pointerEvent) {
+      return;
+    }
+
+    event.preventDefault();
+    applyDraggedFramePosition({
+      left: dragState.startLeft + pointerEvent.screenX - dragState.startScreenX,
+      top: dragState.startTop + pointerEvent.screenY - dragState.startScreenY,
+    });
+  };
+
+  const beginFrameDrag = (event: JQuery.TriggeredEvent) => {
+    const pointerEvent = event.originalEvent as PointerEvent | undefined;
+    if (!pointerEvent || pointerEvent.button !== 0 || getViewportMetrics().width <= MOBILE_BREAKPOINT) {
+      return;
+    }
+
+    const target = event.target as Element | null;
+    if (target?.closest('button, input, textarea, select, a')) {
+      return;
+    }
+
+    const frameRect = $frame[0].getBoundingClientRect();
+    dragState = {
+      startScreenX: pointerEvent.screenX,
+      startScreenY: pointerEvent.screenY,
+      startLeft: frameRect.left + (hostVisualViewport?.offsetLeft ?? 0),
+      startTop: frameRect.top + (hostVisualViewport?.offsetTop ?? 0),
+    };
+
+    event.preventDefault();
+    $frame.css('pointer-events', 'none');
+    $(hostDocument.body).css({
+      cursor: 'move',
+      userSelect: 'none',
+    });
+    $(hostDocument)
+      .off(`pointermove${PAGE_SCOPE} pointerup${PAGE_SCOPE} pointercancel${PAGE_SCOPE}`)
+      .on(`pointermove${PAGE_SCOPE}`, updateFrameDrag)
+      .on(`pointerup${PAGE_SCOPE} pointercancel${PAGE_SCOPE}`, endFrameDrag);
+  };
+
   const syncFrameLayout = () => {
     const state = readState(false);
-    lastTargetWorldbookName = state.targetWorldbookName;
+    if (state.targetWorldbookName) {
+      lastLegacyWorldbookName = state.targetWorldbookName;
+    }
     const visible = state.ui.visible;
-    const viewportWidth = Math.max(hostVisualViewport?.width ?? hostWindow.innerWidth, 1);
-    const viewportHeight = Math.max(hostVisualViewport?.height ?? hostWindow.innerHeight, 1);
-    const mobile = viewportWidth <= MOBILE_BREAKPOINT;
-    const viewportOffsetLeft = hostVisualViewport?.offsetLeft ?? 0;
-    const viewportOffsetTop = hostVisualViewport?.offsetTop ?? 0;
-    const width = mobile ? Math.max(viewportWidth - 16, 1) : Math.min(760, viewportWidth - 40);
-    const height = mobile ? Math.max(viewportHeight - 16, 1) : Math.min(720, viewportHeight - 96);
+    const metrics = getViewportMetrics();
+    const mobile = metrics.width <= MOBILE_BREAKPOINT;
+    const { width, height } = getFrameSize();
+    const desktopPosition = !mobile && draggedFramePosition ? clampFramePosition(draggedFramePosition, { width, height }) : null;
+    draggedFramePosition = desktopPosition;
 
     $frame.css({
-      left: mobile ? `${viewportOffsetLeft + 8}px` : 'auto',
-      top: mobile ? `${viewportOffsetTop + 8}px` : 'auto',
-      right: mobile ? 'auto' : '20px',
-      bottom: mobile ? 'auto' : '74px',
+      left: mobile ? `${metrics.offsetLeft + 8}px` : desktopPosition ? `${desktopPosition.left}px` : 'auto',
+      top: mobile ? `${metrics.offsetTop + 8}px` : desktopPosition ? `${desktopPosition.top}px` : 'auto',
+      right: mobile || desktopPosition ? 'auto' : '20px',
+      bottom: mobile || desktopPosition ? 'auto' : '74px',
       display: visible ? 'block' : 'none',
-      width: `${Math.max(width, mobile ? 1 : 280)}px`,
-      height: `${Math.max(height, mobile ? 1 : 58)}px`,
+      width: `${width}px`,
+      height: `${height}px`,
       maxWidth: mobile ? 'none' : 'calc(100vw - 40px)',
       maxHeight: mobile ? 'none' : 'calc(100vh - 96px)',
     });
@@ -164,6 +294,7 @@ function mountXinjingwanStoryDirector() {
     app.mount(rootElement);
     $(frameDocument)
       .off(PAGE_SCOPE)
+      .on(`pointerdown${PAGE_SCOPE}`, '.titlebar', beginFrameDrag)
       .on(`focusin${PAGE_SCOPE}`, 'textarea,input', syncFrameLayoutForEditing)
       .on(`focusout${PAGE_SCOPE}`, 'textarea,input', syncFrameLayoutForEditing);
     syncFrameLayoutSoon();
@@ -181,27 +312,44 @@ function mountXinjingwanStoryDirector() {
       return;
     }
 
-    const previousChatId = currentChatId;
-    const previousTarget = lastTargetWorldbookName;
+    const eventRevision = ++chatEventRevision;
+    const previousTarget = lastLegacyWorldbookName;
     currentChatId = nextChatId;
     resetSyncContextForCurrentChat();
+    uninjectPrompts([RUNTIME_PROMPT_ID]);
 
-    if (previousTarget) {
-      await disableScriptEntriesInWorldbook(previousTarget, previousChatId).catch(error => {
-        console.warn('[xinjingwan-story-director] failed to disable previous chat entries:', error);
-      });
-    }
+    await cleanupLegacyRuntimeWorldbookEntries(previousTarget ?? undefined);
 
-    if (currentChatId !== getCurrentChatIdSafely()) {
+    if (eventRevision !== chatEventRevision || currentChatId !== getCurrentChatIdSafely()) {
       return;
     }
 
-    const nextState = readState(true);
-    lastTargetWorldbookName = nextState.targetWorldbookName;
+    let nextState = readState(true);
+    if (nextState.ui.visible) {
+      nextState = patchState(state => {
+        state.ui.visible = false;
+      }, false);
+    }
+    if (nextState.targetWorldbookName) {
+      lastLegacyWorldbookName = nextState.targetWorldbookName;
+    }
     emitStateChanged(nextState);
+    refreshRuntimePromptStatus(`${reason}后恢复`, nextState);
     syncFrameLayoutSoon();
+    if (nextState.activeMode) {
+      queueSync(reason, false, 0);
+      queueSyncSeries(reason);
+    }
+  };
+
+  const queueSyncNowAndSeries = (reason: string) => {
     queueSync(reason, false, 0);
     queueSyncSeries(reason);
+  };
+
+  const refreshPromptAndQueue = (reason: string) => {
+    refreshRuntimePromptStatus(reason);
+    queueSync(reason, false, 0);
   };
 
   const stopStateListener = onStateChanged(syncFrameLayoutSoon);
@@ -216,39 +364,39 @@ function mountXinjingwanStoryDirector() {
     ).stop,
     eventOn(
       tavern_events.MESSAGE_RECEIVED,
-      errorCatched(() => queueSyncSeries('消息接收')),
+      errorCatched(() => queueSyncNowAndSeries('消息接收')),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_UPDATED,
-      errorCatched(() => queueSyncSeries('消息更新')),
+      errorCatched(() => queueSyncNowAndSeries('消息更新')),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_EDITED,
-      errorCatched(() => queueSyncSeries('消息编辑')),
+      errorCatched(() => queueSyncNowAndSeries('消息编辑')),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_DELETED,
-      errorCatched(() => queueSyncSeries('消息删除')),
+      errorCatched(() => queueSyncNowAndSeries('消息删除')),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_SWIPED,
-      errorCatched(() => queueSyncSeries('消息 swipe 切换')),
+      errorCatched(() => queueSyncNowAndSeries('消息 swipe 切换')),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_SWIPE_DELETED,
-      errorCatched(() => queueSyncSeries('消息 swipe 删除')),
+      errorCatched(() => queueSyncNowAndSeries('消息 swipe 删除')),
     ).stop,
     eventOn(
       tavern_events.GENERATION_STARTED,
-      errorCatched(() => queueSync('生成开始', false, 0)),
+      errorCatched(() => refreshPromptAndQueue('生成开始')),
     ).stop,
     eventOn(
       tavern_events.GENERATION_ENDED,
-      errorCatched(() => queueSyncSeries('生成结束')),
+      errorCatched(() => queueSyncNowAndSeries('生成结束')),
     ).stop,
     eventOn(
       tavern_events.GENERATION_STOPPED,
-      errorCatched(() => queueSyncSeries('生成停止')),
+      errorCatched(() => queueSyncNowAndSeries('生成停止')),
     ).stop,
   ];
 
@@ -258,6 +406,8 @@ function mountXinjingwanStoryDirector() {
   hostVisualViewport?.addEventListener('scroll', syncFrameLayoutSoon);
   _.delay(mountVueOnFrame, 16);
   syncFrameLayoutSoon();
+  refreshRuntimePromptStatus('脚本启动', readState(true));
+  void cleanupLegacyRuntimeWorldbookEntries(lastLegacyWorldbookName ?? undefined);
   queueSync('脚本启动', false, 100);
 
   const cleanup = () => {
@@ -268,6 +418,8 @@ function mountXinjingwanStoryDirector() {
     stopHandles.forEach(stop => stop());
     stopStateListener();
     clearSyncTimers();
+    endFrameDrag();
+    uninjectPrompts([RUNTIME_PROMPT_ID]);
     app?.unmount();
     destroyStyleTeleport?.();
     $frame.off(PAGE_SCOPE);

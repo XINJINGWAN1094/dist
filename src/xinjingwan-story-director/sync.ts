@@ -1,7 +1,6 @@
 import {
   ENTRY_SOURCE,
   type OutlineProgressReport,
-  type StoryDirectorEntryType,
   type StoryDirectorMode,
   type StoryDirectorState,
   type TimedActiveRange,
@@ -20,23 +19,33 @@ const SYNC_DELAYS_MS = [250, 1_500, 4_000, 9_000] as const;
 const TIMED_COUNTER_EXTRA_KEY = 'xinjingwan_end_counter';
 const OUTLINE_STATE_EXTRA_KEY = 'xinjingwan_outline_state';
 const OUTLINE_STATE_TAG = 'XJWSD_STATE';
+export const RUNTIME_PROMPT_ID = 'xinjingwan-story-director-runtime';
 
-const ENTRY_SPECS: Record<
-  StoryDirectorEntryType,
-  { name: string; order: number; mode: StoryDirectorMode }
-> = {
-  outlineContent: { name: '[XINJINGWAN-2026] 大纲内容', order: 9997, mode: 'outline' },
-  outlineRule: { name: '[XINJINGWAN-2026] 大纲准则', order: 9998, mode: 'outline' },
-  outlineProgress: { name: '[XINJINGWAN-2026] 大纲状态协议', order: 9999, mode: 'outline' },
-  endingReference: { name: '[XINJINGWAN-2026] 结局参考', order: 9999, mode: 'endingReference' },
-  timedEnding: { name: '[XINJINGWAN-2026] 限时结局', order: 9999, mode: 'timedEnding' },
-};
+const LEGACY_RUNTIME_ENTRY_NAMES = new Set([
+  '[XINJINGWAN-2026] 大纲内容',
+  '[XINJINGWAN-2026] 大纲准则',
+  '[XINJINGWAN-2026] 大纲状态协议',
+  '[XINJINGWAN-2026] 结局参考',
+  '[XINJINGWAN-2026] 限时结局',
+]);
 
-const MODE_ENTRY_TYPES: Record<StoryDirectorMode, StoryDirectorEntryType[]> = {
-  outline: ['outlineContent', 'outlineRule', 'outlineProgress'],
-  endingReference: ['endingReference'],
-  timedEnding: ['timedEnding'],
-};
+const LEGACY_RUNTIME_ENTRY_TYPES = new Set([
+  'outlineContent',
+  'outlineRule',
+  'outlineProgress',
+  'endingReference',
+  'timedEnding',
+]);
+
+const LEGACY_RUNTIME_CONTENT_MARKERS = [
+  '<XINJINGWAN-2026-大纲状态>',
+  '<XINJINGWAN-2026-大纲>',
+  '<XJWSD_STATE>',
+  '大纲运行ID：XJW_OUTLINE_2026-',
+  '每次回复末尾必须输出一次脚本状态块',
+  '<XINJINGWAN-2026-结局参考>',
+  '<XINJINGWAN-2026-限时结局>',
+];
 
 let syncRunning = false;
 let queuedManual = false;
@@ -44,6 +53,7 @@ let queuedReason = '';
 let debounceTimer: number | null = null;
 let syncTimers: number[] = [];
 let syncContextRevision = 0;
+const ignoredOutlineStateWarnings = new Set<string>();
 
 type SyncContext = {
   chatId: string;
@@ -149,24 +159,6 @@ function getOutlineCompletedNodesLabel(currentNode: number) {
   return currentNode > 1 ? `节点1~节点${currentNode - 1}` : '无';
 }
 
-function extractLastOutlineStatePayload(message: string) {
-  const pattern = createOutlineStateBlockPattern();
-  let payload: string | null = null;
-  let match: RegExpExecArray | null = null;
-  while ((match = pattern.exec(message)) != null) {
-    payload = match[1]?.trim() ?? null;
-  }
-  return payload;
-}
-
-function stripOutlineStateBlocks(message: string) {
-  return message
-    .replace(createOutlineStateBlockPattern(), '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trimEnd();
-}
-
 function normalizeJsonPayload(payload: string) {
   return payload
     .trim()
@@ -183,8 +175,7 @@ function parseOutlineProgressPayload(
   let parsed: unknown;
   try {
     parsed = JSON.parse(normalizeJsonPayload(payload));
-  } catch (error) {
-    console.warn('[xinjingwan-story-director] unable to parse outline state block:', error);
+  } catch {
     return null;
   }
 
@@ -232,6 +223,70 @@ function parseOutlineProgressPayload(
     messageId,
     updatedAt: nowIsoString(),
   };
+}
+
+function stripMessageRanges(message: string, ranges: Array<{ start: number; end: number }>) {
+  if (ranges.length === 0) {
+    return message;
+  }
+
+  let nextMessage = '';
+  let cursor = 0;
+  for (const range of ranges) {
+    nextMessage += message.slice(cursor, range.start);
+    cursor = range.end;
+  }
+  nextMessage += message.slice(cursor);
+  return nextMessage
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+}
+
+function warnIgnoredOutlineStateBlock(messageId: number, payload: string) {
+  const normalized = normalizeJsonPayload(payload);
+  const looksLikeBody = normalized.length > 1200 || /\n\s*\n/.test(normalized);
+  const reason = looksLikeBody ? '状态块可能包入了正文，已保留原文。' : '状态块无法解析或 runId 不匹配，已保留原文。';
+  const warningKey = `${messageId}:${reason}:${normalized.slice(0, 120)}`;
+  const warning = `第${messageId}楼${reason}`;
+  if (!ignoredOutlineStateWarnings.has(warningKey)) {
+    ignoredOutlineStateWarnings.add(warningKey);
+    if (ignoredOutlineStateWarnings.size > 200) {
+      ignoredOutlineStateWarnings.clear();
+    }
+    console.warn(`[xinjingwan-story-director] ignored outline state block in message ${messageId}: ${reason}`);
+  }
+  return warning;
+}
+
+function collectValidOutlineStateBlocks(
+  message: string,
+  state: StoryDirectorState,
+  messageId: number,
+  warnings: string[],
+) {
+  const pattern = createOutlineStateBlockPattern();
+  const validBlocks: Array<{ start: number; end: number; progress: OutlineProgressReport }> = [];
+  let match: RegExpExecArray | null = null;
+
+  while ((match = pattern.exec(message)) != null) {
+    const payload = match[1]?.trim() ?? '';
+    const progress = parseOutlineProgressPayload(payload, state, messageId);
+    if (!progress) {
+      const warning = warnIgnoredOutlineStateBlock(messageId, payload);
+      if (warning) {
+        warnings.push(warning);
+      }
+      continue;
+    }
+    validBlocks.push({
+      start: match.index,
+      end: pattern.lastIndex,
+      progress,
+    });
+  }
+
+  return validBlocks;
 }
 
 function normalizeStoredOutlineProgress(
@@ -294,6 +349,7 @@ function deactivateOtherModes(state: StoryDirectorState, keepMode: StoryDirector
   if (keepMode !== 'outline') {
     state.outline.enabledPageId = null;
     state.outline.runId = null;
+    state.outline.progress = createOutlineProgressReport(null, getOutlineCurrentNode(state));
   }
   if (keepMode !== 'endingReference') {
     state.endingReference.enabled = false;
@@ -306,6 +362,22 @@ function deactivateOtherModes(state: StoryDirectorState, keepMode: StoryDirector
   }
 }
 
+function isOutlineRuntimeActive(state: StoryDirectorState) {
+  return state.activeMode === 'outline' && Boolean(state.outline.enabledPageId && state.outline.runId);
+}
+
+function clearInactiveOutlineRuntime(state: StoryDirectorState) {
+  if (isOutlineRuntimeActive(state)) {
+    return;
+  }
+  if (state.activeMode === 'outline') {
+    state.activeMode = null;
+  }
+  state.outline.enabledPageId = null;
+  state.outline.runId = null;
+  state.outline.progress = createOutlineProgressReport(null, getOutlineCurrentNode(state));
+}
+
 function localDateStamp() {
   const date = new Date();
   const year = date.getFullYear();
@@ -316,65 +388,6 @@ function localDateStamp() {
 
 function createSessionId(serial: number) {
   return `XJW_END_COUNTER_2026-${localDateStamp()}-${String(serial).padStart(3, '0')}`;
-}
-
-function isOwnEntry(entry: WorldbookEntry) {
-  return entry.extra?.source === ENTRY_SOURCE && entry.extra?.scriptId === getScriptId();
-}
-
-function isControlledEntryType(value: unknown): value is StoryDirectorEntryType {
-  return (
-    value === 'outlineContent' ||
-    value === 'outlineRule' ||
-    value === 'outlineProgress' ||
-    value === 'endingReference' ||
-    value === 'timedEnding'
-  );
-}
-
-function getEntryType(entry: WorldbookEntry): StoryDirectorEntryType | null {
-  return isControlledEntryType(entry.extra?.entryType) ? entry.extra.entryType : null;
-}
-
-function getPreferredWorldbookName(): string | null {
-  const chatWorldbookName = getChatWorldbookName('current');
-  if (chatWorldbookName) {
-    return chatWorldbookName;
-  }
-
-  try {
-    const charWorldbooks = getCharWorldbookNames('current');
-    if (charWorldbooks.primary) {
-      return charWorldbooks.primary;
-    }
-    if (charWorldbooks.additional.length > 0) {
-      return charWorldbooks.additional[0];
-    }
-  } catch (error) {
-    console.warn('[xinjingwan-story-director] unable to read current character worldbooks:', error);
-  }
-
-  return null;
-}
-
-async function assertWorldbookReady(entryTypes: StoryDirectorEntryType[], context: SyncContext) {
-  throwIfStale(context);
-  const worldbookName = getPreferredWorldbookName();
-  if (!worldbookName) {
-    throw new Error('当前聊天和角色卡都没有绑定世界书，请先绑定世界书后再启用剧情指导。');
-  }
-
-  const worldbook = await getWorldbook(worldbookName);
-  throwIfStale(context);
-  const conflicts = entryTypes
-    .map(entryType => ENTRY_SPECS[entryType].name)
-    .filter(name => worldbook.some(entry => entry.name === name && !isOwnEntry(entry)));
-
-  if (conflicts.length > 0) {
-    throw new Error(`世界书「${worldbookName}」中已有同名用户条目，已拒绝覆盖：${conflicts.join('、')}`);
-  }
-
-  return worldbookName;
 }
 
 function applyOutlineCompletion(state: StoryDirectorState) {
@@ -397,51 +410,6 @@ function applyOutlineCompletion(state: StoryDirectorState) {
   page.lastKnownNode = currentNode;
   toastr.success('该页大纲演绎结束', '剧情指导');
   return true;
-}
-
-function buildBlueEntry(
-  entryType: StoryDirectorEntryType,
-  content: string,
-  enabled: boolean,
-  chatId: string,
-): PartialDeep<WorldbookEntry> {
-  const spec = ENTRY_SPECS[entryType];
-  return {
-    name: spec.name,
-    enabled,
-    strategy: {
-      type: 'constant',
-      keys: [],
-      keys_secondary: { logic: 'and_any', keys: [] },
-      scan_depth: 'same_as_global',
-    },
-    position: {
-      type: 'at_depth',
-      role: 'system',
-      depth: 1,
-      order: spec.order,
-    },
-    content,
-    probability: 100,
-    recursion: {
-      prevent_incoming: true,
-      prevent_outgoing: true,
-      delay_until: null,
-    },
-    effect: {
-      sticky: null,
-      cooldown: null,
-      delay: null,
-    },
-    extra: {
-      source: ENTRY_SOURCE,
-      scriptId: getScriptId(),
-      chatId,
-      mode: spec.mode,
-      entryType,
-      updatedAt: nowIsoString(),
-    },
-  };
 }
 
 function buildOutlineContent(state: StoryDirectorState) {
@@ -485,7 +453,6 @@ ${nodeContent}
 
 function buildOutlineRule() {
   return trimBlock(`
-强调：以下为最高优先级！
 你必须以“<XINJINGWAN-2026-大纲></XINJINGWAN-2026-大纲>”标签包裹的文本内容为大纲，严格按照顺序去演绎大纲，每个剧情演绎完则进行下一个剧情的演绎。剧情的演绎必须尊重用户的选择，不无视用户的行动。当用户的选择与剧情冲突时，则以用户的选择为主，并设法让剧情步入正轨。
 额外要求：不得对剧情生硬演绎，演绎的过程中可以适当补充合理的情节，以达到在不偏离大纲剧情推进的情况下让剧情生动起来的效果。
 
@@ -595,84 +562,131 @@ function buildTimedEndingContent(state: StoryDirectorState) {
 `);
 }
 
-function buildDesiredEntries(
-  state: StoryDirectorState,
-  chatId: string,
-): Map<StoryDirectorEntryType, PartialDeep<WorldbookEntry>> {
-  const desired = new Map<StoryDirectorEntryType, PartialDeep<WorldbookEntry>>();
-
+export function buildRuntimePromptContent(state: StoryDirectorState): string | null {
   if (state.activeMode === 'outline' && state.outline.enabledPageId) {
     const outlineContent = buildOutlineContent(state);
-    if (outlineContent) {
-      desired.set('outlineContent', buildBlueEntry('outlineContent', outlineContent, true, chatId));
-      desired.set('outlineRule', buildBlueEntry('outlineRule', buildOutlineRule(), true, chatId));
-      desired.set('outlineProgress', buildBlueEntry('outlineProgress', buildOutlineProgressRule(state), true, chatId));
+    if (!outlineContent) {
+      return null;
     }
+    return trimBlock([
+      outlineContent,
+      buildOutlineRule(),
+      buildOutlineProgressRule(state),
+    ].join('\n\n'));
   }
 
   if (state.activeMode === 'endingReference' && state.endingReference.enabled) {
-    const endingReference = buildEndingReferenceContent(state);
-    if (endingReference) {
-      desired.set('endingReference', buildBlueEntry('endingReference', endingReference, true, chatId));
-    }
+    return buildEndingReferenceContent(state);
   }
 
   if (state.activeMode === 'timedEnding' && state.timedEnding.active) {
-    const timedEnding = buildTimedEndingContent(state);
-    if (timedEnding) {
-      desired.set('timedEnding', buildBlueEntry('timedEnding', timedEnding, true, chatId));
-    }
+    return buildTimedEndingContent(state);
   }
 
-  return desired;
+  return null;
 }
 
-function mergeEntry(entry: WorldbookEntry, desired: PartialDeep<WorldbookEntry>): PartialDeep<WorldbookEntry> {
-  return {
-    ...entry,
-    ...desired,
-    extra: {
-      ...entry.extra,
-      ...desired.extra,
-    },
-  };
-}
+export function syncRuntimePrompt(state = readState(true)) {
+  uninjectPrompts([RUNTIME_PROMPT_ID]);
 
-function entryComparable(entry: PartialDeep<WorldbookEntry>) {
-  return _.omit(entry, ['uid', 'extra.updatedAt']);
-}
-
-function shouldDisableOwnEntry(entry: WorldbookEntry, chatId?: string) {
-  if (!isOwnEntry(entry) || !getEntryType(entry) || !entry.enabled) {
+  const content = buildRuntimePromptContent(state);
+  if (!content) {
     return false;
   }
 
-  if (!chatId) {
-    return true;
-  }
-
-  const entryChatId = entry.extra?.chatId;
-  return typeof entryChatId !== 'string' || entryChatId === chatId;
+  injectPrompts([{
+    id: RUNTIME_PROMPT_ID,
+    position: 'in_chat',
+    depth: 1,
+    role: 'system',
+    content,
+    should_scan: false,
+  }]);
+  return true;
 }
 
-async function disableOwnEntriesInWorldbook(worldbookName: string, chatId?: string) {
-  const worldbook = await getWorldbook(worldbookName);
-  let changed = false;
-  const nextWorldbook = worldbook.map(entry => {
-    if (!shouldDisableOwnEntry(entry, chatId)) {
-      return entry;
-    }
-    changed = true;
-    return { ...entry, enabled: false };
+export function refreshRuntimePromptStatus(reason: string, state = readState(true)) {
+  const runtimePromptInjected = syncRuntimePrompt(state);
+  patchState(stateToUpdate => {
+    clearInactiveOutlineRuntime(stateToUpdate);
+    stateToUpdate.targetWorldbookName = null;
+    stateToUpdate.status = {
+      ...stateToUpdate.status,
+      reason,
+      activeMode: stateToUpdate.activeMode,
+      targetWorldbookName: null,
+      changedEntries: 0,
+      runtimePromptInjected,
+      outlineCurrentNode: getOutlineCurrentNode(stateToUpdate),
+      outlineMvuAvailable: isOutlineRuntimeActive(stateToUpdate),
+      timedCompletedReplyCount: stateToUpdate.timedEnding.completedReplyCount,
+      timedNextReplyIndex: stateToUpdate.timedEnding.nextReplyIndex,
+      lastSyncedAt: nowIsoString(),
+    };
   });
+  return runtimePromptInjected;
+}
 
-  if (changed) {
-    await replaceWorldbook(worldbookName, nextWorldbook, { render: 'debounced' });
+function isLegacyRuntimeEntryType(value: unknown) {
+  return typeof value === 'string' && LEGACY_RUNTIME_ENTRY_TYPES.has(value);
+}
+
+function hasLegacyRuntimeStrongFeature(entry: WorldbookEntry) {
+  const content = entry.content ?? '';
+  return (
+    entry.extra?.source === ENTRY_SOURCE ||
+    entry.extra?.scriptId === getScriptId() ||
+    isLegacyRuntimeEntryType(entry.extra?.entryType) ||
+    LEGACY_RUNTIME_CONTENT_MARKERS.some(marker => content.includes(marker))
+  );
+}
+
+function shouldCleanupLegacyRuntimeEntry(entry: WorldbookEntry) {
+  return LEGACY_RUNTIME_ENTRY_NAMES.has(entry.name) && hasLegacyRuntimeStrongFeature(entry);
+}
+
+function addUniqueWorldbookName(names: string[], value: unknown) {
+  const name = typeof value === 'string' ? value.trim() : '';
+  if (name && !names.includes(name)) {
+    names.push(name);
   }
 }
 
-export async function disableScriptEntriesInWorldbook(worldbookName: string, chatId?: string) {
-  await disableOwnEntriesInWorldbook(worldbookName, chatId);
+export function getRuntimeCleanupWorldbookNames(extraTargets?: string | string[]) {
+  const names: string[] = [];
+  const extras = Array.isArray(extraTargets) ? extraTargets : [extraTargets];
+  extras.forEach(target => addUniqueWorldbookName(names, target));
+
+  try {
+    addUniqueWorldbookName(names, getChatWorldbookName('current'));
+  } catch (error) {
+    console.warn('[xinjingwan-story-director] failed to read current chat worldbook for legacy cleanup:', error);
+  }
+
+  try {
+    const charWorldbooks = getCharWorldbookNames('current');
+    addUniqueWorldbookName(names, charWorldbooks.primary);
+    charWorldbooks.additional.forEach(name => addUniqueWorldbookName(names, name));
+  } catch (error) {
+    console.warn('[xinjingwan-story-director] failed to read current character worldbooks for legacy cleanup:', error);
+  }
+
+  return names;
+}
+
+export async function cleanupLegacyRuntimeWorldbookEntries(worldbookName?: string | string[]) {
+  const worldbookNames = getRuntimeCleanupWorldbookNames(worldbookName);
+  for (const name of worldbookNames) {
+    try {
+      const worldbook = await getWorldbook(name);
+      const filteredWorldbook = worldbook.filter(entry => !shouldCleanupLegacyRuntimeEntry(entry));
+      if (filteredWorldbook.length !== worldbook.length) {
+        await replaceWorldbook(name, filteredWorldbook, { render: 'debounced' });
+      }
+    } catch (error) {
+      console.warn(`[xinjingwan-story-director] failed to cleanup legacy worldbook entries in ${name}:`, error);
+    }
+  }
 }
 
 function getVisibleAssistantMessages() {
@@ -680,7 +694,7 @@ function getVisibleAssistantMessages() {
     .filter(message => message.is_hidden !== true);
 }
 
-async function refreshOutlineProgressMessages(context: SyncContext) {
+async function refreshOutlineProgressMessages(context: SyncContext, warnings: string[]) {
   throwIfStale(context);
   let state = readState(true);
   if (state.activeMode !== 'outline' || !state.outline.enabledPageId || !state.outline.runId) {
@@ -707,19 +721,17 @@ async function refreshOutlineProgressMessages(context: SyncContext) {
       latestProgress = storedProgress;
     }
 
-    const payload = extractLastOutlineStatePayload(message.message);
-    if (payload == null) {
+    const validBlocks = collectValidOutlineStateBlocks(message.message, state, message.message_id, warnings);
+    if (validBlocks.length === 0) {
       continue;
     }
 
-    const parsedProgress = parseOutlineProgressPayload(payload, state, message.message_id);
-    const strippedMessage = stripOutlineStateBlocks(message.message);
-    const nextExtra = parsedProgress
-      ? {
-          ...message.extra,
-          [OUTLINE_STATE_EXTRA_KEY]: parsedProgress,
-        }
-      : message.extra;
+    const parsedProgress = validBlocks.at(-1)!.progress;
+    const strippedMessage = stripMessageRanges(message.message, validBlocks);
+    const nextExtra = {
+      ...message.extra,
+      [OUTLINE_STATE_EXTRA_KEY]: parsedProgress,
+    };
 
     updates.push({
       message_id: message.message_id,
@@ -727,16 +739,14 @@ async function refreshOutlineProgressMessages(context: SyncContext) {
       extra: nextExtra,
     });
 
-    if (parsedProgress) {
-      latestProgress = parsedProgress;
-      state = {
-        ...state,
-        outline: {
-          ...state.outline,
-          progress: parsedProgress,
-        },
-      };
-    }
+    latestProgress = parsedProgress;
+    state = {
+      ...state,
+      outline: {
+        ...state.outline,
+        progress: parsedProgress,
+      },
+    };
   }
 
   if (updates.length > 0) {
@@ -790,7 +800,7 @@ async function refreshTimedCounterMessages(context: SyncContext) {
   );
 
   const updates = eligibleMessages
-    .map((message, index) => {
+    .flatMap((message, index): Array<{ message_id: number } & Partial<ChatMessage>> => {
       const counter = {
         sessionId,
         index: index + 1,
@@ -798,17 +808,16 @@ async function refreshTimedCounterMessages(context: SyncContext) {
         targetReplyIndex: state.timedEnding.targetReplyIndex,
       };
       if (_.isEqual(message.extra?.[TIMED_COUNTER_EXTRA_KEY], counter)) {
-        return null;
+        return [];
       }
-      return {
+      return [{
         message_id: message.message_id,
         extra: {
           ...message.extra,
           [TIMED_COUNTER_EXTRA_KEY]: counter,
         },
-      };
-    })
-    .filter((update): update is { message_id: number; extra: Record<string, unknown> } => update !== null);
+      }];
+    });
 
   if (updates.length > 0) {
     throwIfStale(context);
@@ -827,65 +836,11 @@ async function refreshTimedCounterMessages(context: SyncContext) {
   return { completedReplyCount, nextReplyIndex };
 }
 
-async function applyDesiredEntries(
-  worldbookName: string,
-  desired: Map<StoryDirectorEntryType, PartialDeep<WorldbookEntry>>,
-  warnings: string[],
-  context: SyncContext,
-) {
-  throwIfStale(context);
-  const worldbook = await getWorldbook(worldbookName);
-  throwIfStale(context);
-  const existingOwnTypes = new Set<StoryDirectorEntryType>();
-  let changedEntries = 0;
-
-  const nextWorldbook = worldbook.map(entry => {
-    const entryType = getEntryType(entry);
-    if (!isOwnEntry(entry) || !entryType) {
-      return entry;
-    }
-
-    existingOwnTypes.add(entryType);
-    const desiredEntry = desired.get(entryType);
-    const nextEntry = desiredEntry ? mergeEntry(entry, desiredEntry) : { ...entry, enabled: false };
-
-    if (!_.isEqual(entryComparable(entry), entryComparable(nextEntry))) {
-      changedEntries += 1;
-    }
-    return nextEntry;
-  });
-
-  for (const [entryType, desiredEntry] of desired) {
-    if (existingOwnTypes.has(entryType)) {
-      continue;
-    }
-
-    const spec = ENTRY_SPECS[entryType];
-    const conflict = worldbook.find(entry => entry.name === spec.name && !isOwnEntry(entry));
-    if (conflict) {
-      warnings.push(`世界书「${worldbookName}」中已有同名用户条目「${spec.name}」，本次跳过创建。`);
-      continue;
-    }
-
-    nextWorldbook.push(desiredEntry);
-    changedEntries += 1;
-  }
-
-  if (changedEntries > 0) {
-    throwIfStale(context);
-    await replaceWorldbook(worldbookName, nextWorldbook, { render: 'debounced' });
-    throwIfStale(context);
-  }
-
-  return changedEntries;
-}
-
 export async function syncNow(reason: string, manual = false, context = captureSyncContext()) {
   const warnings: string[] = [];
-  let changedEntries = 0;
   throwIfStale(context);
   let state = normalizeState(readState(true));
-  await refreshOutlineProgressMessages(context);
+  await refreshOutlineProgressMessages(context, warnings);
   state = normalizeState(readState(true));
   throwIfStale(context);
 
@@ -900,78 +855,32 @@ export async function syncNow(reason: string, manual = false, context = captureS
     state = readState(true);
   }
 
-  const worldbookName = getPreferredWorldbookName();
   throwIfStale(context);
-  if (state.targetWorldbookName && state.targetWorldbookName !== worldbookName) {
-    try {
-      await disableOwnEntriesInWorldbook(state.targetWorldbookName, context.chatId);
-      throwIfStale(context);
-    } catch (error) {
-      if (error instanceof StaleSyncError) {
-        throw error;
-      }
-      const detail = error instanceof Error ? error.message : String(error);
-      warnings.push(`关闭旧世界书「${state.targetWorldbookName}」中的脚本条目失败：${detail}`);
-    }
-  }
-
-  if (!worldbookName) {
-    warnings.push('当前聊天和角色卡都没有绑定世界书，无法同步剧情指导条目。');
-    throwIfStale(context);
-    state.status = {
-      reason,
-      activeMode: state.activeMode,
-      targetWorldbookName: null,
-      changedEntries: 0,
-      warnings,
-      outlineCurrentNode: getOutlineCurrentNode(state),
-      outlineMvuAvailable: Boolean(state.outline.runId),
-      timedCompletedReplyCount: state.timedEnding.completedReplyCount,
-      timedNextReplyIndex: state.timedEnding.nextReplyIndex,
-      lastSyncedAt: nowIsoString(),
-    };
-    state.targetWorldbookName = null;
-    writeState(state);
-    if (manual) {
-      toastr.warning(warnings.at(-1), '剧情指导');
-    }
-    return state.status;
-  }
-
-  const desiredEntries = buildDesiredEntries(state, context.chatId);
-  try {
-    changedEntries = await applyDesiredEntries(worldbookName, desiredEntries, warnings, context);
-  } catch (error) {
-    if (error instanceof StaleSyncError) {
-      throw error;
-    }
-    const detail = error instanceof Error ? error.message : String(error);
-    warnings.push(`同步世界书「${worldbookName}」失败：${detail}`);
-    console.error('[xinjingwan-story-director] worldbook sync failed:', error);
-  }
-
-  throwIfStale(context);
-  state = readState(true);
-  state.targetWorldbookName = worldbookName;
+  clearInactiveOutlineRuntime(state);
+  const runtimePromptInjected = syncRuntimePrompt(state);
   state.status = {
     reason,
     activeMode: state.activeMode,
-    targetWorldbookName: worldbookName,
-    changedEntries,
+    targetWorldbookName: null,
+    changedEntries: 0,
+    runtimePromptInjected,
     warnings,
     outlineCurrentNode: getOutlineCurrentNode(state),
-    outlineMvuAvailable: Boolean(state.outline.runId),
+    outlineMvuAvailable: isOutlineRuntimeActive(state),
     timedCompletedReplyCount: state.timedEnding.completedReplyCount,
     timedNextReplyIndex: state.timedEnding.nextReplyIndex,
     lastSyncedAt: nowIsoString(),
   };
+  state.targetWorldbookName = null;
   writeState(state);
 
   if (manual) {
     if (warnings.length > 0) {
-      toastr.warning(`同步完成，但有 ${warnings.length} 条提醒。`, '剧情指导');
+      toastr.warning(`运行提示已刷新，但有 ${warnings.length} 条提醒。`, '剧情指导');
+    } else if (runtimePromptInjected) {
+      toastr.success('运行提示已注入。', '剧情指导');
     } else {
-      toastr.success(`已同步到世界书「${worldbookName}」。`, '剧情指导');
+      toastr.success('运行提示已清除。', '剧情指导');
     }
   }
 
@@ -1035,7 +944,6 @@ export async function enableOutlinePage(pageId: string) {
   if (!page || getNonEmptyNodes(page).length === 0) {
     throw new Error('请先填写至少一个大纲节点。');
   }
-  await assertWorldbookReady(MODE_ENTRY_TYPES.outline, context);
   throwIfStale(context);
 
   patchState(stateToUpdate => {
@@ -1078,7 +986,6 @@ export async function enableEndingReference() {
   if (!state.endingReference.text.trim()) {
     throw new Error('请先填写弱结局参考内容。');
   }
-  await assertWorldbookReady(MODE_ENTRY_TYPES.endingReference, context);
   throwIfStale(context);
 
   patchState(stateToUpdate => {
@@ -1107,7 +1014,6 @@ export async function startNewTimedGoal() {
   if (!state.timedEnding.goalText.trim()) {
     throw new Error('请先填写目标结局。');
   }
-  await assertWorldbookReady(MODE_ENTRY_TYPES.timedEnding, context);
   throwIfStale(context);
 
   patchState(stateToUpdate => {
@@ -1136,7 +1042,6 @@ export async function continueTimedGoal() {
     await startNewTimedGoal();
     return;
   }
-  await assertWorldbookReady(MODE_ENTRY_TYPES.timedEnding, context);
   throwIfStale(context);
 
   patchState(stateToUpdate => {
