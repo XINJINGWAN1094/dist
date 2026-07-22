@@ -54,10 +54,20 @@ let debounceTimer: number | null = null;
 let syncTimers: number[] = [];
 let syncContextRevision = 0;
 const ignoredOutlineStateWarnings = new Set<string>();
+const ignoredStoredOutlineMessageIds = new Set<number>();
 
 type SyncContext = {
   chatId: string;
   revision: number;
+};
+
+type MessageScanOptions = {
+  excludeMessageId?: number | null;
+  applyMessageUpdates?: boolean;
+};
+
+type GenerationPromptOptions = {
+  excludeLatestAssistant?: boolean;
 };
 
 class StaleSyncError extends Error {
@@ -350,6 +360,7 @@ function deactivateOtherModes(state: StoryDirectorState, keepMode: StoryDirector
     state.outline.enabledPageId = null;
     state.outline.runId = null;
     state.outline.progress = createOutlineProgressReport(null, getOutlineCurrentNode(state));
+    state.outline.recentlyClosedRuntime = null;
   }
   if (keepMode !== 'endingReference') {
     state.endingReference.enabled = false;
@@ -403,6 +414,15 @@ function applyOutlineCompletion(state: StoryDirectorState) {
     return false;
   }
 
+  const completedRunId = state.outline.runId;
+  if (completedRunId) {
+    state.outline.recentlyClosedRuntime = {
+      pageId: page.id,
+      runId: completedRunId,
+      progress: state.outline.progress,
+      closedAt: nowIsoString(),
+    };
+  }
   state.activeMode = null;
   state.outline.enabledPageId = null;
   state.outline.runId = null;
@@ -694,31 +714,115 @@ function getVisibleAssistantMessages() {
     .filter(message => message.is_hidden !== true);
 }
 
-async function refreshOutlineProgressMessages(context: SyncContext, warnings: string[]) {
-  throwIfStale(context);
-  let state = readState(true);
-  if (state.activeMode !== 'outline' || !state.outline.enabledPageId || !state.outline.runId) {
+function getLatestVisibleAssistantMessage() {
+  try {
+    const latestMessage = getChatMessages(-1)[0];
+    if (latestMessage?.role === 'assistant' && latestMessage.is_hidden !== true) {
+      return latestMessage;
+    }
+  } catch (error) {
+    console.warn('[xinjingwan-story-director] unable to read latest message for generation rollback:', error);
+  }
+  return null;
+}
+
+function shouldSkipMessage(message: Pick<ChatMessage, 'message_id'>, options: MessageScanOptions) {
+  return options.excludeMessageId != null && message.message_id === options.excludeMessageId;
+}
+
+export function ignoreStoredOutlineStateForMessage(messageId: number | null | undefined) {
+  if (messageId == null || !Number.isFinite(messageId)) {
+    return;
+  }
+  ignoredStoredOutlineMessageIds.add(Math.trunc(messageId));
+  if (ignoredStoredOutlineMessageIds.size > 200) {
+    ignoredStoredOutlineMessageIds.clear();
+  }
+}
+
+function describeOutlineProgressSource(progress: OutlineProgressReport) {
+  return progress.messageId != null ? `第${progress.messageId}楼状态` : '本页初始节点';
+}
+
+function isOutlineProgressRollback(previous: OutlineProgressReport, rebuilt: OutlineProgressReport) {
+  if (previous.runId !== rebuilt.runId) {
+    return false;
+  }
+
+  const previousMessageId = previous.messageId ?? -1;
+  const rebuiltMessageId = rebuilt.messageId ?? -1;
+  if (rebuiltMessageId < previousMessageId) {
+    return true;
+  }
+  return rebuiltMessageId === previousMessageId && rebuilt.nextNode < previous.nextNode;
+}
+
+function updateLocalOutlineProgressState(state: StoryDirectorState, progress: OutlineProgressReport): StoryDirectorState {
+  return {
+    ...state,
+    outline: {
+      ...state.outline,
+      progress,
+    },
+  };
+}
+
+function createRecentlyClosedOutlineScanState(state: StoryDirectorState): StoryDirectorState | null {
+  const runtime = state.outline.recentlyClosedRuntime;
+  if (!runtime || !state.outline.pages.some(page => page.id === runtime.pageId)) {
     return null;
+  }
+
+  return {
+    ...state,
+    activeMode: 'outline',
+    outline: {
+      ...state.outline,
+      enabledPageId: runtime.pageId,
+      runId: runtime.runId,
+      progress: runtime.progress,
+    },
+  };
+}
+
+function rebuildOutlineProgressMessages(warnings: string[], options: MessageScanOptions = {}) {
+  let state = readState(true);
+  const closedScanState = state.activeMode === 'outline' ? null : createRecentlyClosedOutlineScanState(state);
+  const scanningRecentlyClosedRuntime = Boolean(closedScanState);
+  if (closedScanState) {
+    state = closedScanState;
+  }
+
+  if (state.activeMode !== 'outline' || !state.outline.enabledPageId || !state.outline.runId) {
+    return {
+      progress: null,
+      updates: [] as Array<{ message_id: number; message: string; extra: Record<string, unknown> }>,
+    };
   }
 
   let selectedAssistantMessages: ChatMessage[] = [];
   try {
-    selectedAssistantMessages = getVisibleAssistantMessages();
+    selectedAssistantMessages = getVisibleAssistantMessages()
+      .filter(message => !shouldSkipMessage(message, options));
   } catch (error) {
     console.warn('[xinjingwan-story-director] unable to scan chat messages for outline progress:', error);
   }
 
   const updates: Array<{ message_id: number; message: string; extra: Record<string, unknown> }> = [];
   let latestProgress: OutlineProgressReport | null = null;
+  const previousProgress = state.outline.progress;
 
   for (const message of selectedAssistantMessages) {
-    const storedProgress = normalizeStoredOutlineProgress(
-      message.extra?.[OUTLINE_STATE_EXTRA_KEY],
-      state,
-      message.message_id,
-    );
+    const storedProgress = ignoredStoredOutlineMessageIds.has(message.message_id)
+      ? null
+      : normalizeStoredOutlineProgress(
+        message.extra?.[OUTLINE_STATE_EXTRA_KEY],
+        state,
+        message.message_id,
+      );
     if (storedProgress) {
       latestProgress = storedProgress;
+      state = updateLocalOutlineProgressState(state, storedProgress);
     }
 
     const validBlocks = collectValidOutlineStateBlocks(message.message, state, message.message_id, warnings);
@@ -727,6 +831,7 @@ async function refreshOutlineProgressMessages(context: SyncContext, warnings: st
     }
 
     const parsedProgress = validBlocks.at(-1)!.progress;
+    ignoredStoredOutlineMessageIds.delete(message.message_id);
     const strippedMessage = stripMessageRanges(message.message, validBlocks);
     const nextExtra = {
       ...message.extra,
@@ -740,37 +845,60 @@ async function refreshOutlineProgressMessages(context: SyncContext, warnings: st
     });
 
     latestProgress = parsedProgress;
-    state = {
-      ...state,
-      outline: {
-        ...state.outline,
-        progress: parsedProgress,
-      },
-    };
+    state = updateLocalOutlineProgressState(state, parsedProgress);
   }
 
-  if (updates.length > 0) {
+  const rebuiltProgress = latestProgress ?? createOutlineProgressReport(state.outline.runId, 1);
+  if (isOutlineProgressRollback(previousProgress, rebuiltProgress)) {
+    warnings.push(`检测到被废弃的大纲变量输出，已回退到${describeOutlineProgressSource(rebuiltProgress)}。`);
+  }
+
+  patchState(stateToUpdate => {
+    if (scanningRecentlyClosedRuntime) {
+      if (!isOutlineProgressRollback(previousProgress, rebuiltProgress)) {
+        return;
+      }
+      stateToUpdate.activeMode = 'outline';
+      stateToUpdate.ui.tab = 'outline';
+      stateToUpdate.outline.enabledPageId = state.outline.enabledPageId;
+      stateToUpdate.outline.runId = state.outline.runId;
+      stateToUpdate.outline.progress = rebuiltProgress;
+      stateToUpdate.outline.recentlyClosedRuntime = null;
+      const page = getEnabledOutlinePage(stateToUpdate);
+      if (page) {
+        page.completed = false;
+        page.lastKnownNode = rebuiltProgress.nextNode;
+      }
+      return;
+    }
+
+    if (stateToUpdate.activeMode !== 'outline' || stateToUpdate.outline.runId !== rebuiltProgress.runId) {
+      return;
+    }
+    stateToUpdate.outline.progress = rebuiltProgress;
+    const page = getEnabledOutlinePage(stateToUpdate);
+    if (page) {
+      page.lastKnownNode = rebuiltProgress.nextNode;
+      if (rebuiltProgress.messageId == null && rebuiltProgress.nextNode <= 1) {
+        page.completed = false;
+      }
+    }
+  }, false);
+
+  return { progress: rebuiltProgress, updates };
+}
+
+async function refreshOutlineProgressMessages(context: SyncContext, warnings: string[], options: MessageScanOptions = {}) {
+  throwIfStale(context);
+  const { progress, updates } = rebuildOutlineProgressMessages(warnings, options);
+
+  if (updates.length > 0 && options.applyMessageUpdates !== false) {
     throwIfStale(context);
     await setChatMessages(updates, { refresh: 'affected' });
     throwIfStale(context);
   }
 
-  if (!latestProgress) {
-    return null;
-  }
-
-  throwIfStale(context);
-  patchState(stateToUpdate => {
-    if (stateToUpdate.activeMode !== 'outline' || stateToUpdate.outline.runId !== latestProgress.runId) {
-      return;
-    }
-    stateToUpdate.outline.progress = latestProgress;
-    const page = getEnabledOutlinePage(stateToUpdate);
-    if (page) {
-      page.lastKnownNode = latestProgress.nextNode;
-    }
-  }, false);
-  return latestProgress;
+  return progress;
 }
 
 function messageInRanges(messageId: number, ranges: TimedActiveRange[]) {
@@ -780,17 +908,21 @@ function messageInRanges(messageId: number, ranges: TimedActiveRange[]) {
   });
 }
 
-async function refreshTimedCounterMessages(context: SyncContext) {
-  throwIfStale(context);
+function rebuildTimedCounterMessages(options: MessageScanOptions = {}) {
   const state = readState(true);
   const sessionId = state.timedEnding.sessionId;
   if (!sessionId) {
-    return { completedReplyCount: 0, nextReplyIndex: 1 };
+    return {
+      completedReplyCount: 0,
+      nextReplyIndex: 1,
+      updates: [] as Array<{ message_id: number } & Partial<ChatMessage>>,
+    };
   }
 
   let selectedAssistantMessages: ChatMessage[] = [];
   try {
-    selectedAssistantMessages = getVisibleAssistantMessages();
+    selectedAssistantMessages = getVisibleAssistantMessages()
+      .filter(message => !shouldSkipMessage(message, options));
   } catch (error) {
     console.warn('[xinjingwan-story-director] unable to scan chat messages for timed counter:', error);
   }
@@ -819,28 +951,39 @@ async function refreshTimedCounterMessages(context: SyncContext) {
       }];
     });
 
-  if (updates.length > 0) {
-    throwIfStale(context);
-    await setChatMessages(updates, { refresh: 'none' });
-    throwIfStale(context);
-  }
-
   const completedReplyCount = eligibleMessages.length;
   const nextReplyIndex = completedReplyCount + 1;
-  throwIfStale(context);
   patchState(stateToUpdate => {
     stateToUpdate.timedEnding.completedReplyCount = completedReplyCount;
     stateToUpdate.timedEnding.nextReplyIndex = nextReplyIndex;
   });
 
+  return { completedReplyCount, nextReplyIndex, updates };
+}
+
+async function refreshTimedCounterMessages(context: SyncContext, options: MessageScanOptions = {}) {
+  throwIfStale(context);
+  const { completedReplyCount, nextReplyIndex, updates } = rebuildTimedCounterMessages(options);
+
+  if (updates.length > 0 && options.applyMessageUpdates !== false) {
+    throwIfStale(context);
+    await setChatMessages(updates, { refresh: 'none' });
+    throwIfStale(context);
+  }
+
   return { completedReplyCount, nextReplyIndex };
 }
 
-export async function syncNow(reason: string, manual = false, context = captureSyncContext()) {
+export async function syncNow(
+  reason: string,
+  manual = false,
+  context = captureSyncContext(),
+  messageScanOptions: MessageScanOptions = {},
+) {
   const warnings: string[] = [];
   throwIfStale(context);
   let state = normalizeState(readState(true));
-  await refreshOutlineProgressMessages(context, warnings);
+  await refreshOutlineProgressMessages(context, warnings, messageScanOptions);
   state = normalizeState(readState(true));
   throwIfStale(context);
 
@@ -851,7 +994,7 @@ export async function syncNow(reason: string, manual = false, context = captureS
   }
 
   if (state.timedEnding.sessionId) {
-    await refreshTimedCounterMessages(context);
+    await refreshTimedCounterMessages(context, messageScanOptions);
     state = readState(true);
   }
 
@@ -884,6 +1027,43 @@ export async function syncNow(reason: string, manual = false, context = captureS
     }
   }
 
+  return state.status;
+}
+
+export function prepareRuntimePromptForGeneration(reason: string, options: GenerationPromptOptions = {}) {
+  const warnings: string[] = [];
+  const shouldExcludeLatestAssistant = options.excludeLatestAssistant ?? true;
+  const latestAssistantMessage = shouldExcludeLatestAssistant ? getLatestVisibleAssistantMessage() : null;
+  const messageScanOptions: MessageScanOptions = {
+    applyMessageUpdates: false,
+    excludeMessageId: latestAssistantMessage?.message_id ?? null,
+  };
+
+  rebuildOutlineProgressMessages(warnings, messageScanOptions);
+  let state = normalizeState(readState(true));
+
+  if (state.timedEnding.sessionId) {
+    rebuildTimedCounterMessages(messageScanOptions);
+    state = normalizeState(readState(true));
+  }
+
+  clearInactiveOutlineRuntime(state);
+  const runtimePromptInjected = syncRuntimePrompt(state);
+  state.status = {
+    reason,
+    activeMode: state.activeMode,
+    targetWorldbookName: null,
+    changedEntries: 0,
+    runtimePromptInjected,
+    warnings,
+    outlineCurrentNode: getOutlineCurrentNode(state),
+    outlineMvuAvailable: isOutlineRuntimeActive(state),
+    timedCompletedReplyCount: state.timedEnding.completedReplyCount,
+    timedNextReplyIndex: state.timedEnding.nextReplyIndex,
+    lastSyncedAt: nowIsoString(),
+  };
+  state.targetWorldbookName = null;
+  writeState(state);
   return state.status;
 }
 
@@ -955,6 +1135,7 @@ export async function enableOutlinePage(pageId: string) {
     stateToUpdate.outline.enabledPageId = pageId;
     stateToUpdate.outline.runId = runId;
     stateToUpdate.outline.progress = createOutlineProgressReport(runId, 1);
+    stateToUpdate.outline.recentlyClosedRuntime = null;
     const targetPage = stateToUpdate.outline.pages.find(candidate => candidate.id === pageId);
     if (targetPage) {
       targetPage.completed = false;
@@ -976,6 +1157,7 @@ export async function closeOutlinePage() {
     }
     state.outline.enabledPageId = null;
     state.outline.runId = null;
+    state.outline.recentlyClosedRuntime = null;
   });
   await syncNow('关闭当前大纲页', true, context);
 }

@@ -2,6 +2,7 @@ import {
   CHAT_STATE_KEY,
   type OutlinePage,
   type OutlineProgressReport,
+  type RecentlyClosedOutlineRuntime,
   type StateListener,
   type StoryDirectorMode,
   type StoryDirectorState,
@@ -150,6 +151,32 @@ function normalizeOutlineProgress(
   };
 }
 
+function normalizeRecentlyClosedRuntime(
+  value: unknown,
+  pages: OutlinePage[],
+): RecentlyClosedOutlineRuntime | null {
+  const record = isRecord(value) ? value : null;
+  if (!record) {
+    return null;
+  }
+
+  const pageId = coerceString(record.pageId).trim();
+  const runId = coerceString(record.runId).trim();
+  if (!pageId || !runId || !pages.some(page => page.id === pageId)) {
+    return null;
+  }
+
+  const progress = normalizeOutlineProgress(record.progress, runId, 1);
+  progress.runId = runId;
+
+  return {
+    pageId,
+    runId,
+    progress,
+    closedAt: coerceString(record.closedAt).trim(),
+  };
+}
+
 function normalizeRanges(value: unknown): TimedActiveRange[] {
   if (!Array.isArray(value)) {
     return [];
@@ -192,6 +219,10 @@ export function normalizeState(value: unknown): StoryDirectorState {
     outlineRunId,
     enabledPage?.lastKnownNode ?? 1,
   );
+  const recentlyClosedRuntime = normalizeRecentlyClosedRuntime(
+    outlineRecord.recentlyClosedRuntime,
+    pages,
+  );
 
   const endingRecord = isRecord(record.endingReference) ? record.endingReference : {};
   const timedRecord = isRecord(record.timedEnding) ? record.timedEnding : {};
@@ -214,6 +245,7 @@ export function normalizeState(value: unknown): StoryDirectorState {
       enabledPageId,
       runId: outlineRunId,
       progress: outlineProgress,
+      recentlyClosedRuntime,
     },
     endingReference: {
       text: coerceString(endingRecord.text),

@@ -2,7 +2,7 @@
   <div class="director-shell" @focusin="keepFocusedFieldVisible">
     <header class="titlebar">
       <div class="title-main">
-        <span class="title">新景湾剧情指导</span>
+        <span class="title">xinjingwan</span>
         <span class="subtitle">{{ modeLabel }}</span>
       </div>
       <div class="window-actions">
@@ -596,11 +596,11 @@ function keepFocusedFieldVisible(event: FocusEvent) {
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(64, 117, 96, 0.28);
+  border: 1px solid rgba(36, 59, 53, 0.18);
   border-radius: 8px;
-  color: #1f302a;
-  background: #f7faf8;
-  box-shadow: 0 18px 46px rgba(27, 50, 42, 0.22);
+  color: #192421;
+  background: #f4f7f6;
+  box-shadow: 0 10px 24px rgba(22, 31, 29, 0.16);
   font-family:
     Inter,
     ui-sans-serif,
@@ -620,8 +620,8 @@ function keepFocusedFieldVisible(event: FocusEvent) {
   flex: 0 0 58px;
   height: 58px;
   padding: 10px 12px 10px 16px;
-  border-bottom: 1px solid rgba(64, 117, 96, 0.18);
-  background: #edf6f1;
+  border-bottom: 1px solid rgba(36, 59, 53, 0.12);
+  background: #fbfdfc;
   cursor: move;
   user-select: none;
 }
@@ -635,9 +635,10 @@ function keepFocusedFieldVisible(event: FocusEvent) {
 
 .title {
   overflow: hidden;
-  color: #18362d;
+  color: #14221e;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 760;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -662,7 +663,7 @@ function keepFocusedFieldVisible(event: FocusEvent) {
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   padding: 12px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -681,7 +682,7 @@ function keepFocusedFieldVisible(event: FocusEvent) {
 .progress-box {
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid rgba(64, 117, 96, 0.16);
+  border: 1px solid rgba(36, 59, 53, 0.12);
   border-radius: 8px;
   background: #ffffff;
 }
@@ -710,7 +711,7 @@ function keepFocusedFieldVisible(event: FocusEvent) {
   gap: 6px;
   padding: 4px;
   border-radius: 8px;
-  background: #e5f0ea;
+  background: #e4ebe8;
 }
 
 .tabs button,
@@ -734,18 +735,19 @@ button {
 .tabs button.active,
 .page-tabs button.active {
   background: #ffffff;
-  box-shadow: 0 1px 4px rgba(38, 76, 60, 0.12);
+  box-shadow: 0 1px 3px rgba(22, 31, 29, 0.12);
   font-weight: 700;
 }
 
 .panel {
   display: flex;
-  min-height: 0;
-  flex: 1;
+  min-height: auto;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  border: 1px solid rgba(64, 117, 96, 0.16);
+  overflow: visible;
+  border: 1px solid rgba(36, 59, 53, 0.12);
   border-radius: 8px;
   background: #ffffff;
 }
@@ -787,7 +789,7 @@ p {
   min-height: 34px;
   flex: 0 0 auto;
   padding: 0 12px;
-  border: 1px solid rgba(64, 117, 96, 0.16);
+  border: 1px solid rgba(36, 59, 53, 0.12);
   background: #f8fbf9;
 }
 
@@ -799,13 +801,13 @@ p {
 .outline-editor,
 .node-list {
   display: flex;
-  min-height: 0;
+  min-height: auto;
   flex-direction: column;
   gap: 10px;
 }
 
 .outline-editor {
-  flex: 1;
+  flex: none;
 }
 
 .row-between {
@@ -813,8 +815,8 @@ p {
 }
 
 .node-list {
-  flex: 1;
-  overflow: auto;
+  flex: none;
+  overflow: visible;
   padding-right: 2px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -839,9 +841,9 @@ textarea,
 input {
   width: 100%;
   min-width: 0;
-  border: 1px solid rgba(64, 117, 96, 0.26);
+  border: 1px solid rgba(36, 59, 53, 0.18);
   border-radius: 8px;
-  color: #1f302a;
+  color: #192421;
   background: #fbfdfc;
   font: inherit;
   outline: none;
@@ -865,7 +867,7 @@ input:focus {
 
 .large-textarea {
   min-height: 220px;
-  flex: 1;
+  flex: none;
 }
 
 .node-actions {
@@ -878,15 +880,15 @@ input:focus {
 .secondary-button,
 .ghost-button,
 .small-button {
-  border: 1px solid rgba(64, 117, 96, 0.22);
+  border: 1px solid rgba(36, 59, 53, 0.16);
   padding: 0 12px;
   background: #ffffff;
 }
 
 .primary-button {
-  border-color: #37725f;
+  border-color: #2f6f5c;
   color: #ffffff;
-  background: #37725f;
+  background: #2f6f5c;
 }
 
 .secondary-button:hover,

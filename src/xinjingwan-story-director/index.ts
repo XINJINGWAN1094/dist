@@ -6,6 +6,8 @@ import { SCRIPT_BUTTON_NAME } from './types';
 import {
   clearSyncTimers,
   cleanupLegacyRuntimeWorldbookEntries,
+  ignoreStoredOutlineStateForMessage,
+  prepareRuntimePromptForGeneration,
   queueSync,
   queueSyncSeries,
   refreshRuntimePromptStatus,
@@ -342,14 +344,17 @@ function mountXinjingwanStoryDirector() {
     }
   };
 
-  const queueSyncNowAndSeries = (reason: string) => {
+  const queueSyncNowAndSeries = (reason: string, messageId?: number | null) => {
+    ignoreStoredOutlineStateForMessage(messageId);
     queueSync(reason, false, 0);
     queueSyncSeries(reason);
   };
 
-  const refreshPromptAndQueue = (reason: string) => {
-    refreshRuntimePromptStatus(reason);
-    queueSync(reason, false, 0);
+  const preparePromptForGeneration = (reason: string, generationType?: string) => {
+    const keepLatestAssistantProgress = ['continue', 'append', 'appendFinal'].includes(generationType ?? '');
+    prepareRuntimePromptForGeneration(reason, {
+      excludeLatestAssistant: !keepLatestAssistantProgress,
+    });
   };
 
   const stopStateListener = onStateChanged(syncFrameLayoutSoon);
@@ -376,19 +381,23 @@ function mountXinjingwanStoryDirector() {
     ).stop,
     eventOn(
       tavern_events.MESSAGE_DELETED,
-      errorCatched(() => queueSyncNowAndSeries('消息删除')),
+      errorCatched(messageId => queueSyncNowAndSeries('消息删除', messageId)),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_SWIPED,
-      errorCatched(() => queueSyncNowAndSeries('消息 swipe 切换')),
+      errorCatched(messageId => queueSyncNowAndSeries('消息 swipe 切换', messageId)),
     ).stop,
     eventOn(
       tavern_events.MESSAGE_SWIPE_DELETED,
-      errorCatched(() => queueSyncNowAndSeries('消息 swipe 删除')),
+      errorCatched(eventData => queueSyncNowAndSeries('消息 swipe 删除', eventData?.messageId)),
+    ).stop,
+    eventOn(
+      tavern_events.GENERATION_AFTER_COMMANDS,
+      errorCatched((generationType: string) => preparePromptForGeneration('生成请求准备', generationType)),
     ).stop,
     eventOn(
       tavern_events.GENERATION_STARTED,
-      errorCatched(() => refreshPromptAndQueue('生成开始')),
+      errorCatched(() => refreshRuntimePromptStatus('生成开始')),
     ).stop,
     eventOn(
       tavern_events.GENERATION_ENDED,

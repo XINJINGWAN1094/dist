@@ -24,6 +24,13 @@ export type OutlineProgressReport = {
   updatedAt: string;
 };
 
+export type RecentlyClosedOutlineRuntime = {
+  pageId: string;
+  runId: string;
+  progress: OutlineProgressReport;
+  closedAt: string;
+};
+
 export type TimedActiveRange = {
   startMessageId: number;
   endMessageId: number | null;
@@ -57,6 +64,7 @@ export type StoryDirectorState = {
     enabledPageId: string | null;
     runId: string | null;
     progress: OutlineProgressReport;
+    recentlyClosedRuntime: RecentlyClosedOutlineRuntime | null;
   };
   endingReference: {
     text: string;
