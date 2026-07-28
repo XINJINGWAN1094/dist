@@ -50,6 +50,7 @@ function common_path(lhs: string, rhs: string) {
 
 function glob_script_files() {
   const results: string[] = [];
+<<<<<<< HEAD
   const force_include_suffix = '/\u611f\u53f9\u53f7\u63d0\u793a\u6309\u94ae/index.ts';
   const is_force_include_entry = (file: string) => {
     const normalized = file.replaceAll('\\', '/');
@@ -57,10 +58,15 @@ function glob_script_files() {
   };
 
   fs.globSync(`{\u793a\u4f8b,src}/**/index.{ts,tsx,js,jsx}`)
+=======
+
+  fs.globSync(`{示例,src}/**/index.{ts,tsx,js,jsx}`)
+>>>>>>> 3ee370304f725ffc74d481bb24331e890bad1641
     .filter(
       file => process.env.CI !== 'true' || !fs.readFileSync(path.join(import.meta.dirname, file)).includes('@no-ci'),
     )
     .forEach(file => {
+<<<<<<< HEAD
       const is_force_include_file = is_force_include_entry(file);
       const file_dirname = path.dirname(file);
       for (const [index, result] of results.entries()) {
@@ -71,6 +77,16 @@ function glob_script_files() {
           return;
         }
         if (!is_force_include_result && common === file_dirname) {
+=======
+      const file_dirname = path.dirname(file);
+      for (const [index, result] of results.entries()) {
+        const result_dirname = path.dirname(result);
+        const common = common_path(result_dirname, file_dirname);
+        if (common === result_dirname) {
+          return;
+        }
+        if (common === file_dirname) {
+>>>>>>> 3ee370304f725ffc74d481bb24331e890bad1641
           results.splice(index, 1, file);
           return;
         }
@@ -459,6 +475,10 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
             { from: 'klona', imports: ['klona'] },
             { from: 'vue-final-modal', imports: ['useModal'] },
             { from: 'zod', imports: ['z'] },
+<<<<<<< HEAD
+=======
+            { from: 'type-fest', imports: [['*', 'TypeFest']], type: true },
+>>>>>>> 3ee370304f725ffc74d481bb24331e890bad1641
           ],
         }),
         unpluginVueComponents({
@@ -567,9 +587,23 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       const cdn = {
         sass: 'https://jspm.dev/sass',
       };
+<<<<<<< HEAD
       return callback(
         null,
         'module-import ' + (cdn[request as keyof typeof cdn] ?? `https://testingcf.jsdelivr.net/npm/${request}/+esm`),
+=======
+      const package_json = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, 'package.json'), 'utf-8')) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const package_versions = { ...package_json.devDependencies, ...package_json.dependencies };
+      const version = package_versions[request]?.replace(/^[~^]/, '');
+      const versioned_request = /^[.\d]+$/.test(version) ? `${request}@${version}` : request;
+      return callback(
+        null,
+        'module-import ' +
+          (cdn[request as keyof typeof cdn] ?? `https://testingcf.jsdelivr.net/npm/${versioned_request}/+esm`),
+>>>>>>> 3ee370304f725ffc74d481bb24331e890bad1641
       );
     },
   });
