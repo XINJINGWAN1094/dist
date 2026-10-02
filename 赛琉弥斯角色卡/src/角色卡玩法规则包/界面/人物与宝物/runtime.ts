@@ -1,5 +1,14 @@
 import { equipmentSlots, type EquipmentCommand, type EquipmentSlot, type EquipmentState } from '../../equipment';
 import type { Person, Treasure } from './fixture';
+import {
+  describeTreasure,
+  growthPerDay,
+  promotionSupported,
+  talentMultiplier,
+  worldSeconds,
+  type Gameplay,
+  type GrowingPerson,
+} from '../../progression';
 
 export type EquipmentApi = {
   version: number;
@@ -10,7 +19,12 @@ export function findEquipmentApi(): EquipmentApi | undefined {
   for (const frame of [window, window.parent]) {
     try {
       const api = (frame as unknown as Record<string, any>).__selyumis_equipment_v1__;
-      if (api?.version === 1 && typeof api.read === 'function' && typeof api.apply === 'function') return api;
+      if (
+        (api?.version === 1 || api?.version === 2) &&
+        typeof api.read === 'function' &&
+        typeof api.apply === 'function'
+      )
+        return api;
     } catch {
       /* 跨源独立预览无权访问宿主，保持演示模式。 */
     }
@@ -27,6 +41,7 @@ export function viewFromEquipmentState(gameplay: EquipmentState & Record<string,
     const data = value as Record<string, any>;
     const routes = Object.keys(data.路线);
     const route = data.路线.斗气 ?? data.路线.法力 ?? (Object.values(data.路线)[0] as any);
+    const routeName = data.路线.斗气 ? '斗气' : data.路线.法力 ? '法力' : routes[0];
     return {
       id,
       name: data.姓名,
@@ -42,6 +57,18 @@ export function viewFromEquipmentState(gameplay: EquipmentState & Record<string,
       progressMax: route ? 100 * route.境界 * route.品质 : 0,
       nextRealm: data.路线.斗气 ? (knightRealms[route.境界 + 1] ?? '待定') : '待定',
       routes,
+      routeRanks: Object.fromEntries(routes.map(name => [name, data.路线[name].境界])),
+      talent: data.天赋?.等级,
+      talentFactor: data.天赋 ? talentMultiplier(data as GrowingPerson) : undefined,
+      growthNote: !data.天赋
+        ? '随世界时间成长'
+        : worldSeconds(gameplay.时间?.剧情时间) === null
+          ? '待剧情时间确定'
+          : route?.境界 >= 8
+            ? '已达当前最高境界'
+            : !promotionSupported(data as GrowingPerson)
+              ? '晋阶面板待明确'
+              : `每日 +${growthPerDay(gameplay as Gameplay, id, routeName).toFixed(3)} 修为`,
     };
   });
   const treasures: Treasure[] = [];
@@ -65,7 +92,7 @@ export function viewFromEquipmentState(gameplay: EquipmentState & Record<string,
         category: item.宝物.大类,
         quantity: item.数量,
         use: item.宝物.使用方式 === '佩戴' ? 'wear' : item.宝物.使用方式 === '消耗' ? 'consume' : 'special',
-        effect: item.固定规格,
+        effect: describeTreasure(item.宝物) ?? item.固定规格,
         description: '',
         ownerId,
         slot,

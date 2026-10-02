@@ -19,6 +19,12 @@ export const slotCategories: Record<EquipmentSlot, TreasureCategory> = {
   special: '特殊物品',
 };
 export type EquipmentRef = { 库存ID: string; 物品ID: string };
+export type TreasureEffect = {
+  类型: '固定属性' | '比例属性' | '成长加速' | '修为';
+  属性?: '生命' | '能量' | '攻击' | '防御';
+  路线?: string;
+  份额: 0.5 | 1;
+};
 export type TreasureMetadata = {
   大类: TreasureCategory;
   子类: '普通' | '法杖';
@@ -26,6 +32,8 @@ export type TreasureMetadata = {
   使用方式: '佩戴' | '消耗' | '特殊';
   归属人物ID: string | null;
   固定加成?: { 攻击: number; 防御: number };
+  品阶?: number;
+  效果?: TreasureEffect[];
 };
 export type InventoryItem = {
   名称: string;
@@ -45,7 +53,8 @@ export type EquipmentState = {
 export type EquipmentCommand =
   | { type: 'equip'; ref: EquipmentRef; personId: string; slot: EquipmentSlot; splitId: string }
   | { type: 'unequip'; ref: EquipmentRef }
-  | { type: 'discard'; ref: EquipmentRef; quantity: number };
+  | { type: 'discard'; ref: EquipmentRef; quantity: number }
+  | { type: 'consume'; ref: EquipmentRef; personId: string; route: string };
 
 export function sameItem(a: EquipmentRef, b: EquipmentRef): boolean {
   return a.库存ID === b.库存ID && a.物品ID === b.物品ID;
@@ -67,6 +76,7 @@ function clearReferences(state: EquipmentState, ref: EquipmentRef): void {
 }
 /** 调用方在副本上执行；失败不写回存档。没有 AI 通知或新增物件入口。 */
 export function applyEquipmentCommand(state: EquipmentState, command: EquipmentCommand): void {
+  if (command.type === 'consume') throw new Error('消耗须通过成长结算入口提交。');
   const item = resolveEquipment(state, command.ref);
   if (!item?.宝物 || item.数量 <= 0) throw new Error('宝物已不存在，请刷新后重试。');
   if (command.type === 'unequip') {

@@ -45,6 +45,32 @@ export const Schema = z
               ),
               已掌握技能: z.record(z.string().min(1).describe('技能版本ID'), z.literal(true)).prefault({}),
               下次药剂可生效时间: z.string().min(1).nullable().prefault(null),
+              天赋: z
+                .object({
+                  等级: z.enum(['平常', '良好', '优秀', '卓越', '天才', '绝世']),
+                  初始境界: z.number().int().min(1).max(8),
+                  规则版本: z.literal(1),
+                })
+                .optional(),
+              _成长: z
+                .object({
+                  结算至: z.string().nullable(),
+                  基础面板: z.object({
+                    生命上限: z.number().positive(),
+                    防御: z.number().nonnegative(),
+                    攻击: z.number().nonnegative(),
+                    路线能量: z.record(z.string(), z.number().positive()),
+                  }),
+                  吸收: z.record(
+                    z.string(),
+                    z.object({ 日期: z.string(), 上限: z.number().nonnegative(), 已用: z.number().nonnegative() }),
+                  ),
+                  晋升待报: z.record(
+                    z.string(),
+                    z.object({ 原境界: z.number().int().min(1).max(8), 新境界: z.number().int().min(1).max(8) }),
+                  ),
+                })
+                .optional(),
               装备: z
                 .partialRecord(
                   z.enum(['weapon', 'armor', 'accessory1', 'accessory2', 'growth', 'special']),
@@ -130,6 +156,19 @@ export const Schema = z
                         适用路线: z.enum(['通用', '斗气', '法力']),
                         使用方式: z.enum(['佩戴', '消耗', '特殊']),
                         归属人物ID: z.string().min(1).nullable(),
+                        品阶: z.number().int().min(1).max(8).optional(),
+                        效果: z
+                          .array(
+                            z.object({
+                              类型: z.enum(['固定属性', '比例属性', '成长加速', '修为']),
+                              属性: z.enum(['生命', '能量', '攻击', '防御']).optional(),
+                              路线: z.string().min(1).optional(),
+                              份额: z.union([z.literal(0.5), z.literal(1)]),
+                            }),
+                          )
+                          .min(1)
+                          .max(2)
+                          .optional(),
                         固定加成: z
                           .object({ 攻击: z.number().nonnegative(), 防御: z.number().nonnegative() })
                           .optional(),
@@ -137,6 +176,25 @@ export const Schema = z
                       .refine(
                         item => item.子类 !== '法杖' || (item.大类 === '武器' && item.适用路线 === '法力'),
                         '法杖必须登记为法力路线武器',
+                      )
+                      .refine(
+                        item =>
+                          !item.效果 ||
+                          (item.品阶 !== undefined &&
+                            !item.固定加成 &&
+                            item.大类 !== '特殊物品' &&
+                            item.效果.reduce((sum, effect) => sum + effect.份额, 0) <= 1 &&
+                            item.效果.every(effect => {
+                              const attribute = effect.类型 === '固定属性' || effect.类型 === '比例属性';
+                              if (attribute !== Boolean(effect.属性)) return false;
+                              if ((effect.属性 === '能量' || !attribute) !== Boolean(effect.路线)) return false;
+                              if (item.适用路线 !== '通用' && effect.路线 && effect.路线 !== item.适用路线)
+                                return false;
+                              return effect.类型 === '修为'
+                                ? item.使用方式 === '消耗' && item.大类 === '修为秘宝'
+                                : item.使用方式 === '佩戴';
+                            })),
+                        '效果必须符合品阶、用途与一份总预算；特殊效果尚未开放',
                       )
                       .optional(),
                   }),

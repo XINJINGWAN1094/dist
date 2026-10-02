@@ -70,10 +70,14 @@ function benefitsApply(item: Treasure, id = item.ownerId ?? recipient.value) {
   if (!item.metadata) return true;
   const target = people.value.find(p => p.id === id);
   if (!target) return false;
-  return equipmentBenefitsApply(
+  const routeFits = equipmentBenefitsApply(
     { 姓名: target.name, 路线: Object.fromEntries((target.routes ?? ['斗气']).map(route => [route, {}])) },
     item.metadata,
   );
+  const ranks = Object.entries(target.routeRanks ?? {})
+    .filter(([name]) => item.metadata!.适用路线 === '通用' || name === item.metadata!.适用路线)
+    .map(([, rank]) => rank);
+  return routeFits && (!item.metadata.品阶 || Math.max(0, ...ranks) >= item.metadata.品阶);
 }
 function refreshRuntime() {
   runtimeApi = findEquipmentApi();
@@ -211,7 +215,13 @@ async function useSelected() {
   if (isLive.value) {
     if (!item.inventoryRef) return;
     if (item.use === 'consume') {
-      notice('修为秘宝的消耗效果尚未接入，物品已保留。');
+      const route = item.metadata?.效果?.find(effect => effect.类型 === '修为')?.路线;
+      if (runtimeApi?.version !== 2 || !route) {
+        notice('此秘宝的效果规格尚未完善，物品已保留。');
+        return;
+      }
+      if (await commitEquipment({ type: 'consume', ref: item.inventoryRef, personId: recipient.value, route }))
+        notice(`${ownerName(recipient.value)}已使用${item.name}，修为已保存`);
       return;
     }
     const command: EquipmentCommand = item.slot
@@ -482,7 +492,7 @@ onUnmounted(() => {
             <h2>{{ selected.name }}</h2>
             <div class="item-classification">
               <span>{{ selected.category }}</span
-              ><span>品级待定</span>
+              ><span>{{ selected.metadata?.品阶 ? `${selected.metadata.品阶}阶` : '品阶待定' }}</span>
             </div>
             <dl class="item-facts">
               <div>
@@ -513,9 +523,7 @@ onUnmounted(() => {
               </p>
               <button
                 class="ornate-button"
-                :disabled="
-                  saving || selected.use === 'special' || !people.length || (isLive && selected.use === 'consume')
-                "
+                :disabled="saving || selected.use === 'special' || !people.length"
                 @click="useSelected"
               >
                 {{
@@ -687,7 +695,12 @@ onUnmounted(() => {
         </section>
         <section class="growth-section">
           <h3>成长</h3>
-          <p>天赋 <span>待定</span></p>
+          <p>
+            天赋
+            <span :title="person.talent ? '只影响修为积累速度，不直接增加战斗属性' : undefined"
+              >{{ person.talent ?? '待抽取' }}{{ person.talentFactor ? ` · ×${person.talentFactor}` : '' }}</span
+            >
+          </p>
           <div class="growth-value">
             <span>修为</span
             ><strong
@@ -698,7 +711,7 @@ onUnmounted(() => {
           <p>
             下一境界 <span>{{ person.nextRealm }}</span>
           </p>
-          <small>随世界时间成长</small>
+          <small>{{ person.growthNote ?? '随世界时间成长' }}</small>
         </section>
         <section class="equipped-section">
           <h3>

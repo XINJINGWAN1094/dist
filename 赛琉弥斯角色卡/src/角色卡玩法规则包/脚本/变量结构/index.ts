@@ -7,7 +7,7 @@ $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
     registerMvuSchema(Schema);
-    installMapTimeBridge();
-    installEquipmentRuntime();
+    const refreshGameplay = installEquipmentRuntime();
+    installMapTimeBridge(refreshGameplay);
   })().catch(error => console.error('[角色卡玩法] MVU 变量结构注册失败', error));
 });

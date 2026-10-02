@@ -25,6 +25,10 @@ export interface Person {
   energyMax?: number;
   routes?: string[];
   progress?: number;
+  talent?: string;
+  talentFactor?: number;
+  growthNote?: string;
+  routeRanks?: Record<string, number>;
   defense: number;
   attack: number;
   cap: number;

@@ -1,8 +1,4 @@
-import {
-  branchPointFromMessages,
-  replyParentMessagesForGenerationV2,
-  restoreStoreForBranch,
-} from '../../../赛琉弥斯地图/phase2/branchHistory';
+import { branchPointFromMessages, restoreStoreForBranch } from '../../../赛琉弥斯地图/phase2/branchHistory';
 import { ChatStoreV2Schema, type BranchPoint } from '../../../赛琉弥斯地图/phase2/model';
 
 const CLOCK_RUNTIME_KEY = '__selyumis_clock_runtime_v1__';
@@ -17,8 +13,10 @@ export function mapTimeForBranch(rawStore: unknown, branch: BranchPoint): string
 
 function clockIsActive(): boolean {
   const host = window.parent as unknown as Record<string, unknown>;
-  return Boolean((host[CLOCK_RUNTIME_KEY] as { service?: unknown } | undefined)?.service)
-    || _.has(getVariables({ type: 'chat' }), MAP_STORE_KEY);
+  return (
+    Boolean((host[CLOCK_RUNTIME_KEY] as { service?: unknown } | undefined)?.service) ||
+    _.has(getVariables({ type: 'chat' }), MAP_STORE_KEY)
+  );
 }
 
 function selectedBranch(): BranchPoint {
@@ -45,77 +43,42 @@ export function setGameplayTime(data: Mvu.MvuData, time: string | null, previous
   return true;
 }
 
-export function installMapTimeBridge(): void {
-  let stopped = false;
+/** 由唯一的玩法写入入口调用，避免时间同步覆盖装备或成长结果。 */
+export function synchronizeMapTime(
+  data: Mvu.MvuData,
+  parents: Parameters<typeof branchPointFromMessages>[0],
+  previous?: Mvu.MvuData,
+): void {
+  if (!clockIsActive()) return;
+  const time = mapTimeForBranch(getVariables({ type: 'chat' })[MAP_STORE_KEY], branchPointFromMessages(parents));
+  setGameplayTime(data, time ?? _.get(previous ?? data, 'stat_data.玩法.时间.剧情时间', null), previous);
+}
+
+export function installMapTimeBridge(refresh: () => Promise<void>): void {
   let timer: number | undefined;
-  let writing = false;
-  let rerun = false;
-
-  const identity = () => JSON.stringify([SillyTavern.characterId, SillyTavern.getCurrentChatId()]);
-
-  async function synchronizeLatest(generationType?: string): Promise<void> {
-    if (stopped || !clockIsActive()) return;
-    if (writing) {
-      rerun = true;
-      return;
-    }
-    const selected = getChatMessages('0-{{lastMessageId}}', { include_swipes: true });
-    const parents = replyParentMessagesForGenerationV2(selected, generationType);
-    const message = selected.filter(m => parents.some(p => p.message_id === m.message_id))
-      .findLast(m => _.has(m.swipes_data[m.swipe_id], 'stat_data.玩法.时间'));
-    if (!message) return;
-    // Do not initialize an existing chat or write a previous message to fill a missing latest state.
-    if (!_.has(message.swipes_data[message.swipe_id], 'stat_data.玩法.时间')) return;
-    const time = mapTimeForBranch(getVariables({ type: 'chat' })[MAP_STORE_KEY], branchPointFromMessages(parents));
-    if (time === null) return;
-    const chatIdentity = identity();
-    const branchIdentity = JSON.stringify(selectedBranch().tokens);
-    const data = _.cloneDeep(Mvu.getMvuData({ type: 'message', message_id: message.message_id }));
-    if (!setGameplayTime(data, time)) return;
-    if (chatIdentity !== identity() || branchIdentity !== JSON.stringify(selectedBranch().tokens)) return;
-    writing = true;
-    try {
-      await Mvu.replaceMvuData(data, { type: 'message', message_id: message.message_id });
-    } finally {
-      writing = false;
-      if (rerun && !stopped) {
-        rerun = false;
-        queueSynchronization();
-      }
-    }
-  }
-
+  let stopped = false;
   function queueSynchronization(): void {
     if (timer !== undefined) window.clearTimeout(timer);
-    const chatIdentity = identity();
-    // Map report settlement uses a zero-delay task; read its committed result after that task.
+    const identity = JSON.stringify([SillyTavern.characterId, SillyTavern.getCurrentChatId()]);
     timer = window.setTimeout(() => {
       timer = undefined;
-      if (!stopped && chatIdentity === identity()) {
-        void synchronizeLatest().catch(error => console.error('[角色卡玩法] 地图时间同步失败', error));
-      }
+      if (!stopped && identity === JSON.stringify([SillyTavern.characterId, SillyTavern.getCurrentChatId()]))
+        void refresh().catch(error => console.error('[角色卡玩法] 时间与成长同步失败', error));
     }, 50);
   }
-
   eventMakeFirst(Mvu.events.VARIABLE_UPDATE_ENDED, (data, previous) => {
-    if (!clockIsActive()) return;
-    const time = currentMapTime() ?? _.get(previous, 'stat_data.玩法.时间.剧情时间', null);
-    // Runs before schema validation. AI cannot overwrite the clock-owned field.
-    setGameplayTime(data, time, previous);
+    if (clockIsActive())
+      setGameplayTime(data, currentMapTime() ?? _.get(previous, 'stat_data.玩法.时间.剧情时间', null), previous);
   });
   eventOn(Mvu.events.VARIABLE_INITIALIZED, queueSynchronization);
-  eventMakeLast(tavern_events.GENERATION_AFTER_COMMANDS, (type, _options, dryRun) => {
-    if (!dryRun) return synchronizeLatest(type);
-    return undefined;
-  });
   for (const event of [
     tavern_events.GENERATION_ENDED,
     tavern_events.MESSAGE_SWIPED,
     tavern_events.MESSAGE_EDITED,
     tavern_events.MESSAGE_DELETED,
     tavern_events.CHAT_CHANGED,
-  ]) eventMakeLast(event, queueSynchronization);
-
+  ])
+    eventMakeLast(event, queueSynchronization);
   $(window).on('pagehide', () => {
     stopped = true;
     if (timer !== undefined) window.clearTimeout(timer);
