@@ -107,15 +107,6 @@ try {
   Crop-Asset blue-button 0 1160 867 50 40
   Crop-Asset desk 0 0 528 245 496
   Crop-Asset castle-paper 1 14 469 353 524 0 70
-  Crop-Asset crystal 0 297 281 159 169
-  Crop-Asset potion 0 487 282 148 168
-  Crop-Asset sword 0 675 282 150 167
-  Crop-Asset ring 0 860 282 149 167
-  Crop-Asset brooch 0 298 559 153 167
-  Crop-Asset pendant 0 487 559 150 167
-  Crop-Asset shard 0 675 559 149 167
-  Crop-Asset dagger 0 861 559 148 167
-  Crop-Asset armor 1 930 239 96 111
   Extract-Shield heraldry 1 57 243 58 76
   Extract-Ornament compass 0 24 0 126 118 $true
   Crop-Asset header-architecture 0 545 97 489 94

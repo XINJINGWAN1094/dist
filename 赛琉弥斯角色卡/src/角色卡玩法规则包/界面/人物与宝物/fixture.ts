@@ -1,11 +1,13 @@
 // UI 演示专用。不是宝物生成器，不初始化或写入酒馆库存。
+import type { EquipmentRef, TreasureMetadata } from '../../equipment';
 export type Category = '武器' | '防具' | '饰品' | '修为秘宝' | '特殊物品';
 export type Slot = 'weapon' | 'armor' | 'accessory1' | 'accessory2' | 'growth' | 'special';
 export interface Treasure {
   id: string;
   name: string;
   category: Category;
-  art: string;
+  metadata?: TreasureMetadata;
+  inventoryRef?: EquipmentRef;
   quantity: number;
   use: 'consume' | 'wear' | 'special';
   effect: string;
@@ -18,7 +20,11 @@ export interface Person {
   name: string;
   realm: string;
   hp: number;
+  hpMax?: number;
   energy: number;
+  energyMax?: number;
+  routes?: string[];
+  progress?: number;
   defense: number;
   attack: number;
   cap: number;
@@ -73,7 +79,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-crystal',
       name: '晨辉晶石',
       category: '修为秘宝',
-      art: 'crystal',
       quantity: 1,
       use: 'consume',
       effect: '直接增加修为，使用后消耗。',
@@ -83,7 +88,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-potion',
       name: '清灵秘露',
       category: '修为秘宝',
-      art: 'potion',
       quantity: 3,
       use: 'consume',
       effect: '直接增加修为，使用后消耗。',
@@ -93,7 +97,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-sword',
       name: '月影长剑',
       category: '武器',
-      art: 'sword',
       quantity: 1,
       use: 'wear',
       ownerId: 'lia',
@@ -105,7 +108,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-ring',
       name: '星辉之戒',
       category: '饰品',
-      art: 'ring',
       quantity: 2,
       use: 'wear',
       effect: '提供有绝对数值上限的属性加成。',
@@ -115,7 +117,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-armor',
       name: '银纹轻甲',
       category: '防具',
-      art: 'armor',
       quantity: 1,
       use: 'wear',
       ownerId: 'lia',
@@ -127,7 +128,6 @@ export function createTreasures(): Treasure[] {
       id: 'demo-pendant',
       name: '潮汐吊坠',
       category: '修为秘宝',
-      art: 'pendant',
       quantity: 1,
       use: 'wear',
       effect: '佩戴期间提高修炼速度，受品级额度限制。',
@@ -137,21 +137,20 @@ export function createTreasures(): Treasure[] {
       id: 'demo-shard',
       name: '碎星晶片',
       category: '特殊物品',
-      art: 'shard',
       quantity: 4,
       use: 'special',
       effect: '独有机制尚待确定。',
       description: '断裂的晶片仍留着微光，等待被辨明用途。',
     },
     {
-      id: 'demo-dagger',
-      name: '夜行短匕',
+      id: 'demo-staff',
+      name: '星纹法杖',
       category: '武器',
-      art: 'dagger',
       quantity: 1,
       use: 'wear',
       effect: '按品级增加固定攻击数值。',
-      description: '黑蓝刀鞘收住锋芒，金色纹饰隐在暗处。',
+      description: '刻着星纹的法师系武器。',
+      metadata: { 大类: '武器', 子类: '法杖', 适用路线: '法力', 使用方式: '佩戴', 归属人物ID: null },
     },
   ];
 }

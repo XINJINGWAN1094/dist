@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "../../@types",
+    "../../*.d.ts",
+    "../src/角色卡玩法规则包/schema.ts",
+    "../src/角色卡玩法规则包/脚本/**/*.ts",
+    "../src/角色卡玩法规则包/界面/人物与宝物/fixture.ts",
+    "../src/角色卡玩法规则包/界面/人物与宝物/runtime.ts"
+  ],
+  "exclude": [
+    "../../node_modules",
+    "../../dist"
+  ]
+}

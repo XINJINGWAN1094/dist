@@ -1,0 +1,893 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "玩法": {
+      "default": {},
+      "$ref": "#/$defs/__schema0"
+    }
+  },
+  "additionalProperties": {},
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "_规则确认": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "N2基础数值": {
+              "default": "待评审测试基准",
+              "type": "string",
+              "const": "待评审测试基准"
+            },
+            "地缚": {
+              "default": "暂定通过·实验性",
+              "type": "string",
+              "const": "暂定通过·实验性"
+            }
+          }
+        },
+        "玩家人物ID": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "时间": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "剧情时间": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "已结束交锋": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "人物": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "稳定人物ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "姓名": {
+                "type": "string",
+                "minLength": 1
+              },
+              "种族": {
+                "type": "string",
+                "minLength": 1
+              },
+              "面板依据": {
+                "type": "string",
+                "minLength": 1
+              },
+              "体型模板": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "生命": {
+                "type": "object",
+                "properties": {
+                  "当前": {
+                    "$ref": "#/$defs/__schema1"
+                  },
+                  "上限": {
+                    "$ref": "#/$defs/__schema2"
+                  }
+                },
+                "required": [
+                  "当前",
+                  "上限"
+                ]
+              },
+              "有效防御": {
+                "type": "number",
+                "minimum": 0
+              },
+              "无资源攻击": {
+                "type": "number",
+                "minimum": 0
+              },
+              "路线": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "已有能量路线，如斗气或法力"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "境界": {
+                      "$ref": "#/$defs/__schema3"
+                    },
+                    "品质": {
+                      "$ref": "#/$defs/__schema4"
+                    },
+                    "当前能量": {
+                      "$ref": "#/$defs/__schema5"
+                    },
+                    "能量上限": {
+                      "$ref": "#/$defs/__schema6"
+                    },
+                    "单次投入上限": {
+                      "$ref": "#/$defs/__schema7"
+                    },
+                    "修炼进度": {
+                      "$ref": "#/$defs/__schema8"
+                    }
+                  },
+                  "required": [
+                    "境界",
+                    "品质",
+                    "当前能量",
+                    "能量上限",
+                    "单次投入上限"
+                  ]
+                }
+              },
+              "已掌握技能": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "技能版本ID"
+                },
+                "additionalProperties": {
+                  "type": "boolean",
+                  "const": true
+                }
+              },
+              "下次药剂可生效时间": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "装备": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "enum": [
+                    "weapon",
+                    "armor",
+                    "accessory1",
+                    "accessory2",
+                    "growth",
+                    "special"
+                  ]
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "库存ID": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "物品ID": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "库存ID",
+                    "物品ID"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "姓名",
+              "种族",
+              "面板依据",
+              "生命",
+              "有效防御",
+              "无资源攻击",
+              "路线"
+            ]
+          }
+        },
+        "技能定义": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "固定技能版本ID，版本升级使用新ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "名称": {
+                "type": "string",
+                "minLength": 1
+              },
+              "确认状态": {
+                "type": "string",
+                "enum": [
+                  "已通过",
+                  "待评审",
+                  "暂定通过·实验性"
+                ]
+              },
+              "路线": {
+                "type": "string",
+                "minLength": 1
+              },
+              "门槛": {
+                "type": "string",
+                "minLength": 1
+              },
+              "固定消耗": {
+                "type": "number",
+                "minimum": 0
+              },
+              "固定规格": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "名称",
+              "确认状态",
+              "路线",
+              "门槛",
+              "固定消耗",
+              "固定规格"
+            ]
+          }
+        },
+        "护盾": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "人物ID，每人最多一盾"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "技能版本ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "剩余盾值": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "结束交锋": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "技能版本ID",
+              "剩余盾值",
+              "结束交锋"
+            ]
+          }
+        },
+        "准备": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "人物ID，每人一项准备"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "技能版本ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "剩余准备行动": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "技能版本ID",
+              "剩余准备行动"
+            ]
+          }
+        },
+        "实验性地缚": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "被束缚人物ID，每人一条有效束缚"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "技能版本ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "有效强度": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "结束交锋": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "技能版本ID",
+              "有效强度",
+              "结束交锋"
+            ]
+          }
+        },
+        "休整": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "正在连续休整的人物ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "开始时间": {
+                "type": "string",
+                "minLength": 1
+              },
+              "条件": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "开始时间",
+              "条件"
+            ]
+          }
+        },
+        "当日修炼": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "当天实际训练的人物ID，全部路线共用每日上限"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "日期": {
+                "type": "string",
+                "minLength": 1
+              },
+              "已得进度": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 4
+              }
+            },
+            "required": [
+              "日期",
+              "已得进度"
+            ]
+          }
+        },
+        "库存": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "稳定库存ID，同一批资产只登记一次"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "所属": {
+                "type": "string",
+                "minLength": 1
+              },
+              "资金": {
+                "type": "number",
+                "minimum": 0
+              },
+              "补给": {
+                "type": "number",
+                "minimum": 0
+              },
+              "材料": {
+                "type": "number",
+                "minimum": 0
+              },
+              "物品": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "物品ID，同规格批次合并数量"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "名称": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "数量": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "固定规格": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "宝物": {
+                      "type": "object",
+                      "properties": {
+                        "大类": {
+                          "$ref": "#/$defs/__schema9"
+                        },
+                        "子类": {
+                          "$ref": "#/$defs/__schema10"
+                        },
+                        "适用路线": {
+                          "$ref": "#/$defs/__schema11"
+                        },
+                        "使用方式": {
+                          "$ref": "#/$defs/__schema12"
+                        },
+                        "归属人物ID": {
+                          "$ref": "#/$defs/__schema13"
+                        },
+                        "固定加成": {
+                          "$ref": "#/$defs/__schema14"
+                        }
+                      },
+                      "required": [
+                        "大类",
+                        "子类",
+                        "适用路线",
+                        "使用方式",
+                        "归属人物ID"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "名称",
+                    "数量",
+                    "固定规格"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "所属",
+              "资金",
+              "补给",
+              "材料"
+            ]
+          }
+        },
+        "军队": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "稳定军队ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "名称": {
+                "type": "string",
+                "minLength": 1
+              },
+              "库存ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "命令": {
+                "type": "string"
+              },
+              "构成": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "职业与境界分组ID"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "职业": {
+                      "$ref": "#/$defs/__schema15"
+                    },
+                    "境界": {
+                      "$ref": "#/$defs/__schema16"
+                    },
+                    "存活人数": {
+                      "$ref": "#/$defs/__schema17"
+                    },
+                    "其中伤员": {
+                      "$ref": "#/$defs/__schema18"
+                    },
+                    "累计死亡": {
+                      "$ref": "#/$defs/__schema19"
+                    }
+                  },
+                  "required": [
+                    "职业",
+                    "境界",
+                    "存活人数",
+                    "其中伤员"
+                  ]
+                }
+              },
+              "关键人物": {
+                "default": {},
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "人物ID，仅引用而不额外计数"
+                },
+                "additionalProperties": {
+                  "type": "boolean",
+                  "const": true
+                }
+              }
+            },
+            "required": [
+              "名称",
+              "库存ID",
+              "命令",
+              "构成"
+            ]
+          }
+        },
+        "领地": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "稳定领地ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "名称": {
+                "type": "string",
+                "minLength": 1
+              },
+              "等级": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "库存ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "产出结算至": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "名称",
+              "等级",
+              "库存ID",
+              "产出结算至"
+            ]
+          }
+        },
+        "合同": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "费用合同ID，覆盖对象和费用不得重复"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "库存ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "覆盖对象与费用": {
+                "type": "string",
+                "minLength": 1
+              },
+              "资金日率": {
+                "type": "number",
+                "minimum": 0
+              },
+              "补给日率": {
+                "type": "number",
+                "minimum": 0
+              },
+              "结算至": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "库存ID",
+              "覆盖对象与费用",
+              "资金日率",
+              "补给日率",
+              "结算至"
+            ]
+          }
+        },
+        "项目": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "实际进行的学习、培养、招募或建设项目ID"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "类型": {
+                "type": "string",
+                "enum": [
+                  "启蒙",
+                  "学习",
+                  "元素学习",
+                  "晋阶",
+                  "招募",
+                  "建设"
+                ]
+              },
+              "人物ID": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "军队ID": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "领地ID": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "库存ID": {
+                "type": "string",
+                "minLength": 1
+              },
+              "固定规格": {
+                "type": "string",
+                "minLength": 1
+              },
+              "已支付启动费用": {
+                "type": "boolean"
+              },
+              "开始时间": {
+                "type": "string",
+                "minLength": 1
+              },
+              "进度单位": {
+                "type": "string",
+                "minLength": 1
+              },
+              "已完成进度": {
+                "type": "number",
+                "minimum": 0
+              },
+              "所需进度": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "进度结算至": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "类型",
+              "库存ID",
+              "固定规格",
+              "已支付启动费用",
+              "开始时间",
+              "进度单位",
+              "已完成进度",
+              "所需进度",
+              "进度结算至"
+            ]
+          }
+        }
+      }
+    },
+    "__schema1": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema2": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema3": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "__schema4": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema5": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema6": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "__schema7": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema8": {
+      "type": "number",
+      "minimum": 0
+    },
+    "__schema9": {
+      "type": "string",
+      "enum": [
+        "武器",
+        "防具",
+        "饰品",
+        "修为秘宝",
+        "特殊物品"
+      ]
+    },
+    "__schema10": {
+      "type": "string",
+      "enum": [
+        "普通",
+        "法杖"
+      ]
+    },
+    "__schema11": {
+      "type": "string",
+      "enum": [
+        "通用",
+        "斗气",
+        "法力"
+      ]
+    },
+    "__schema12": {
+      "type": "string",
+      "enum": [
+        "佩戴",
+        "消耗",
+        "特殊"
+      ]
+    },
+    "__schema13": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "__schema14": {
+      "type": "object",
+      "properties": {
+        "攻击": {
+          "type": "number",
+          "minimum": 0
+        },
+        "防御": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "攻击",
+        "防御"
+      ]
+    },
+    "__schema15": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema16": {
+      "type": "string",
+      "minLength": 1
+    },
+    "__schema17": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema18": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "__schema19": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  }
+}

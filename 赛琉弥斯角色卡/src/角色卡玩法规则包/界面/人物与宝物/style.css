@@ -372,13 +372,13 @@ a {
   display: block;
   position: relative;
   aspect-ratio: 0.79;
-  background: #243343;
+  background: #eee1c7 url('./assets/paper.webp') center / cover;
   overflow: hidden;
 }
 .item-illustration > img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .quantity {
   position: absolute;
@@ -819,12 +819,12 @@ a {
 .equipment-slot > img {
   height: calc(106 * var(--u));
   width: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 .equipment-slot > .empty-emblem {
   object-fit: contain;
-  opacity: 0.18;
-  padding: calc(14 * var(--u));
+  opacity: 0.45;
+  padding: 0;
 }
 .equipment-slot > small {
   font-size: calc(14 * var(--u));
@@ -1099,7 +1099,7 @@ progress::-moz-progress-bar {
 .equipped-row > img {
   width: calc(73 * var(--u));
   height: calc(68 * var(--u));
-  object-fit: cover;
+  object-fit: contain;
   border: 1px solid #aa9575;
 }
 .equipped-row > span {

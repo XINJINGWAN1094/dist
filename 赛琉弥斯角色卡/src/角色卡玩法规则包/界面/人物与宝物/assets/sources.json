@@ -165,105 +165,6 @@
     "source": "02-领地人物-羊皮纸蓝银.png"
   },
   {
-    "transparentCenter": 0,
-    "crop": [
-      297,
-      281,
-      159,
-      169
-    ],
-    "file": "crystal.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      487,
-      282,
-      148,
-      168
-    ],
-    "file": "potion.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      675,
-      282,
-      150,
-      167
-    ],
-    "file": "sword.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      860,
-      282,
-      149,
-      167
-    ],
-    "file": "ring.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      298,
-      559,
-      153,
-      167
-    ],
-    "file": "brooch.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      487,
-      559,
-      150,
-      167
-    ],
-    "file": "pendant.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      675,
-      559,
-      149,
-      167
-    ],
-    "file": "shard.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      861,
-      559,
-      148,
-      167
-    ],
-    "file": "dagger.png",
-    "source": "01-宝物藏室-羊皮纸蓝银.png"
-  },
-  {
-    "transparentCenter": 0,
-    "crop": [
-      930,
-      239,
-      96,
-      111
-    ],
-    "file": "armor.png",
-    "source": "02-领地人物-羊皮纸蓝银.png"
-  },
-  {
     "extraction": "edge-connected paper removed, original shield contour",
     "crop": [
       57,
@@ -493,5 +394,40 @@
     ],
     "file": "icon-search.png",
     "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "file": "category-weapon.png",
+    "source": "武器徽记-v9.png",
+    "type": "generated-category-icon",
+    "reference": "武器徽记-v9.png",
+    "usage": "按宝物大类复用；无单件专用图，扁平淡灰剪影、无棕色描边"
+  },
+  {
+    "file": "category-armor.png",
+    "source": "exec-367af26a-5ad5-4a76-ae0c-c1d4aa3c3beb.png",
+    "type": "generated-category-icon",
+    "reference": "武器徽记-v9.png",
+    "usage": "按宝物大类复用；无单件专用图，扁平淡灰剪影、无棕色描边"
+  },
+  {
+    "file": "category-accessory.png",
+    "source": "exec-850111ce-2a8a-43d3-bb57-1dbda370c3f1.png",
+    "type": "generated-category-icon",
+    "reference": "武器徽记-v9.png",
+    "usage": "按宝物大类复用；无单件专用图，扁平淡灰剪影、无棕色描边"
+  },
+  {
+    "file": "category-cultivation.png",
+    "source": "exec-3a4a2915-c9b2-407a-8a34-b2593c9bc53d.png",
+    "type": "generated-category-icon",
+    "reference": "武器徽记-v9.png",
+    "usage": "按宝物大类复用；无单件专用图，扁平淡灰剪影、无棕色描边"
+  },
+  {
+    "file": "category-special.png",
+    "source": "exec-e421e763-a36b-4f85-a564-eb4c5e925ee9.png",
+    "type": "generated-category-icon",
+    "reference": "武器徽记-v9.png",
+    "usage": "按宝物大类复用；无单件专用图，扁平淡灰剪影、无棕色描边"
   }
 ]

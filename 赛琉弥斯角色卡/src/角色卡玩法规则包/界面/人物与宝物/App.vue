@@ -1,10 +1,40 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
-import { categories, createTreasures, people, slots, type Category, type Slot, type Treasure } from './fixture';
+import {
+  categories,
+  createTreasures,
+  people as examplePeople,
+  slots,
+  type Category,
+  type Slot,
+  type Treasure,
+  type Person,
+} from './fixture';
+import { categoryIcons, equipmentBenefitsApply, type EquipmentCommand } from '../../equipment';
+import { findEquipmentApi, viewFromEquipmentState, type EquipmentApi } from './runtime';
 
 const art = (name: string) => `./assets/${name}.webp`;
 const screen = ref(location.hash === '#people' ? 'people' : 'treasures');
 const treasures = ref(createTreasures());
+const people = ref<Person[]>(structuredClone(examplePeople));
+const isLive = ref(false);
+const saving = ref(false);
+const runtimeError = ref('');
+let runtimeApi: EquipmentApi | undefined;
+let runtimeToken = '';
+const emptyPerson: Person = {
+  id: '',
+  name: '尚未建档',
+  realm: '未知',
+  hp: 0,
+  energy: 0,
+  defense: 0,
+  attack: 0,
+  cap: 0,
+  progressMax: 0,
+  nextRealm: '待定',
+};
+const itemArt = (item: Pick<Treasure, 'category'>) => art(categoryIcons[item.category]);
 const category = ref<Category | '全部'>('全部');
 const search = ref('');
 const rosterSearch = ref('');
@@ -14,9 +44,12 @@ const personId = ref('lia');
 const recipient = ref('yun');
 const ownerFilter = ref('');
 const selected = computed(() => treasures.value.find(item => item.id === selectedId.value));
-const person = computed(() => people.find(p => p.id === personId.value)!);
+const person = computed(() => people.value.find(p => p.id === personId.value) ?? emptyPerson);
+const energyLabel = computed(() =>
+  person.value.routes?.includes('法力') && !person.value.routes.includes('斗气') ? '法力' : '斗气',
+);
 const visiblePeople = computed(() =>
-  people.filter(
+  people.value.filter(
     p =>
       `${p.name}${p.realm}`.includes(rosterSearch.value.trim()) &&
       (rosterFilter.value === 'all' || treasures.value.some(t => t.ownerId === p.id && t.slot)),
@@ -32,7 +65,63 @@ const visibleItems = computed(() =>
 );
 const equippedItems = computed(() => treasures.value.filter(t => t.ownerId === personId.value && t.slot));
 const equipped = (slot: Slot) => equippedItems.value.find(t => t.slot === slot);
-const ownerName = (id?: string) => people.find(p => p.id === id)?.name ?? '未分配';
+const ownerName = (id?: string) => people.value.find(p => p.id === id)?.name ?? '未分配';
+function benefitsApply(item: Treasure, id = item.ownerId ?? recipient.value) {
+  if (!item.metadata) return true;
+  const target = people.value.find(p => p.id === id);
+  if (!target) return false;
+  return equipmentBenefitsApply(
+    { 姓名: target.name, 路线: Object.fromEntries((target.routes ?? ['斗气']).map(route => [route, {}])) },
+    item.metadata,
+  );
+}
+function refreshRuntime() {
+  runtimeApi = findEquipmentApi();
+  if (!runtimeApi) {
+    if (isLive.value) {
+      people.value = [];
+      treasures.value = [];
+      runtimeToken = '';
+      runtimeError.value = '装备脚本未连接，请重新加载角色脚本。';
+    }
+    return;
+  }
+  isLive.value = true;
+  // 独立预览的人物图表不能跨聊天带进真实存档。
+  portraitUrls.value = {};
+  localAddress.value = '';
+  try {
+    const snapshot = runtimeApi.read();
+    const view = viewFromEquipmentState(snapshot.gameplay);
+    runtimeToken = snapshot.token;
+    people.value = view.people;
+    treasures.value = view.treasures;
+    if (!people.value.some(p => p.id === personId.value)) personId.value = people.value[0]?.id ?? '';
+    if (!people.value.some(p => p.id === recipient.value)) recipient.value = personId.value;
+    if (!treasures.value.some(t => t.id === selectedId.value)) selectedId.value = treasures.value[0]?.id ?? '';
+    runtimeError.value = '';
+  } catch (error) {
+    people.value = [];
+    treasures.value = [];
+    runtimeToken = '';
+    runtimeError.value = error instanceof Error ? error.message : '当前存档无法读取。';
+  }
+}
+async function commitEquipment(command: EquipmentCommand) {
+  if (!runtimeApi || !runtimeToken || saving.value) return false;
+  saving.value = true;
+  try {
+    await runtimeApi.apply(command, runtimeToken);
+    refreshRuntime();
+    return true;
+  } catch (error) {
+    notice(error instanceof Error ? error.message : '保存失败。');
+    refreshRuntime();
+    return false;
+  } finally {
+    saving.value = false;
+  }
+}
 const mode = ref('normal');
 const discarding = ref(false);
 const discardQuantity = ref(1);
@@ -116,9 +205,32 @@ function removeItem(item: Treasure, quantity: number) {
   }
   discarding.value = false;
 }
-function useSelected() {
+async function useSelected() {
   const item = selected.value;
-  if (!item || item.use === 'special') return;
+  if (!item || item.use === 'special' || saving.value) return;
+  if (isLive.value) {
+    if (!item.inventoryRef) return;
+    if (item.use === 'consume') {
+      notice('修为秘宝的消耗效果尚未接入，物品已保留。');
+      return;
+    }
+    const command: EquipmentCommand = item.slot
+      ? { type: 'unequip', ref: item.inventoryRef }
+      : {
+          type: 'equip',
+          ref: item.inventoryRef,
+          personId: recipient.value,
+          slot: destination(item),
+          splitId: crypto.randomUUID(),
+        };
+    if (await commitEquipment(command))
+      notice(
+        item.slot
+          ? `已卸下${item.name}`
+          : `已佩戴${item.name}${benefitsApply(item, recipient.value) ? '' : '；路线不符，增幅不生效'}`,
+      );
+    return;
+  }
   if (item.use === 'consume') {
     removeItem(item, 1);
     notice(`${ownerName(recipient.value)}已使用一份${item.name}`);
@@ -148,17 +260,25 @@ function useSelected() {
     item.ownerId = recipient.value;
     item.slot = targetSlot;
   }
-  notice(`${ownerName(recipient.value)}已佩戴${item.name}`);
+  notice(`${ownerName(recipient.value)}已佩戴${item.name}${benefitsApply(item) ? '' : '；路线不符，增幅不生效'}`);
 }
-function discardSelected() {
+async function discardSelected() {
   const item = selected.value;
   if (!item) return;
   const count = Math.min(item.quantity, Math.max(1, Math.floor(Number(discardQuantity.value) || 1)));
   const name = item.name;
+  if (isLive.value) {
+    if (item.inventoryRef && (await commitEquipment({ type: 'discard', ref: item.inventoryRef, quantity: count }))) {
+      discarding.value = false;
+      notice(`已丢弃${name}${count > 1 ? ` × ${count}` : ''}`);
+    }
+    return;
+  }
   removeItem(item, count);
   notice(`已丢弃${name}${count > 1 ? ` × ${count}` : ''}`);
 }
 function setPreviewState(value: string) {
+  if (isLive.value) return;
   mode.value = value;
   discarding.value = false;
   treasures.value = value === 'empty' ? [] : createTreasures();
@@ -173,6 +293,10 @@ function selectPerson(id: string) {
   localAddress.value = portraitUrls.value[id] ?? '';
 }
 async function uploadPortrait(event: Event) {
+  if (isLive.value) {
+    portraitStatus.value = '当前存档的人物图片功能尚未开放。';
+    return;
+  }
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
@@ -203,6 +327,10 @@ async function uploadPortrait(event: Event) {
   }
 }
 async function saveAddress() {
+  if (isLive.value) {
+    portraitStatus.value = '当前存档的人物图片功能尚未开放。';
+    return;
+  }
   const id = personId.value;
   try {
     const url = new URL(localAddress.value.trim(), location.href);
@@ -235,6 +363,12 @@ function hashChanged() {
 }
 onMounted(async () => {
   window.addEventListener('hashchange', hashChanged);
+  window.addEventListener('focus', refreshRuntime);
+  try {
+    window.parent.addEventListener('selyumis-equipment-changed', refreshRuntime);
+  } catch {}
+  refreshRuntime();
+  if (isLive.value) return;
   try {
     const response = await fetch('./api/portraits');
     if (response.ok) {
@@ -248,6 +382,10 @@ onMounted(async () => {
 onUnmounted(() => {
   clearTimeout(toastTimer);
   window.removeEventListener('hashchange', hashChanged);
+  window.removeEventListener('focus', refreshRuntime);
+  try {
+    window.parent.removeEventListener('selyumis-equipment-changed', refreshRuntime);
+  } catch {}
 });
 </script>
 
@@ -311,7 +449,7 @@ onUnmounted(() => {
             @click="selectItem(item)"
           >
             <span class="item-illustration"
-              ><img :src="art(item.art)" alt="" loading="lazy" /><span v-if="item.slot" class="wear-label"
+              ><img :src="itemArt(item)" alt="" loading="lazy" /><span v-if="item.slot" class="wear-label"
                 >{{ ownerName(item.ownerId) }}佩戴</span
               ><span class="quantity">{{ item.quantity }}</span></span
             >
@@ -359,7 +497,9 @@ onUnmounted(() => {
             <div class="effect-description">
               <h3>宝物效果</h3>
               <p>{{ selected.effect }}</p>
-              <small>具体数值待定</small>
+              <small v-if="selected.metadata?.子类 === '法杖'">法师系武器 · 骑士佩戴不产生增幅</small>
+              <small v-if="selected.use === 'wear' && !benefitsApply(selected)">路线不符，增幅不生效</small>
+              <small v-else-if="!isLive">具体数值待定</small>
             </div>
             <div class="item-actions">
               <template v-if="!selected.slot"
@@ -371,7 +511,13 @@ onUnmounted(() => {
               <p v-if="replacement" class="replacement-note">
                 将替换{{ ownerName(recipient) }}的{{ replacement.name }}
               </p>
-              <button class="ornate-button" :disabled="selected.use === 'special'" @click="useSelected">
+              <button
+                class="ornate-button"
+                :disabled="
+                  saving || selected.use === 'special' || !people.length || (isLive && selected.use === 'consume')
+                "
+                @click="useSelected"
+              >
                 {{
                   selected.use === 'special'
                     ? '机制待定'
@@ -450,7 +596,7 @@ onUnmounted(() => {
               <div class="portrait-prompt">
                 <strong>{{ person.name }}</strong>
                 <p>{{ portraitUrls[personId] ? '图片未能加载' : '尚未放置人物图片' }}</p>
-                <button class="quiet-button" :disabled="portraitBusy" @click="portraitInput?.click()">
+                <button v-if="!isLive" class="quiet-button" :disabled="portraitBusy" @click="portraitInput?.click()">
                   {{ portraitUrls[personId] ? '重新上传' : '上传人物图片' }}
                 </button>
               </div>
@@ -465,15 +611,15 @@ onUnmounted(() => {
             @click="showEquipment(slot.id)"
           >
             <span>{{ slot.label }}</span
-            ><img v-if="equipped(slot.id)" :src="art(equipped(slot.id)!.art)" alt="" /><img
+            ><img v-if="equipped(slot.id)" :src="itemArt(equipped(slot.id)!)" alt="" /><img
               v-else
               class="empty-emblem"
-              :src="art('heraldry')"
+              :src="art(categoryIcons[slot.category])"
               alt=""
             /><small>{{ equipped(slot.id)?.name ?? '未装备' }}</small>
           </button>
         </div>
-        <div class="portrait-tools">
+        <div v-if="!isLive" class="portrait-tools">
           <input
             ref="portraitInput"
             type="file"
@@ -500,25 +646,29 @@ onUnmounted(() => {
       </section>
       <aside class="character-stats paper-panel" aria-label="人物属性">
         <h2>{{ person.name }}</h2>
-        <p class="realm">{{ person.realm }} · 斗气</p>
+        <p class="realm">{{ person.realm }} · {{ energyLabel }}</p>
         <section class="stats-section" aria-label="战斗属性">
           <div class="vital">
             <div>
               <span><img class="stat-icon" :src="art('icon-life')" alt="" />生命</span
               ><strong
-                >{{ person.hp }} <small>/ {{ person.hp }}</small></strong
+                >{{ person.hp }} <small>/ {{ person.hpMax ?? person.hp }}</small></strong
               >
             </div>
-            <progress :value="person.hp" :max="person.hp" aria-label="当前生命" />
+            <progress :value="person.hp" :max="(person.hpMax ?? person.hp) || 1" aria-label="当前生命" />
           </div>
           <div class="vital energy">
             <div>
-              <span><img class="stat-icon" :src="art('icon-special')" alt="" />斗气</span
+              <span><img class="stat-icon" :src="art('icon-special')" alt="" />{{ energyLabel }}</span
               ><strong
-                >{{ person.energy }} <small>/ {{ person.energy }}</small></strong
+                >{{ person.energy }} <small>/ {{ person.energyMax ?? person.energy }}</small></strong
               >
             </div>
-            <progress :value="person.energy" :max="person.energy" aria-label="当前斗气" />
+            <progress
+              :value="person.energy"
+              :max="(person.energyMax ?? person.energy) || 1"
+              :aria-label="`当前${energyLabel}`"
+            />
           </div>
           <dl class="stat-list">
             <div>
@@ -541,10 +691,10 @@ onUnmounted(() => {
           <div class="growth-value">
             <span>修为</span
             ><strong
-              >0 <small>/ {{ person.progressMax }}</small></strong
+              >{{ person.progress ?? 0 }} <small>/ {{ person.progressMax }}</small></strong
             >
           </div>
-          <progress :max="person.progressMax" value="0" aria-label="当前修为" />
+          <progress :max="person.progressMax || 1" :value="person.progress ?? 0" aria-label="当前修为" />
           <p>
             下一境界 <span>{{ person.nextRealm }}</span>
           </p>
@@ -555,9 +705,9 @@ onUnmounted(() => {
             已装备宝物 <small>{{ equippedItems.length }}</small>
           </h3>
           <button v-for="item in equippedItems" :key="item.id" class="equipped-row" @click="showEquipment(item.slot!)">
-            <img :src="art(item.art)" alt="" /><span
+            <img :src="itemArt(item)" alt="" /><span
               ><strong>{{ item.name }}</strong
-              ><small>{{ item.effect }}</small></span
+              ><small>{{ benefitsApply(item, personId) ? item.effect : '路线不符，增幅不生效' }}</small></span
             >
           </button>
           <p v-if="!equippedItems.length" class="no-equipment">尚未佩戴宝物。</p>
@@ -568,8 +718,10 @@ onUnmounted(() => {
       <span v-if="toast">{{ toast }}</span>
     </div>
     <footer class="preview-toolbar">
-      <span>界面预览 · 示例宝物，操作不写入聊天</span>
-      <div>
+      <span>{{
+        isLive ? runtimeError || '当前聊天 · 佩戴与丢弃自动保存' : '界面预览 · 示例宝物，操作不写入聊天'
+      }}</span>
+      <div v-if="!isLive">
         <button :aria-pressed="mode === 'normal'" @click="setPreviewState('normal')">重置示例</button
         ><button
           :aria-pressed="mode === 'capacity'"

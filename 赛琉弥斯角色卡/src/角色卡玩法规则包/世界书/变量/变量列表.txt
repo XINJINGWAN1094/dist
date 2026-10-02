@@ -1,0 +1,5 @@
+---
+<status_current_variable>
+{{format_message_variable::stat_data.玩法正文}}
+</status_current_variable>
+这是脚本生成的只读视图。JSON Patch 仍写 /玩法/...；不写 /玩法正文。人物的“当前武器”仅供正文使用，由界面佩戴结果决定。
