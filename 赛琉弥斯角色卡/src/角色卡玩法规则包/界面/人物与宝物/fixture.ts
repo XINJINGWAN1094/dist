@@ -6,7 +6,6 @@ export interface Treasure {
   name: string;
   category: Category;
   art: string;
-  largeArt?: string;
   quantity: number;
   use: 'consume' | 'wear' | 'special';
   effect: string;
@@ -75,7 +74,6 @@ export function createTreasures(): Treasure[] {
       name: '晨辉晶石',
       category: '修为秘宝',
       art: 'crystal',
-      largeArt: 'crystal-large',
       quantity: 1,
       use: 'consume',
       effect: '直接增加修为，使用后消耗。',

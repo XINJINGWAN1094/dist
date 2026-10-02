@@ -449,20 +449,8 @@ a {
   border-left-width: calc(9 * var(--u));
   scroll-margin-top: 8px;
 }
-.detail-art {
-  border: calc(7 * var(--u)) solid transparent;
-  border-image: url('./assets/equipment-frame.webp') 9 stretch;
-  aspect-ratio: 1.26;
-  background: #223343;
-  overflow: hidden;
-}
-.detail-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 .detail-body {
-  padding: calc(13 * var(--u)) calc(27 * var(--u)) 0;
+  padding: calc(24 * var(--u)) calc(27 * var(--u)) 0;
 }
 .detail-body h2 {
   font-size: calc(42 * var(--u));
@@ -1396,9 +1384,6 @@ progress::-moz-progress-bar {
   }
   .item-detail {
     padding: 5px 7px 18px;
-  }
-  .detail-art {
-    aspect-ratio: 1.45;
   }
   .detail-body {
     padding: 17px 10px 0;

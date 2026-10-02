@@ -108,7 +108,6 @@ try {
   Crop-Asset desk 0 0 528 245 496
   Crop-Asset castle-paper 1 14 469 353 524 0 70
   Crop-Asset crystal 0 297 281 159 169
-  Crop-Asset crystal-large 0 1086 126 417 325
   Crop-Asset potion 0 487 282 148 168
   Crop-Asset sword 0 675 282 150 167
   Crop-Asset ring 0 860 282 149 167

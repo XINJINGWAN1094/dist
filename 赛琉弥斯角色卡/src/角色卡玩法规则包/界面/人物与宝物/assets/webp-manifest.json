@@ -4,8 +4,8 @@
   "encoder": "Chrome canvas / libwebp",
   "alpha": "preserved",
   "resized": false,
-  "originalBytes": 4896662,
-  "encodedBytes": 789420,
+  "originalBytes": 4490318,
+  "encodedBytes": 722726,
   "reductionPercent": 83.9,
   "entries": [
     {
@@ -79,14 +79,6 @@
       "quality": 95,
       "sourceBytes": 12536,
       "bytes": 3334
-    },
-    {
-      "file": "crystal-large.webp",
-      "width": 417,
-      "height": 325,
-      "quality": 95,
-      "sourceBytes": 406344,
-      "bytes": 66694
     },
     {
       "file": "crystal.webp",

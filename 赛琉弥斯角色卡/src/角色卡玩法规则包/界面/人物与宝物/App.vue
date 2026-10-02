@@ -340,7 +340,6 @@ onUnmounted(() => {
       </section>
       <aside ref="detail" class="item-detail paper-panel" aria-label="宝物详情">
         <template v-if="selected">
-          <div class="detail-art"><img :src="art(selected.largeArt ?? selected.art)" :alt="selected.name" /></div>
           <div class="detail-body">
             <h2>{{ selected.name }}</h2>
             <div class="item-classification">
