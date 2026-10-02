@@ -1,0 +1,508 @@
+[
+  {
+    "transparentCenter": 0,
+    "crop": [
+      487,
+      825,
+      508,
+      116
+    ],
+    "file": "paper.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      1000,
+      5,
+      380,
+      60
+    ],
+    "file": "navy.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      78,
+      0,
+      51,
+      81
+    ],
+    "file": "crest.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 18,
+    "crop": [
+      1085,
+      73,
+      447,
+      935
+    ],
+    "file": "panel-frame.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 10,
+    "crop": [
+      475,
+      269,
+      176,
+      269
+    ],
+    "file": "item-frame.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 9,
+    "crop": [
+      285,
+      267,
+      179,
+      272
+    ],
+    "file": "selected-frame.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 9,
+    "crop": [
+      441,
+      590,
+      103,
+      136
+    ],
+    "file": "equipment-frame.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 8,
+    "crop": [
+      30,
+      226,
+      327,
+      103
+    ],
+    "file": "roster-frame.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 9,
+    "crop": [
+      1100,
+      241,
+      415,
+      253
+    ],
+    "file": "stats-frame.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 23,
+    "crop": [
+      1105,
+      848,
+      375,
+      81
+    ],
+    "file": "button-frame.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 8,
+    "crop": [
+      30,
+      333,
+      327,
+      103
+    ],
+    "file": "row-frame.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 19,
+    "crop": [
+      33,
+      243,
+      245,
+      84
+    ],
+    "file": "category-frame.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      1160,
+      867,
+      50,
+      40
+    ],
+    "file": "blue-button.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      0,
+      528,
+      245,
+      496
+    ],
+    "file": "desk.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      14,
+      469,
+      353,
+      524
+    ],
+    "file": "castle-paper.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      297,
+      281,
+      159,
+      169
+    ],
+    "file": "crystal.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      1086,
+      126,
+      417,
+      325
+    ],
+    "file": "crystal-large.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      487,
+      282,
+      148,
+      168
+    ],
+    "file": "potion.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      675,
+      282,
+      150,
+      167
+    ],
+    "file": "sword.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      860,
+      282,
+      149,
+      167
+    ],
+    "file": "ring.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      298,
+      559,
+      153,
+      167
+    ],
+    "file": "brooch.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      487,
+      559,
+      150,
+      167
+    ],
+    "file": "pendant.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      675,
+      559,
+      149,
+      167
+    ],
+    "file": "shard.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      861,
+      559,
+      148,
+      167
+    ],
+    "file": "dagger.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      930,
+      239,
+      96,
+      111
+    ],
+    "file": "armor.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      57,
+      243,
+      58,
+      76
+    ],
+    "file": "heraldry.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "preserved ornament color, transparent background",
+    "crop": [
+      24,
+      0,
+      126,
+      118
+    ],
+    "file": "compass.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      545,
+      97,
+      489,
+      94
+    ],
+    "file": "header-architecture.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      497,
+      0,
+      272,
+      86
+    ],
+    "file": "header-castle.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "preserved ornament color, transparent background",
+    "crop": [
+      1102,
+      704,
+      385,
+      21
+    ],
+    "file": "section-rule.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "preserved ornament color, transparent background",
+    "crop": [
+      496,
+      143,
+      64,
+      28
+    ],
+    "file": "title-ornament.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      527,
+      21,
+      158,
+      18
+    ],
+    "file": "header-rule.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "preserved ornament color, transparent background",
+    "crop": [
+      1383,
+      102,
+      125,
+      120
+    ],
+    "file": "dragon-watermark.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "transparentCenter": 0,
+    "crop": [
+      264,
+      975,
+      1127,
+      49
+    ],
+    "file": "archive-footer.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      59,
+      185,
+      41,
+      44
+    ],
+    "file": "icon-all.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      59,
+      345,
+      38,
+      42
+    ],
+    "file": "icon-weapon.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      62,
+      428,
+      36,
+      43
+    ],
+    "file": "icon-ring.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      59,
+      264,
+      38,
+      42
+    ],
+    "file": "icon-secret.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1116,
+      300,
+      35,
+      31
+    ],
+    "file": "icon-special.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1117,
+      355,
+      33,
+      34
+    ],
+    "file": "icon-defense.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1119,
+      262,
+      29,
+      28
+    ],
+    "file": "icon-life.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1118,
+      400,
+      31,
+      31
+    ],
+    "file": "icon-attack.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1118,
+      612,
+      34,
+      38
+    ],
+    "file": "icon-energy.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1119,
+      443,
+      32,
+      29
+    ],
+    "file": "icon-cap.png",
+    "source": "02-领地人物-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      1127,
+      784,
+      37,
+      36
+    ],
+    "file": "icon-person.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  },
+  {
+    "extraction": "monochrome glyph, transparent paper",
+    "crop": [
+      311,
+      209,
+      32,
+      34
+    ],
+    "file": "icon-search.png",
+    "source": "01-宝物藏室-羊皮纸蓝银.png"
+  }
+]

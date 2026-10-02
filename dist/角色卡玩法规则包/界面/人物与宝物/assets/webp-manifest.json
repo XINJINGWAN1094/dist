@@ -1,0 +1,388 @@
+{
+  "format": "WebP",
+  "quality": 95,
+  "encoder": "Chrome canvas / libwebp",
+  "alpha": "preserved",
+  "resized": false,
+  "originalBytes": 4899030,
+  "encodedBytes": 789504,
+  "reductionPercent": 83.9,
+  "entries": [
+    {
+      "file": "archive-footer.webp",
+      "width": 1127,
+      "height": 49,
+      "quality": 95,
+      "sourceBytes": 117361,
+      "bytes": 15176
+    },
+    {
+      "file": "armor.webp",
+      "width": 96,
+      "height": 111,
+      "quality": 95,
+      "sourceBytes": 33440,
+      "bytes": 6862
+    },
+    {
+      "file": "blue-button.webp",
+      "width": 50,
+      "height": 40,
+      "quality": 95,
+      "sourceBytes": 3085,
+      "bytes": 800
+    },
+    {
+      "file": "brooch.webp",
+      "width": 153,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 70938,
+      "bytes": 13968
+    },
+    {
+      "file": "button-frame.webp",
+      "width": 375,
+      "height": 81,
+      "quality": 95,
+      "sourceBytes": 44019,
+      "bytes": 5928
+    },
+    {
+      "file": "castle-paper.webp",
+      "width": 353,
+      "height": 524,
+      "quality": 95,
+      "sourceBytes": 366134,
+      "bytes": 45452
+    },
+    {
+      "file": "category-frame.webp",
+      "width": 245,
+      "height": 84,
+      "quality": 95,
+      "sourceBytes": 28615,
+      "bytes": 4316
+    },
+    {
+      "file": "compass.webp",
+      "width": 126,
+      "height": 118,
+      "quality": 95,
+      "sourceBytes": 43202,
+      "bytes": 10720
+    },
+    {
+      "file": "crest.webp",
+      "width": 51,
+      "height": 81,
+      "quality": 95,
+      "sourceBytes": 12536,
+      "bytes": 3334
+    },
+    {
+      "file": "crystal-large.webp",
+      "width": 417,
+      "height": 325,
+      "quality": 95,
+      "sourceBytes": 406344,
+      "bytes": 66694
+    },
+    {
+      "file": "crystal.webp",
+      "width": 159,
+      "height": 169,
+      "quality": 95,
+      "sourceBytes": 74987,
+      "bytes": 12556
+    },
+    {
+      "file": "dagger.webp",
+      "width": 148,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 61230,
+      "bytes": 11840
+    },
+    {
+      "file": "desk.webp",
+      "width": 245,
+      "height": 496,
+      "quality": 95,
+      "sourceBytes": 319318,
+      "bytes": 54746
+    },
+    {
+      "file": "dragon-watermark.webp",
+      "width": 125,
+      "height": 120,
+      "quality": 95,
+      "sourceBytes": 28943,
+      "bytes": 10772
+    },
+    {
+      "file": "equipment-frame.webp",
+      "width": 103,
+      "height": 136,
+      "quality": 95,
+      "sourceBytes": 9902,
+      "bytes": 2112
+    },
+    {
+      "file": "header-architecture.webp",
+      "width": 489,
+      "height": 94,
+      "quality": 95,
+      "sourceBytes": 88205,
+      "bytes": 11438
+    },
+    {
+      "file": "header-castle.webp",
+      "width": 272,
+      "height": 86,
+      "quality": 95,
+      "sourceBytes": 49792,
+      "bytes": 6470
+    },
+    {
+      "file": "header-rule.webp",
+      "width": 158,
+      "height": 18,
+      "quality": 95,
+      "sourceBytes": 6765,
+      "bytes": 1748
+    },
+    {
+      "file": "heraldry.webp",
+      "width": 58,
+      "height": 76,
+      "quality": 95,
+      "sourceBytes": 12370,
+      "bytes": 3032
+    },
+    {
+      "file": "icon-all.webp",
+      "width": 41,
+      "height": 44,
+      "quality": 95,
+      "sourceBytes": 580,
+      "bytes": 992
+    },
+    {
+      "file": "icon-attack.webp",
+      "width": 31,
+      "height": 31,
+      "quality": 95,
+      "sourceBytes": 495,
+      "bytes": 934
+    },
+    {
+      "file": "icon-cap.webp",
+      "width": 32,
+      "height": 29,
+      "quality": 95,
+      "sourceBytes": 408,
+      "bytes": 820
+    },
+    {
+      "file": "icon-defense.webp",
+      "width": 33,
+      "height": 34,
+      "quality": 95,
+      "sourceBytes": 499,
+      "bytes": 884
+    },
+    {
+      "file": "icon-energy.webp",
+      "width": 34,
+      "height": 38,
+      "quality": 95,
+      "sourceBytes": 573,
+      "bytes": 996
+    },
+    {
+      "file": "icon-life.webp",
+      "width": 29,
+      "height": 28,
+      "quality": 95,
+      "sourceBytes": 365,
+      "bytes": 780
+    },
+    {
+      "file": "icon-person.webp",
+      "width": 37,
+      "height": 36,
+      "quality": 95,
+      "sourceBytes": 446,
+      "bytes": 862
+    },
+    {
+      "file": "icon-ring.webp",
+      "width": 36,
+      "height": 43,
+      "quality": 95,
+      "sourceBytes": 617,
+      "bytes": 1022
+    },
+    {
+      "file": "icon-search.webp",
+      "width": 32,
+      "height": 34,
+      "quality": 95,
+      "sourceBytes": 553,
+      "bytes": 974
+    },
+    {
+      "file": "icon-secret.webp",
+      "width": 38,
+      "height": 42,
+      "quality": 95,
+      "sourceBytes": 751,
+      "bytes": 1110
+    },
+    {
+      "file": "icon-special.webp",
+      "width": 35,
+      "height": 31,
+      "quality": 95,
+      "sourceBytes": 492,
+      "bytes": 940
+    },
+    {
+      "file": "icon-weapon.webp",
+      "width": 38,
+      "height": 42,
+      "quality": 95,
+      "sourceBytes": 525,
+      "bytes": 914
+    },
+    {
+      "file": "item-frame.webp",
+      "width": 176,
+      "height": 269,
+      "quality": 95,
+      "sourceBytes": 21328,
+      "bytes": 2930
+    },
+    {
+      "file": "navy.webp",
+      "width": 380,
+      "height": 60,
+      "quality": 95,
+      "sourceBytes": 35327,
+      "bytes": 4242
+    },
+    {
+      "file": "panel-frame.webp",
+      "width": 447,
+      "height": 935,
+      "quality": 95,
+      "sourceBytes": 130285,
+      "bytes": 13674
+    },
+    {
+      "file": "paper.webp",
+      "width": 508,
+      "height": 116,
+      "quality": 95,
+      "sourceBytes": 71892,
+      "bytes": 5544
+    },
+    {
+      "file": "pendant.webp",
+      "width": 150,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 69077,
+      "bytes": 13942
+    },
+    {
+      "file": "portrait-default-female.webp",
+      "width": 1024,
+      "height": 1536,
+      "quality": 95,
+      "sourceBytes": 2423129,
+      "bytes": 384868
+    },
+    {
+      "file": "potion.webp",
+      "width": 148,
+      "height": 168,
+      "quality": 95,
+      "sourceBytes": 68795,
+      "bytes": 12774
+    },
+    {
+      "file": "ring.webp",
+      "width": 149,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 70092,
+      "bytes": 13672
+    },
+    {
+      "file": "roster-frame.webp",
+      "width": 327,
+      "height": 103,
+      "quality": 95,
+      "sourceBytes": 12817,
+      "bytes": 2234
+    },
+    {
+      "file": "row-frame.webp",
+      "width": 327,
+      "height": 103,
+      "quality": 95,
+      "sourceBytes": 19559,
+      "bytes": 3634
+    },
+    {
+      "file": "section-rule.webp",
+      "width": 385,
+      "height": 21,
+      "quality": 95,
+      "sourceBytes": 11473,
+      "bytes": 1452
+    },
+    {
+      "file": "selected-frame.webp",
+      "width": 179,
+      "height": 272,
+      "quality": 95,
+      "sourceBytes": 21777,
+      "bytes": 3822
+    },
+    {
+      "file": "shard.webp",
+      "width": 149,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 70178,
+      "bytes": 12372
+    },
+    {
+      "file": "stats-frame.webp",
+      "width": 415,
+      "height": 253,
+      "quality": 95,
+      "sourceBytes": 23564,
+      "bytes": 2678
+    },
+    {
+      "file": "sword.webp",
+      "width": 150,
+      "height": 167,
+      "quality": 95,
+      "sourceBytes": 62658,
+      "bytes": 11232
+    },
+    {
+      "file": "title-ornament.webp",
+      "width": 64,
+      "height": 28,
+      "quality": 95,
+      "sourceBytes": 3589,
+      "bytes": 1242
+    }
+  ]
+}

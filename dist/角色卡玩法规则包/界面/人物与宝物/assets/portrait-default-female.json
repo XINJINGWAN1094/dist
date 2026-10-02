@@ -1,0 +1,8 @@
+{
+  "generator": "built-in image_gen",
+  "approved": true,
+  "usage": "未上传人物图片时的默认底图；不代表人物身份或性别",
+  "format": "WebP",
+  "quality": 95,
+  "prompt": "Use case: precise-object-edit.\nEdit the supplied portrait-placeholder background into one female-template variant.\nChange only the anonymous human silhouette inside the central ornamental oval: use a recognizable adult feminine head-and-shoulders silhouette, with softly flowing shoulder-length hair, a graceful neck and a simple modest high-neck cloak or draped garment. Keep the face completely blank, without eyes, nose or mouth. This is a generic female character emblem, not a specific character portrait. Preserve the pale dusty blue-gray fill, delicate silver-beige and muted antique-gold linework, subtle embossed/bookplate impression, and quiet low contrast.\nKeep everything else as close to the source as possible: exactly the same portrait aspect ratio, warm ivory parchment texture, softly aged edges, large blank areas, thin ornamental oval and its four flourishes, emblem position and overall scale. Do not make the figure larger, more colorful or realistic. Keep the lower blank area clean.\nNo text, UI controls, buttons, extra symbols, scenery, armor, weapons, or watermark. One opaque raster image only."
+}
