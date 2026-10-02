@@ -4,8 +4,8 @@
   "encoder": "Chrome canvas / libwebp",
   "alpha": "preserved",
   "resized": false,
-  "originalBytes": 4899030,
-  "encodedBytes": 789504,
+  "originalBytes": 4896662,
+  "encodedBytes": 789420,
   "reductionPercent": 83.9,
   "entries": [
     {
@@ -157,8 +157,8 @@
       "width": 58,
       "height": 76,
       "quality": 95,
-      "sourceBytes": 12370,
-      "bytes": 3032
+      "sourceBytes": 10002,
+      "bytes": 2948
     },
     {
       "file": "icon-all.webp",

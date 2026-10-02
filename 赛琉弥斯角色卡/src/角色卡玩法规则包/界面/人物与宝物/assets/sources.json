@@ -275,15 +275,15 @@
     "source": "02-领地人物-羊皮纸蓝银.png"
   },
   {
-    "transparentCenter": 0,
+    "extraction": "edge-connected paper removed, original shield contour",
     "crop": [
       57,
       243,
       58,
       76
     ],
-    "file": "heraldry.png",
-    "source": "02-领地人物-羊皮纸蓝银.png"
+    "source": "02-领地人物-羊皮纸蓝银.png",
+    "file": "heraldry.png"
   },
   {
     "extraction": "preserved ornament color, transparent background",

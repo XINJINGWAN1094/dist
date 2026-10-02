@@ -60,6 +60,37 @@ function Extract-Ornament([string]$Name, [int]$Source, [int]$X, [int]$Y, [int]$W
     $records.Add(@{file=$Name+'.png';source=$sourceFiles[$Source].Name;crop=@($X,$Y,$Width,$Height);extraction='preserved ornament color, transparent background'})
   } finally { $bitmap.Dispose() }
 }
+function Extract-Shield([string]$Name, [int]$Source, [int]$X, [int]$Y, [int]$Width, [int]$Height) {
+  # Remove only the paper connected to the image edge; the dark shield outline
+  # protects its enclosed gold decoration. The contour comes from the source.
+  $bitmap = [System.Drawing.Bitmap]::new($Width,$Height,[System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+  $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+  try {
+    $graphics.DrawImage($sourceImages[$Source],[System.Drawing.Rectangle]::new(0,0,$Width,$Height),$X,$Y,$Width,$Height,[System.Drawing.GraphicsUnit]::Pixel)
+    $queue = [System.Collections.Generic.Queue[int]]::new()
+    $visited = [bool[]]::new($Width*$Height)
+    for ($i=0; $i -lt $Width*$Height; $i++) {
+      $px=$i%$Width; $py=[int][Math]::Floor($i/$Width)
+      if ($px -eq 0 -or $py -eq 0 -or $px -eq ($Width-1) -or $py -eq ($Height-1)) { $queue.Enqueue($i) }
+    }
+    while ($queue.Count) {
+      $i=$queue.Dequeue()
+      if ($visited[$i]) { continue }
+      $visited[$i]=$true
+      $px=$i%$Width; $py=[int][Math]::Floor($i/$Width)
+      $color=$bitmap.GetPixel($px,$py)
+      $luma=0.2126*$color.R+0.7152*$color.G+0.0722*$color.B
+      if ($luma -lt 137) { continue }
+      $bitmap.SetPixel($px,$py,[System.Drawing.Color]::Transparent)
+      if ($px -gt 0) { $queue.Enqueue(($i-1)) }
+      if ($px -lt ($Width-1)) { $queue.Enqueue(($i+1)) }
+      if ($py -gt 0) { $queue.Enqueue(($i-$Width)) }
+      if ($py -lt ($Height-1)) { $queue.Enqueue(($i+$Width)) }
+    }
+    $bitmap.Save((Join-Path $assetOutput ($Name+'.png')),[System.Drawing.Imaging.ImageFormat]::Png)
+    $records.Add(@{file=$Name+'.png';source=$sourceFiles[$Source].Name;crop=@($X,$Y,$Width,$Height);extraction='edge-connected paper removed, original shield contour'})
+  } finally { $graphics.Dispose(); $bitmap.Dispose() }
+}
 try {
   Crop-Asset paper 0 487 825 508 116
   Crop-Asset navy 1 1000 5 380 60
@@ -86,7 +117,7 @@ try {
   Crop-Asset shard 0 675 559 149 167
   Crop-Asset dagger 0 861 559 148 167
   Crop-Asset armor 1 930 239 96 111
-  Crop-Asset heraldry 1 57 243 58 76
+  Extract-Shield heraldry 1 57 243 58 76
   Extract-Ornament compass 0 24 0 126 118 $true
   Crop-Asset header-architecture 0 545 97 489 94
   Crop-Asset header-castle 0 497 0 272 86
